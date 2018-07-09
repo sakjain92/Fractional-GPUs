@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pthread.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -26,26 +27,25 @@
 
 /* TODO: Add support for multiple devices */
 /* TODO: Add proper logging mechanism */
+/* TODO: Use CudaIPC to share device memory pointer to be safe */
 
 /* Currently only the very first device is used */
 #define FGPU_DEVICE_NUMBER  0
 
 /* Look into cuMemHostRegister and cuMemHostGetFlags and cuInit*/
-
-typedef struct kernel_info {
-    int tag;
-    int color;
-    int num_pblocks_launched;
-    bool is_done;
-    int return_code;
-} kernel_info_t;
-
-static volatile fgpu_indicators_t *h_indicators;
+/*sysconf(_SC_THREAD_PROCESS_SHARED), pthread_mutexattr_setpshared
+ pthread_condattr_setpshared */
 
 /* Can't share streams between process - As limitation by CUDA library/driver */
 cudaStream_t streams[FGPU_MAX_NUM_COLORS];
 
-/* This structure contains all host side information for persistent thread ctx */
+/* Each process maps host pinned memory individually in it's addr space */
+static volatile fgpu_indicators_t *h_indicators;
+
+/*
+ * This structure contains all host side information for persistent thread ctx.
+ * Everything in this structure is shared by processes using shared mem.
+ */
 typedef struct fgpu_host_ctx {
   
     int device;
@@ -55,19 +55,26 @@ typedef struct fgpu_host_ctx {
 
     std::pair<uint32_t, uint32_t> color_to_sms[FGPU_MAX_NUM_COLORS];
 
-    volatile fgpu_indicators_t *d_indicators;
+    volatile fgpu_indicators_t *d_host_indicators;
+    volatile fgpu_indicators_t *d_dev_indicators;
 
     fgpu_bindexes_t *d_bindexes;
-    
+   
+    /* Lock to allow only one process to launch at a time */
+    pthread_mutex_t launch_lock;
+    pthread_cond_t launch_cond;
+    bool is_lauchpad_free;
     bool cur_indexes[FGPU_MAX_NUM_COLORS];
     int last_color;
-    int last_tags[FGPU_MAX_NUM_COLORS];
-    int cur_tag;
+    int last_num_pblocks_launched;
 
-    /* Kernel tag -> Info kernels */
-    /* TODO: Make this a map in shared memory - See boost interprocess lib */
-    kernel_info_t tag_to_info[FGPU_MAX_PENDING_TASKS];
-//    static std::map<int, kernel_info_t> tag_to_info;
+    /*
+     * Lock to allow only one outstanding operation in each color stream
+     * CUDA streams can't be shared between processes.
+     */
+    pthread_mutex_t streams_lock;
+    pthread_cond_t streams_cond[FGPU_MAX_NUM_COLORS];
+    bool is_stream_free[FGPU_MAX_NUM_COLORS];
 
 } fgpu_host_ctx_t;
 
@@ -89,6 +96,61 @@ static bool is_mps_enabled(void)
         return false;
 
     return true;
+}
+
+/* Initializes mutex for use in shared memory */
+static int init_shared_mutex(pthread_mutex_t *lock)
+{
+    int ret;
+    pthread_mutexattr_t attr;
+    
+    ret = pthread_mutexattr_init(&attr);
+    if (ret < 0) {
+        fprintf(stderr, "Mutex attr failed to initialize\n");
+        return ret;
+    }
+
+    ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+    if (ret < 0) {
+        fprintf(stderr, "Mutex attr couldn't be set to be shared\n");
+        return ret;
+    }
+
+    ret = pthread_mutex_init(lock, &attr);
+    if (ret < 0) {
+        fprintf(stderr, "Mutex can't be initialized\n");
+        return ret;
+    }
+
+    return 0;
+}
+
+
+/* Initializes conditional variable for use in shared memory */
+static int init_shared_condvar(pthread_cond_t *cond)
+{
+    int ret;
+    pthread_condattr_t attr;
+    
+    ret = pthread_condattr_init(&attr);
+    if (ret < 0) {
+        fprintf(stderr, "Condvar attr failed to initialize\n");
+        return ret;
+    }
+
+    ret = pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+    if (ret < 0) {
+        fprintf(stderr, "Condvar attr couldn't be set to be shared\n");
+        return ret;
+    }
+
+    ret = pthread_cond_init(cond, &attr);
+    if (ret < 0) {
+        fprintf(stderr, "Condvar can't be initialized\n");
+        return ret;
+    }
+
+    return 0;
 }
 
 /* Sets color info per device */
@@ -199,13 +261,16 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
     return 0;
 }
 
-/* Initialize (by server) */
+/* Initialize (by server)
+ * Currently, assumption is made that client's are launch some time after
+ * server is launched, allowing server to initialize properly before clients
+ * start using shared memory.
+ */
 int fgpu_server_init(void)
 {
     int ret = 0;
     size_t shmem_size;
     size_t page_size;
-    CUcontext driver_ctx;
 
     ret = gpuDriverErrCheck(cuInit(0));
     if (ret < 0)
@@ -280,29 +345,59 @@ int fgpu_server_init(void)
         goto err;
     }
 
+    /* 
+     * This function needs to be called after a CUDA function is called so that
+     * the device context is created in that function. CUDA context is created
+     * lazily.
+     */
     ret = gpuDriverErrCheck(cuMemHostRegister((void *)h_indicators, shmem_size,
                 CU_MEMHOSTREGISTER_PORTABLE | CU_MEMHOSTREGISTER_DEVICEMAP));
     if (ret < 0)
         goto err;
     
-    ret = gpuErrCheck(cudaHostGetDevicePointer(&g_host_ctx->d_indicators,
+    ret = gpuErrCheck(cudaHostGetDevicePointer(&g_host_ctx->d_host_indicators,
                 (void *)h_indicators, 0));
     if (ret < 0)
         goto err;
 
     memset((void *)h_indicators, 0, sizeof(fgpu_indicators_t));
 
-    g_host_ctx->last_color = -1;
+    ret = gpuErrCheck(cudaMalloc(&g_host_ctx->d_dev_indicators,
+                sizeof(fgpu_indicators_t)));
+    if (ret < 0)
+        goto err;
 
-    for (int i = 0; i < FGPU_MAX_NUM_COLORS; i++)
-        g_host_ctx->last_tags[i] = -1;
-
-    for (int i = 0; i < FGPU_MAX_PENDING_TASKS; i++)
-        g_host_ctx->tag_to_info[i].tag = -1;
+    ret = gpuErrCheck(cudaMemset((void *)g_host_ctx->d_dev_indicators, 0,
+                sizeof(fgpu_indicators_t)));
+    if (ret < 0)
+        goto err;
 
     ret = init_device_info(g_host_ctx);
     if (ret < 0)
         goto err;
+
+    ret = init_shared_mutex(&g_host_ctx->launch_lock);
+    if (ret < 0)
+        goto err;
+
+    ret = init_shared_condvar(&g_host_ctx->launch_cond);
+    if (ret < 0)
+        goto err;
+
+    g_host_ctx->is_lauchpad_free = true;
+    g_host_ctx->last_num_pblocks_launched = 0;
+    g_host_ctx->last_color = -1;
+
+    ret = init_shared_mutex(&g_host_ctx->streams_lock);
+    if (ret < 0)
+        goto err;
+
+    for (int i = 0; i < g_host_ctx->num_colors; i++) {
+        ret = init_shared_condvar(&g_host_ctx->streams_cond[i]);
+        if (ret < 0)
+            goto err;
+        g_host_ctx->is_stream_free[i] = true;
+    }
 
     /* 
      * Server doesn't need to create streams because server is not launching
@@ -324,6 +419,9 @@ void fgpu_server_deinit(void)
     if (g_host_ctx) {
         if (g_host_ctx->d_bindexes != NULL)
             cudaFree((void *)g_host_ctx->d_bindexes);
+
+        if (g_host_ctx->d_dev_indicators != NULL)
+            cudaFree((void *)g_host_ctx->d_dev_indicators);
     }
     
     if (h_indicators != NULL) {
@@ -391,7 +489,7 @@ int fgpu_init(void)
 
     /* Create seperate streams for each color */
     for (int i = 0; i < g_host_ctx->num_colors; i++) {
-        ret = gpuErrCheck(cudaStreamCreate(&streams[i]));
+        ret = gpuErrCheck(cudaStreamCreateWithFlags(&streams[i], cudaStreamDefault));
         if (ret < 0)
             goto err;
     }
@@ -420,54 +518,67 @@ void fgpu_deinit(void)
 /* Wait for last launched kernel to be completely started */
 static void wait_for_last_start(void)
 {
-    if (g_host_ctx->last_color >= 0) {
-        int last_tag = g_host_ctx->last_tags[g_host_ctx->last_color];
-
-        if (last_tag >= 0) {
-
-            kernel_info_t last_info;
-
-            last_info = g_host_ctx->tag_to_info[last_tag];
-            
-            /* 
-             * Need to wait for the last launched kernel to indicate all blocks
-             * have been launched.
-             */
-            assert(last_info.is_done == false);
-            for (int i = 0; i < last_info.num_pblocks_launched; i++) {
-                while (!h_indicators->indicators[i].started[last_info.color]);
-                h_indicators->indicators[i].started[last_info.color] = false;
-            }
-            g_host_ctx->last_color = -1;
-        }
+    pthread_mutex_lock(&g_host_ctx->launch_lock);
+    while (1) {
+        if (g_host_ctx->is_lauchpad_free)
+            break;
+        pthread_cond_wait(&g_host_ctx->launch_cond, &g_host_ctx->launch_lock);
     }
+    g_host_ctx->is_lauchpad_free = false;
+    pthread_mutex_unlock(&g_host_ctx->launch_lock);
+
+    /* Wait for all pblocks to be accounted for */
+    for (int i = 0; i < g_host_ctx->last_num_pblocks_launched; i++) {
+        while (!h_indicators->indicators[i].started);
+        h_indicators->indicators[i].started = false;
+    }
+}
+
+/* Called when cuda stream operation completes 
+ * Unforntunately, currently Nvidia does't provide with stream callbacks with MPS
+ */
+static void stream_callback(int color)
+{
+    pthread_mutex_lock(&g_host_ctx->streams_lock);
+    g_host_ctx->is_stream_free[color] = true;
+    pthread_cond_signal(&g_host_ctx->streams_cond[color]);
+    pthread_mutex_unlock(&g_host_ctx->streams_lock);
+}
+
+/* Called after kernel has been launched */
+int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
+{
+    int ret;
+
+    g_host_ctx->last_color = ctx->color;
+    g_host_ctx->last_num_pblocks_launched = ctx->num_pblock;
+
+    pthread_mutex_lock(&g_host_ctx->launch_lock);
+    g_host_ctx->is_lauchpad_free = true;
+    pthread_cond_signal(&g_host_ctx->launch_cond);
+    pthread_mutex_unlock(&g_host_ctx->launch_lock);
+
+    ret = gpuErrCheck(cudaStreamSynchronize(streams[ctx->color]));
+
+    stream_callback(ctx->color);
+
+    return ret;
 }
 
 /* Wait for last launched kernel of a specific color to be completed */
-static int wait_for_last_complete(int color)
+static void wait_for_last_complete(int color)
 {
-    int ret = 0;;
-
-//    gpuErrCheck(cudaStreamSynchronize(streams[color]));
-//    last_color = -1;
-//    return 0;
-
-    if (g_host_ctx->last_tags[color] >= 0) {
-        kernel_info_t *last_info;
-        ret = gpuErrCheck(cudaStreamSynchronize(streams[color]));
-
-        last_info = &g_host_ctx->tag_to_info[g_host_ctx->last_tags[color]];
-        last_info->is_done = true;
-        last_info->return_code = ret;
-        g_host_ctx->last_tags[color] = -1;
-
-        if (g_host_ctx->last_color == color)
-            g_host_ctx->last_color = -1;
+    pthread_mutex_lock(&g_host_ctx->streams_lock);
+    while (1) {
+        if (g_host_ctx->is_stream_free[color])
+            break;
+        pthread_cond_wait(&g_host_ctx->streams_cond[color], &g_host_ctx->streams_lock);
     }
-
-    return ret;
-
+    g_host_ctx->is_stream_free[color] = false;
+    pthread_mutex_unlock(&g_host_ctx->streams_lock);
 }
+
+
 /* Prepare ctx before launch */
 int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream)
 {
@@ -475,10 +586,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     uint32_t num_threads;
     uint32_t num_pblocks;
     int color = ctx->color;
-    int ret;
-    kernel_info_t info;
 
-    int tag;
     if (color >= g_host_ctx->num_colors || color < 0)
         return -1;
 
@@ -498,9 +606,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     if (num_threads < FGPU_MIN_BLOCKDIMS)
         return -1;
     
-    ret = wait_for_last_complete(color);
-    if (ret < 0)
-        return ret;
+    wait_for_last_complete(color);
 
     wait_for_last_start();
 
@@ -510,56 +616,24 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     ctx->num_blocks = num_blocks;
     ctx->index = g_host_ctx->cur_indexes[color];
     g_host_ctx->cur_indexes[color] ^= 1;   /* Toggle the index */
-    ctx->d_indicators = g_host_ctx->d_indicators;
+    ctx->d_host_indicators = g_host_ctx->d_host_indicators;
+    ctx->d_dev_indicators = g_host_ctx->d_dev_indicators;
     ctx->d_bindex = g_host_ctx->d_bindexes;
     ctx->start_sm = g_host_ctx->color_to_sms[color].first;
     ctx->end_sm = g_host_ctx->color_to_sms[color].second;
-
-    tag = ++g_host_ctx->cur_tag % FGPU_MAX_PENDING_TASKS;
-    info.color = color;
-    info.num_pblocks_launched = num_pblocks;
-    info.is_done = false;
-    g_host_ctx->tag_to_info[tag] = info;
-
-    g_host_ctx->last_tags[color] = tag;
-    g_host_ctx->last_color = color;
 
     _gridDim->x = num_pblocks;
     _gridDim->y = 1;
     _gridDim->z = 1;
     *stream = &streams[color];
 
-    return tag;
+    return 0;
 }
 
-int fgpu_wait_for_kernel(int tag)
+cudaError_t fgpu_color_stream_synchronize(int color)
 {
-//    std::map<int, kernel_info_t>::iterator it = g_host_ctx->tag_to_info.find(tag);
-    kernel_info_t info;
-    int ret;
+    if (color >= g_host_ctx->num_colors || color < 0)
+        return cudaErrorInvalidValue;
 
-//    if (it == g_host_ctx->tag_to_info.end())
-//        return -1;
-
-//    info = it->second;
-    info = g_host_ctx->tag_to_info[tag];
-
-    if (info.tag == -1)
-        return -1;
-
-    if (info.is_done) {
-        g_host_ctx->tag_to_info[tag].tag = -1;
-//        g_host_ctx->tag_to_info.erase(tag);
-        return info.return_code;
-    }
-
-    assert(tag == g_host_ctx->last_tags[info.color]);
-
-    ret = wait_for_last_complete(info.color);
-
-    g_host_ctx->tag_to_info[tag].tag = -1;
-//    g_host_ctx->tag_to_info.erase(tag);
-
-    return ret;
+    return cudaStreamSynchronize(streams[color]);
 }
-

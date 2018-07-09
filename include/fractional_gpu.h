@@ -6,18 +6,18 @@
 
 #include <persistent.h>
 
-typedef struct fgpu_bindexes fgpu_bindexes_t;
-typedef struct fgpu_indicators fgpu_indicators_t;
-
 /* This structure is context that is handed over to kernel by host */
 typedef struct fgpu_dev_ctx {
-    volatile fgpu_indicators_t *d_indicators;  /* Used to indicate launch completion */
-    fgpu_bindexes_t *d_bindex;        /* Used to gather block indexes */
+    volatile fgpu_indicators_t *d_host_indicators;  /* Used to indicate launch completion to host */
+    volatile fgpu_indicators_t *d_dev_indicators;  /* Used to indicate launch completion to pblock */
+
+    fgpu_bindexes_t *d_bindex;      /* Used to gather block indexes */
     int color;                      /* Color to be used by the kernel */
     int index;                      /* Index within the color */
     uint3 gridDim;                  /* User provided grid dimensions */
     uint3 blockDim;                 /* User provided block dimensions */
     int num_blocks;                 /* Number of blocks to be spawned */
+    int num_pblock;                 /* Number of persistent thread blocks spawned */
     int start_sm;
     int end_sm;
     int _blockIdx;
@@ -28,44 +28,47 @@ void fgpu_server_deinit(void);
 int fgpu_init(void);
 void fgpu_deinit(void);
 int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream);
-int fgpu_wait_for_kernel(int tag);
-
+int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
+cudaError_t fgpu_color_stream_synchronize(int color);
 
 /* Macro to launch kernel - Returns a tag - Negative if error */
 #define FGPU_LAUNCH_KERNEL(_color, _gridDim, _blockDim, sharedMem, func, ...)  \
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
-    int tag;                                                                \
+    int ret;                                                                \
     uint3 _lgridDim;                                                        \
     cudaStream_t *stream;                                                   \
     dev_fctx.color = _color;                                                \
     dev_fctx.gridDim = _gridDim;                                            \
     dev_fctx.blockDim = _blockDim;                                          \
     dev_fctx._blockIdx =  -1;                                               \
-    tag = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
-    if (tag >= 0) {                                                         \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    if (ret >= 0) {                                                         \
         func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx, __VA_ARGS__); \
+        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
     }                                                                       \
                                                                             \
-    tag;                                                                    \
+    ret;                                                                    \
 })
 
 #define FGPU_LAUNCH_VOID_KERNEL(_color, _gridDim, _blockDim, sharedMem, func)  \
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
-    int tag;                                                                \
+    int ret;                                                                \
     uint3 _lgridDim;                                                        \
     cudaStream_t *stream;                                                   \
     dev_fctx.color = _color;                                                \
     dev_fctx.gridDim = _gridDim;                                            \
     dev_fctx.blockDim = _blockDim;                                          \
     dev_fctx._blockIdx = -1;                                                \
-    tag = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
-    if (tag >= 0) {                                                         \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    if (ret >= 0) {                                                         \
         func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx);       \
+        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
     }                                                                       \
+    fgpu_complete_launch_kernel(&dev_fctx);                                 \
                                                                             \
-    tag;                                                                    \
+    ret;                                                                    \
 })
 
 /* Macro to define (modified) kernels (with no args) */
@@ -90,11 +93,24 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
         /* Prepare for the next function */
         dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
 
+
+        dev_ctx->d_dev_indicators->indicators[blockIdx.x].started = true;
+
+        /* Pblocks launched on wrong SM have to wait for all other pblocks to be launched */
+        if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
+            /* Poll in round robin fashion to avoid all reading same data at once */
+            for (int i = blockIdx.x + 1; i < dev_ctx->num_pblock; i++)
+                while(!dev_ctx->d_dev_indicators->indicators[i].started)
+            for (int i = 0; i < blockIdx.x; i++)
+                while(!dev_ctx->d_dev_indicators->indicators[i].started);
+        }
+
         /* Note: This is the most time taking process */
-        dev_ctx->d_indicators->indicators[blockIdx.x].started[dev_ctx->color] = true;
+        dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
     }
   
     if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
+        __syncthreads();
         return -1;
     }
     

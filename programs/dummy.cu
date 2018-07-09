@@ -54,7 +54,7 @@ int main()
     if (tag < 0)
         return tag;
 
-    ret = fgpu_wait_for_kernel(tag);
+    ret = gpuErrCheck(fgpu_color_stream_synchronize(0));
     if (ret < 0)
         return ret;
 
@@ -63,8 +63,7 @@ int main()
         start = dtime_usec(0);
         tag = FGPU_LAUNCH_VOID_KERNEL(0, grid, threads, 0, dummy);
         assert(tag);
-        ret = fgpu_wait_for_kernel(tag);
-        assert(ret == 0);
+	gpuErrAssert(fgpu_color_stream_synchronize(0));
         printf("Dummy Time:%f\n", dtime_usec(start));
     }
 */
@@ -74,8 +73,7 @@ int main()
         start = dtime_usec(0);
         tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, simple, d_out);
         assert(tag);
-        ret = fgpu_wait_for_kernel(tag);
-        assert(ret == 0);
+	gpuErrAssert(fgpu_color_stream_synchronize(0));
         printf("Simple Time:%f\n", dtime_usec(start));
     }
     

@@ -228,9 +228,10 @@ int matrixMultiply(void)
         if (ret < 0)
             return ret;
 
-        ret = fgpu_wait_for_kernel(tag);
-        if (ret < 0)
-            return ret;
+	ret = gpuErrCheck(fgpu_color_stream_synchronize(0));
+    	if (ret < 0)
+        	return ret;
+
         total = dtime_usec(start);
         printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }

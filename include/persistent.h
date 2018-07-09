@@ -9,17 +9,17 @@ struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_bindex {
 };
 
 /* Memory where persistent kernels use atomic operations to get block index */
-struct fgpu_bindexes {
+typedef struct fgpu_bindexes {
     struct fgpu_bindex bindexes[FGPU_MAX_NUM_COLORS];
-};
+} fgpu_bindexes_t;
 
 struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_indicator {
-    bool started[FGPU_MAX_NUM_COLORS];
+    bool started;
 };
 
 /* Memory where persistent kernel indicates to host that it successfully launched */
-struct fgpu_indicators {
+typedef struct fgpu_indicators {
     struct fgpu_indicator indicators[FGPU_MAX_NUM_PBLOCKS];
-};
+} fgpu_indicators_t;
 
 #endif /* PERSISTENT_H */
