@@ -8,15 +8,13 @@
 /* Maximum number of colors supported - This is also limited by number of streams */
 #define FGPU_MAX_NUM_COLORS             8
 
-/* Maximum number of SMs on device supported */
-#define FGPU_MAX_NUM_SM                 100
+/* Maximum number of persistent blocks */
+#define FGPU_MAX_NUM_PBLOCKS            6400
 
-/* Maximum number of blocks per SM supported */
-#define FGPU_MAX_NUM_BLOCKS_PER_SM      64
+/* Minimum threads in a block - Minimum unit is a warp on CUDA device */
+#define FGPU_MIN_BLOCKDIMS              32
 
-/* TODO: Remove these and query per device */
-#define FGPU_NUM_COLORS                 2
-#define FGPU_NUM_SM                     15
-#define FGPU_NUM_THREADS_PER_SM         2048
+/* Maximum number of pending CUDA tasks */
+#define FGPU_MAX_PENDING_TASKS          100
 
 #endif /* CONFIG_H */

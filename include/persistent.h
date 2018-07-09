@@ -17,8 +17,9 @@ struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_indicator {
     bool started[FGPU_MAX_NUM_COLORS];
 };
 
+/* Memory where persistent kernel indicates to host that it successfully launched */
 struct fgpu_indicators {
-    struct fgpu_indicator indicators[FGPU_MAX_NUM_BLOCKS_PER_SM * FGPU_MAX_NUM_SM];
+    struct fgpu_indicator indicators[FGPU_MAX_NUM_PBLOCKS];
 };
 
 #endif /* PERSISTENT_H */

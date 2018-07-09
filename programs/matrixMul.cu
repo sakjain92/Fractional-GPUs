@@ -12,11 +12,18 @@ FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
 {
     FGPU_DEVICE_INIT();
     uint3 _blockIdx;
-    int count = 0;
 
-#pragma unroll 1
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+//#pragma unroll 1    
+//    for (int idx = blockIdx.x; idx < 200; idx += 30) {
 
+//        _blockIdx.y = idx / 20;
+//        _blockIdx.x = idx - _blockIdx.y * 20;
+#if 0
+        C[32 * blockIdx.x + _blockIdx.x + 1] = _blockIdx.x;
+        C[32 * blockIdx.x + _blockIdx.x + 2] = _blockIdx.y;
+        C[32 * blockIdx.x + _blockIdx.x + 3] = _blockIdx.z;
+#else
         // Block index
         int bx = _blockIdx.x;
         int by = _blockIdx.y;
@@ -88,8 +95,8 @@ FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
         // each thread writes one element
         int c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
         C[c + wB * ty + tx] = Csub;
-        count++;
-    }
+#endif   
+    } FGPU_FOR_EACH_END;
 }
 
 
@@ -204,24 +211,26 @@ int matrixMultiply(void)
 
     int tag, ret;
 
-    for (int j = 0; j < 10000; j++)
+    for (int j = 0; j < nIter; j++)
     {
         double start, total;
         start = dtime_usec(0);
 
         if (block_size == 16)
         {
-//            matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
             tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-//            matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
             tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
-        assert(tag);
+        ret = tag;
+        if (ret < 0)
+            return ret;
+
         ret = fgpu_wait_for_kernel(tag);
-        assert(ret == 0);
+        if (ret < 0)
+            return ret;
         total = dtime_usec(start);
         printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
@@ -263,15 +272,15 @@ int matrixMultiply(void)
     {
         if (block_size == 16)
         {
-//            matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
             tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-//            matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
             tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
-        assert(tag);
+        tag = ret;
+        if (ret < 0)
+            return ret;
     }
 
     // Record the stop event
@@ -374,10 +383,16 @@ int matrixMultiply(void)
 
 int main()
 {
-    assert(fgpu_init() == 0);
+    int ret;
+    ret = fgpu_init();
+    if (ret < 0)
+        return ret;
 
-    matrixMultiply();
+    ret = matrixMultiply();
+    if (ret < 0)
+        return ret;
 
     fgpu_deinit();
+
     return 0;
 }

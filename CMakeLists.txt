@@ -13,13 +13,21 @@ include_directories(include)
 
 string(APPEND CMAKE_CUDA_FLAGS " -arch=${TARGET}")
 
+#server
+add_executable(server persistent/persistent.cu
+		       programs/server.cu)
+
+target_compile_features(server PUBLIC cxx_std_11)
+
+target_link_libraries(server cuda)
+
 # Matrix Multiplication
 add_executable(matrixMul persistent/persistent.cu
 		       programs/matrixMul.cu)
 
 target_compile_features(matrixMul PUBLIC cxx_std_11)
 
-set_target_properties(matrixMul PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(matrixMul cuda)
 
 # Dummy
 add_executable(dummy persistent/persistent.cu
@@ -27,4 +35,4 @@ add_executable(dummy persistent/persistent.cu
 
 target_compile_features(dummy PUBLIC cxx_std_11)
 
-set_target_properties( PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(dummy cuda)
