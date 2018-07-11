@@ -31,13 +31,11 @@
 
 #include "sortingNetworks_common.h"
 
-#include <fractional_gpu.h>
 ////////////////////////////////////////////////////////////////////////////////
 // Test driver
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-    int ret, color;
     cudaError_t error;
     uint arrayLength;
     uint threadCount;
@@ -45,19 +43,7 @@ int main(int argc, char **argv)
     printf("%s Starting...\n\n", argv[0]);
 
     printf("Starting up CUDA context...\n");
-
-    if (argc != 2) {
-        fprintf(stderr, "Insufficient number of arguments\n");
-        exit(-1);
-    }
-
-    color = atoi(argv[1]);
-
-    printf("Color selected:%d\n", color);
-
-    ret = fgpu_init();
-    if (ret < 0)
-        return ret;
+    int dev = findCudaDevice(argc, (const char **)argv);
 
     uint *h_InputKey, *h_InputVal, *h_OutputKeyGPU, *h_OutputValGPU;
     uint *d_InputKey, *d_InputVal,    *d_OutputKey,    *d_OutputVal;
@@ -116,8 +102,7 @@ int main(int argc, char **argv)
                               d_InputVal,
                               N / arrayLength,
                               arrayLength,
-                              DIR,
-			                  color
+                              DIR
                           );
 
         error = cudaDeviceSynchronize();
@@ -165,8 +150,7 @@ int main(int argc, char **argv)
                 d_InputVal,
                 N / arrayLength,
                 arrayLength,
-                DIR,
-                color
+                DIR
                 );
 
     error = cudaDeviceSynchronize();
@@ -192,8 +176,6 @@ int main(int argc, char **argv)
     free(h_OutputKeyGPU);
     free(h_InputVal);
     free(h_InputKey);
-
-    fgpu_deinit();
 
     exit(flag ? EXIT_SUCCESS : EXIT_FAILURE);
 }

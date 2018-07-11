@@ -117,7 +117,7 @@ void constantInit(float *data, int size, float val)
 int matrixMultiply(int color)
 {
     int block_size = 32;
-    dim3 dimsA(10 * block_size, 10 * block_size, 1);
+    dim3 dimsA(10 * block_size, 100 * block_size, 1);
     dim3 dimsB(20 * block_size, 10 * block_size, 1);
 
     // Allocate host memory for matrices A and B
@@ -208,7 +208,7 @@ int matrixMultiply(int color)
     dim3 grid(dimsB.x / threads.x, dimsA.y / threads.y);
 
     // Execute the kernel
-    int nIter = 10000;
+    int nIter = 1000;
 
     int ret;
 
@@ -320,7 +320,7 @@ int matrixMultiply(int color)
         msecPerMatrixMul,
         flopsPerMatrixMul,
         threads.x * threads.y);
-    
+
     // Copy result from device to host
     error = cudaMemcpyAsync(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost, stream);
 
@@ -359,12 +359,10 @@ int matrixMultiply(int color)
     }
 
     printf("%s\n", correct ? "Result = PASS" : "Result = FAIL");
-    
     // Clean up memory
     free(h_A);
     free(h_B);
     free(h_C);
-
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
