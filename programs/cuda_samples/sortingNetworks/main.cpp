@@ -31,6 +31,8 @@
 
 #include "sortingNetworks_common.h"
 
+#include <common.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 // Test driver
 ////////////////////////////////////////////////////////////////////////////////
@@ -134,13 +136,14 @@ int main(int argc, char **argv)
 
     printf("Running in Loop\n");
     arrayLength = N;
-    numIterations = 1000;
+    numIterations = 10000;
     printf("Testing array length %u (%u arrays per batch)...\n", arrayLength, N / arrayLength);
     error = cudaDeviceSynchronize();
     checkCudaErrors(error);
 
-    sdkResetTimer(&hTimer);
-    sdkStartTimer(&hTimer);
+
+    double start, total;
+    start = dtime_usec(0);
 
     for (uint i = 0; i < numIterations; i++)
         threadCount = bitonicSort(
@@ -156,8 +159,10 @@ int main(int argc, char **argv)
     error = cudaDeviceSynchronize();
     checkCudaErrors(error);
 
-    sdkStopTimer(&hTimer);
-    printf("Average time: %f ms\n\n", sdkGetTimerValue(&hTimer) / numIterations);
+    total = dtime_usec(start);
+    
+    printf("Average time: %f ms\n\n", total / numIterations / 1000);
+
 
     if (arrayLength == N)
     {

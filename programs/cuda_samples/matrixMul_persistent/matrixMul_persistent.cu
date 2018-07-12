@@ -117,7 +117,7 @@ void constantInit(float *data, int size, float val)
 int matrixMultiply(int color)
 {
     int block_size = 32;
-    dim3 dimsA(10 * block_size, 100 * block_size, 1);
+    dim3 dimsA(10 * block_size, 10 * block_size, 1);
     dim3 dimsB(20 * block_size, 10 * block_size, 1);
 
     // Allocate host memory for matrices A and B
@@ -157,7 +157,6 @@ int matrixMultiply(int color)
         exit(EXIT_FAILURE);
     }
 
-
     error = cudaMalloc((void **) &d_B, mem_size_B);
 
     if (error != cudaSuccess)
@@ -186,7 +185,6 @@ int matrixMultiply(int color)
         exit(EXIT_FAILURE);
     }
 
-
     error = cudaMemcpyAsync(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice, stream);
 
     if (error != cudaSuccess)
@@ -208,13 +206,14 @@ int matrixMultiply(int color)
     dim3 grid(dimsB.x / threads.x, dimsA.y / threads.y);
 
     // Execute the kernel
-    int nIter = 1000;
+    int nIter = 10000;
 
     int ret;
+    double start, total;
+
 
     for (int j = 0; j < nIter; j++)
     {
-        double start, total;
         start = dtime_usec(0);
 
         if (block_size == 16)
@@ -236,39 +235,7 @@ int matrixMultiply(int color)
         printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
 
-    // Create and start timer
-    printf("Computing result using CUDA Kernel...\n");
-
-//    cudaDeviceSynchronize();
-
-    // Allocate CUDA events that we'll use for timing
-    cudaEvent_t start;
-    error = cudaEventCreate(&start);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to create start event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    cudaEvent_t stop;
-    error = cudaEventCreate(&stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to create stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    // Record the start event
-    error = cudaEventRecord(start, NULL);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to record start event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
+    start = dtime_usec(0);
     for (int j = 0; j < nIter; j++)
     {
         if (block_size == 16)
@@ -283,39 +250,18 @@ int matrixMultiply(int color)
             return ret;
     }
 
-    // Record the stop event
-    error = cudaEventRecord(stop, NULL);
+    ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+    if (ret < 0)
+        return ret;
 
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to record stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    // Wait for the stop event to complete
-    error = cudaEventSynchronize(stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to synchronize on the stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    float msecTotal = 0.0f;
-    error = cudaEventElapsedTime(&msecTotal, start, stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to get time elapsed between events (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
+    total = dtime_usec(start);
+    
     // Compute and print the performance
-    float msecPerMatrixMul = msecTotal / nIter;
+    double msecPerMatrixMul = total / nIter / 1000;
     double flopsPerMatrixMul = 2.0 * (double)dimsA.x * (double)dimsA.y * (double)dimsB.x;
     double gigaFlops = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
     printf(
-        "Performance= %.2f GFlop/s, Time= %.3f msec, Size= %.0f Ops, WorkgroupSize= %u threads/block\n",
+        "Performance= %.2f GFlop/s, Time= %.6f msec, Size= %.0f Ops, WorkgroupSize= %u threads/block\n",
         gigaFlops,
         msecPerMatrixMul,
         flopsPerMatrixMul,

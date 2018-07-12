@@ -36,6 +36,8 @@
 #include <helper_functions.h>
 #include <helper_cuda.h>
 
+#include <common.h>
+
 /**
  * Matrix multiplication (CUDA Kernel) on the device: C = A * B
  * wA is A's width and wB is B's width
@@ -124,14 +126,6 @@ void constantInit(float *data, int size, float val)
     }
 }
 
-#define USECPSEC 1000000ULL
-inline double dtime_usec(unsigned long long start)
-{
-  timeval tv;
-  gettimeofday(&tv, 0);
-  return (double)(((tv.tv_sec*USECPSEC)+tv.tv_usec)-start);
-}
-
 /**
  * Run a simple test of matrix multiplication using CUDA
  */
@@ -215,55 +209,28 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
     printf("Computing result using CUDA Kernel...\n");
 
    // Execute the kernel
-    int nIter = 1000;
-
-    for (int i = 0; i < nIter; i++) {
+    int nIter = 10000;
     double start, total;
 
+    for (int i = 0; i < nIter; i++) {
+
+        start = dtime_usec(0);
+        // Performs warmup operation using matrixMul CUDA kernel
+        if (block_size == 16)
+        {
+            matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+        else
+        {
+            matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+
+        cudaDeviceSynchronize();
+        total = dtime_usec(start);
+        printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
+    }
+
     start = dtime_usec(0);
-    // Performs warmup operation using matrixMul CUDA kernel
-    if (block_size == 16)
-    {
-        matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
-    }
-    else
-    {
-        matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
-    }
-
-    cudaDeviceSynchronize();
-    total = dtime_usec(start);
-    printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
-    }
-
-    // Allocate CUDA events that we'll use for timing
-    cudaEvent_t start;
-    error = cudaEventCreate(&start);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to create start event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    cudaEvent_t stop;
-    error = cudaEventCreate(&stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to create stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    // Record the start event
-    error = cudaEventRecord(start, NULL);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to record start event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
     for (int j = 0; j < nIter; j++)
     {
         if (block_size == 16)
@@ -274,42 +241,17 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
         {
             matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
-	cudaDeviceSynchronize();
     }
-
-    // Record the stop event
-    error = cudaEventRecord(stop, NULL);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to record stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    // Wait for the stop event to complete
-    error = cudaEventSynchronize(stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to synchronize on the stop event (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-
-    float msecTotal = 0.0f;
-    error = cudaEventElapsedTime(&msecTotal, start, stop);
-
-    if (error != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to get time elapsed between events (error code %s)!\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
+    
+    cudaDeviceSynchronize();
+    total = dtime_usec(start);
 
     // Compute and print the performance
-    float msecPerMatrixMul = msecTotal / nIter;
+    double msecPerMatrixMul = total / nIter / 1000;
     double flopsPerMatrixMul = 2.0 * (double)dimsA.x * (double)dimsA.y * (double)dimsB.x;
     double gigaFlops = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
     printf(
-        "Performance= %.2f GFlop/s, Time= %.3f msec, Size= %.0f Ops, WorkgroupSize= %u threads/block\n",
+        "Performance= %.2f GFlop/s, Time= %.6f msec, Size= %.0f Ops, WorkgroupSize= %u threads/block\n",
         gigaFlops,
         msecPerMatrixMul,
         flopsPerMatrixMul,
@@ -391,7 +333,7 @@ int main(int argc, char **argv)
 
     int block_size = 32;
 
-    dim3 dimsA(10 * block_size, 100 * block_size, 1);
+    dim3 dimsA(10 * block_size, 10 * block_size, 1);
     dim3 dimsB(20 * block_size, 10 * block_size, 1);
 
     // width of Matrix A

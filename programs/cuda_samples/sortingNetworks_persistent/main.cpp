@@ -31,6 +31,7 @@
 
 #include "sortingNetworks_common.h"
 
+#include <common.h>
 #include <fractional_gpu.h>
 ////////////////////////////////////////////////////////////////////////////////
 // Test driver
@@ -149,13 +150,14 @@ int main(int argc, char **argv)
 
     printf("Running in Loop\n");
     arrayLength = N;
-    numIterations = 1000;
+    numIterations = 10000;
     printf("Testing array length %u (%u arrays per batch)...\n", arrayLength, N / arrayLength);
     error = cudaDeviceSynchronize();
     checkCudaErrors(error);
 
-    sdkResetTimer(&hTimer);
-    sdkStartTimer(&hTimer);
+
+    double start, total;
+    start = dtime_usec(0);
 
     for (uint i = 0; i < numIterations; i++)
         threadCount = bitonicSort(
@@ -168,16 +170,17 @@ int main(int argc, char **argv)
                 DIR,
                 color
                 );
+     ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+    	if (ret < 0)
+        	return ret;
 
-    error = cudaDeviceSynchronize();
-    checkCudaErrors(error);
-
-    sdkStopTimer(&hTimer);
-    printf("Average time: %f ms\n\n", sdkGetTimerValue(&hTimer) / numIterations);
+    total = dtime_usec(start);
+    
+    printf("Average time: %f ms\n\n", total / numIterations / 1000);
 
     if (arrayLength == N)
     {
-        double dTimeSecs = 1.0e-3 * sdkGetTimerValue(&hTimer) / numIterations;
+        double dTimeSecs = 1.0e-6 * total / numIterations;
         printf("sortingNetworks-bitonic, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u elements, NumDevsUsed = %u, Workgroup = %u\n",
                 (1.0e-6 * (double)arrayLength/dTimeSecs), dTimeSecs, arrayLength, 1, threadCount);
     }
