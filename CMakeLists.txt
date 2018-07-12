@@ -39,7 +39,7 @@ function(add_native_target target include_dir)
     target_compile_features(${target} PUBLIC cxx_std_11)
     target_include_directories(${target}  PUBLIC ${include_dir})
 
-endfunction(add_persistent_target)
+endfunction(add_native_target)
 
 #server
 add_persistent_target(server programs programs/server.cu)
@@ -67,3 +67,18 @@ add_persistent_target(sortingNetworks_persistent programs/cuda_sample/sortingNet
     programs/cuda_samples/sortingNetworks_persistent/bitonicSort.cu
     programs/cuda_samples/sortingNetworks_persistent/oddEvenMergeSort.cu
     programs/cuda_samples/sortingNetworks_persistent/sortingNetworks_validate.cpp)
+
+# Mandlebrot
+add_native_target(mandlebrot programs/mandlebrot
+    programs/mandlebrot/main.cu programs/mandlebrot/bmp.cpp)
+
+add_persistent_target(mandlebrot_persistent programs/mandlebrot_persistent
+    programs/mandlebrot_persistent/main.cu programs/mandlebrot_persistent/bmp.cpp)
+
+# conjugateGradientMultiBlockCG
+#add_native_target(conjugateGradientMultiBlockCG programs/cuda_samples/conjugateGradientMultiBlockCG
+#    programs/cuda_samples/conjugateGradientMultiBlockCG/conjugateGradientMultiBlockCG.cu)
+
+#add_persistent_target(conjugateGradientMultiBlockCG_persistent programs/cuda_samples/conjugateGradientMultiBlockCG_persistent
+#    programs/cuda_samples/conjugateGradientMultiBlockCG_persistent/conjugateGradientMultiBlockCG_persistent.cu)
+
