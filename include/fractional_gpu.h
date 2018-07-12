@@ -30,5 +30,6 @@ void fgpu_deinit(void);
 int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream);
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
 cudaError_t fgpu_color_stream_synchronize(int color);
+int fpgpu_num_sm(int color, int *num_sm);
 
 #endif /* FRACTIONAL_GPU */

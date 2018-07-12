@@ -91,11 +91,19 @@ static bool is_mps_enabled(void)
 {
     int ret;
     struct stat st;
+    cudaDeviceProp device_prop;
 
     ret = stat(FGPU_MPS_CONTROL_NAME, &st);
     if (ret < 0)
         return false;
 
+    /* Device must be set in exclusive mode */
+    ret = gpuErrCheck(cudaGetDeviceProperties(&device_prop, FGPU_DEVICE_NUMBER));
+    if (ret < 0)
+        return false;
+
+    if (device_prop.computeMode != cudaComputeModeExclusiveProcess)
+        return false;
     return true;
 }
 
@@ -276,11 +284,6 @@ int fgpu_server_init(void)
     ret = gpuDriverErrCheck(cuInit(0));
     if (ret < 0)
         goto err;
-    
-    if (!is_mps_enabled()) {
-        fprintf(stderr, "MPS is not enabled\n");
-        goto err;
-    }
 
     /* Create the shared memory */
     ret = shmem_fd = shm_open(FGPU_SHMEM_NAME,
@@ -406,6 +409,12 @@ int fgpu_server_init(void)
             goto err;
         g_host_ctx->is_stream_free[i] = true;
     }
+     
+    if (!is_mps_enabled()) {
+        fprintf(stderr, "MPS is not enabled\n");
+        ret = -1;
+        goto err;
+    }
 
     /* 
      * Server doesn't need to create streams because server is not launching
@@ -452,12 +461,6 @@ int fgpu_init(void)
     int ret;
     size_t page_size;
     size_t shmem_size;
-
-    if (!is_mps_enabled()) {
-        fprintf(stderr, "MPS is not enabled\n");
-        goto err;
-    }
-
 
     /* Create the shared memory */
     ret = shmem_fd = shm_open(FGPU_SHMEM_NAME, O_RDWR, S_IRUSR | S_IWUSR);
@@ -520,6 +523,16 @@ int fgpu_init(void)
         if (ret < 0)
             goto err;
     }
+
+    ret = gpuErrCheck(cudaSetDevice(FGPU_DEVICE_NUMBER));
+    if (ret < 0)
+        return ret;
+
+    if (!is_mps_enabled()) {
+        fprintf(stderr, "MPS is not enabled\n");
+        goto err;
+    }
+
 
     return 0;
 
@@ -674,4 +687,14 @@ cudaError_t fgpu_color_stream_synchronize(int color)
         return cudaErrorInvalidValue;
 
     return cudaStreamSynchronize(streams[color]);
+}
+
+int fpgpu_num_sm(int color, int *num_sm)
+{
+    if (color >= g_host_ctx->num_colors || color < 0)
+        return -1;
+
+    *num_sm = g_host_ctx->color_to_sms[color].second - 
+        g_host_ctx->color_to_sms[color].first + 1;
+    return 0;
 }
