@@ -3,7 +3,7 @@ set(TARGET sm_61)
 # TODO: Which version do we want?
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
-project(fractional_gpu LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
+project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
 
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -40,6 +40,19 @@ function(add_native_target target include_dir)
     target_include_directories(${target}  PUBLIC ${include_dir})
 
 endfunction(add_native_target)
+
+# Library
+add_library(fractional_gpu SHARED
+    persistent/persistent.cu
+)
+set_property(TARGET fractional_gpu PROPERTY VERSION ${PROJECT_VERSION})
+set_property(TARGET fractional_gpu PROPERTY PUBLIC_HEADER
+		include/fractional_gpu.h
+		include/fractional_gpu_cuda.cuh)
+target_include_directories(fractional_gpu PRIVATE include)
+target_include_directories(fractional_gpu PRIVATE persistent)
+target_compile_features(fractional_gpu PUBLIC cxx_std_11)
+target_link_libraries(fractional_gpu cuda)
 
 #server
 add_persistent_target(server programs programs/server.cu)

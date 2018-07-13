@@ -3,7 +3,8 @@ Fractional GPUs framework allows system architects to split a single GPU into
 smaller independent partitions, each completely isolated from the other. 
 
 Currently we support only Nvidia's GPU and CUDA. Due to hardware limitations,
-applications require modifications to use this functionality.
+applications require modifications to use this functionality. Only one GPU is
+supported currently.
 
 ## Lanuguages Supported
 * C++
@@ -58,6 +59,7 @@ The paritioning feature requires the following:
 
 Steps to run an application are:
 ```
+sudo nvidia-smi --persistence-mode=1    // Optional : Useful for benchmarking. Tries to limit dynamic scaling of GPU
 cd $PROJECT_DIR
 mkdir build
 cd build
@@ -84,7 +86,7 @@ should be kept under programs/cuda_samples/)
 
 ### Creation
 * Make directory under programs/ or programs/cuda_samples/
-* Add all code (keeping all header files contained within one subdirectory)
+* Add all code
 
 ### Header Files
 * fractional_gpu.h needs to be included in any file calling host side API
@@ -151,7 +153,18 @@ index (of type uint3) to run, one at a time, till no more block index are left.
 The CUDA provided blockIdx __shouldn't__ be used.
 
 ### Adding application to build steps
-All applications are need to be added to CMakeList.txt to be included in build steps.
+There are two methods to build an application
+
+#### Using shared library (currently untested)
+After the build steps are completed, a shared library (libfractional_gpu.so) is
+created in the build directory. The application can be linked with this library.
+Remember to include the 'include/' directory in the include path while building
+the application to include the header files.
+
+#### Static Compilation
+Applications can be added to CMakeList.txt to be included in build steps.
 CMakeList.txt is self explanatory. add_native_target() function should be used
 for application that don't use partitioning feature and add_persistent_target()
-function should be used for application that do use the feature.
+function should be used for application that do use the feature. Both these
+functions expect all the include files of the application to be contained within
+one single directory.
