@@ -4,45 +4,6 @@
 
 #include <fractional_gpu.h>
 
-/* Macro to launch kernel - Returns a tag - Negative if error */
-#define FGPU_LAUNCH_KERNEL(_color, _gridDim, _blockDim, sharedMem, func, ...)  \
-({                                                                          \
-    fgpu_dev_ctx_t dev_fctx;                                                \
-    int ret;                                                                \
-    uint3 _lgridDim;                                                        \
-    cudaStream_t *stream;                                                   \
-    dev_fctx.color = _color;                                                \
-    dev_fctx.gridDim = _gridDim;                                            \
-    dev_fctx.blockDim = _blockDim;                                          \
-    dev_fctx._blockIdx =  -1;                                               \
-    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
-    if (ret >= 0) {                                                         \
-        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx, __VA_ARGS__); \
-        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
-    }                                                                       \
-                                                                            \
-    ret;                                                                    \
-})
-
-#define FGPU_LAUNCH_VOID_KERNEL(_color, _gridDim, _blockDim, sharedMem, func)  \
-({                                                                          \
-    fgpu_dev_ctx_t dev_fctx;                                                \
-    int ret;                                                                \
-    uint3 _lgridDim;                                                        \
-    cudaStream_t *stream;                                                   \
-    dev_fctx.color = _color;                                                \
-    dev_fctx.gridDim = _gridDim;                                            \
-    dev_fctx.blockDim = _blockDim;                                          \
-    dev_fctx._blockIdx = -1;                                                \
-    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
-    if (ret >= 0) {                                                         \
-        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx);       \
-        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
-    }                                                                       \
-    fgpu_complete_launch_kernel(&dev_fctx);                                 \
-                                                                            \
-    ret;                                                                    \
-})
 
 /* Macro to define (modified) kernels (with no args) */
 #define FGPU_DEFINE_VOID_KERNEL(func)                                       \
@@ -100,11 +61,6 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
         uint x, y, z;
 
         lblockIdx = atomicAdd(&dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index], 1);
-//        if (dev_ctx->_blockIdx == -1)
-//            dev_ctx->_blockIdx = blockIdx.x;
-//        else
-//            dev_ctx->_blockIdx += 30;
-//        lblockIdx = dev_ctx->_blockIdx;
 
         num2Dblocks = dev_ctx->gridDim.x * dev_ctx->gridDim.y;
         z = lblockIdx / (num2Dblocks);

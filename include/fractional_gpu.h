@@ -32,4 +32,44 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
 cudaError_t fgpu_color_stream_synchronize(int color);
 int fpgpu_num_sm(int color, int *num_sm);
 
+/* Macro to launch kernel - Returns a tag - Negative if error */
+#define FGPU_LAUNCH_KERNEL(_color, _gridDim, _blockDim, sharedMem, func, ...)  \
+({                                                                          \
+    fgpu_dev_ctx_t dev_fctx;                                                \
+    int ret;                                                                \
+    uint3 _lgridDim;                                                        \
+    cudaStream_t *stream;                                                   \
+    dev_fctx.color = _color;                                                \
+    dev_fctx.gridDim = _gridDim;                                            \
+    dev_fctx.blockDim = _blockDim;                                          \
+    dev_fctx._blockIdx =  -1;                                               \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    if (ret >= 0) {                                                         \
+        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx, __VA_ARGS__); \
+        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
+    }                                                                       \
+                                                                            \
+    ret;                                                                    \
+})
+
+#define FGPU_LAUNCH_VOID_KERNEL(_color, _gridDim, _blockDim, sharedMem, func)  \
+({                                                                          \
+    fgpu_dev_ctx_t dev_fctx;                                                \
+    int ret;                                                                \
+    uint3 _lgridDim;                                                        \
+    cudaStream_t *stream;                                                   \
+    dev_fctx.color = _color;                                                \
+    dev_fctx.gridDim = _gridDim;                                            \
+    dev_fctx.blockDim = _blockDim;                                          \
+    dev_fctx._blockIdx = -1;                                                \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    if (ret >= 0) {                                                         \
+        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx);       \
+        ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
+    }                                                                       \
+    fgpu_complete_launch_kernel(&dev_fctx);                                 \
+                                                                            \
+    ret;                                                                    \
+})
+
 #endif /* FRACTIONAL_GPU */
