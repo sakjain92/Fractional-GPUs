@@ -1,0 +1,510 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable
+Settings</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="dma_issues.html" title=
+"Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit Platforms">
+<link rel="next" href="configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;11.&nbsp;Specifying
+OpenGL Environment Variable Settings</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"dma_issues.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"configtwinview.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="openglenvvariables" id=
+"openglenvvariables"></a>Chapter&nbsp;11.&nbsp;Specifying OpenGL
+Environment Variable Settings</h2>
+</div>
+</div>
+</div>
+<h3>Full scene antialiasing</h3>
+<p>Antialiasing is a technique used to smooth the edges of objects
+in a scene to reduce the jagged "stairstep" effect that sometimes
+appears. By setting the appropriate environment variable, you can
+enable full-scene antialiasing in any OpenGL application on these
+GPUs.</p>
+<p>Several antialiasing methods are available and you can select
+between them by setting the __GL_FSAA_MODE environment variable
+appropriately. Note that increasing the number of samples taken
+during FSAA rendering may decrease performance.</p>
+<p>To see the available values for __GL_FSAA_MODE along with their
+descriptions, run:</p>
+<pre class="screen">
+    nvidia-settings --query=fsaa --verbose
+</pre>
+<p>The __GL_FSAA_MODE environment variable uses the same integer
+values that are used to configure FSAA through nvidia-settings and
+the NV-CONTROL X extension. In other words, these two commands are
+equivalent:</p>
+<pre class="screen">
+    export __GL_FSAA_MODE=5
+
+    nvidia-settings --assign FSAA=5
+</pre>
+<p>Note that there are three FSAA related configuration attributes
+(FSAA, FSAAAppControlled and FSAAAppEnhanced) which together
+determine how a GL application will behave. If FSAAAppControlled is
+1, the FSAA specified through nvidia-settings will be ignored, in
+favor of what the application requests through FBConfig selection.
+If FSAAAppControlled is 0 but FSAAAppEnhanced is 1, then the FSAA
+value specified through nvidia-settings will only be applied if the
+application selected a multisample FBConfig.</p>
+<p>Therefore, to be completely correct, the nvidia-settings command
+line to unconditionally assign FSAA should be:</p>
+<pre class="screen">
+    nvidia-settings --assign FSAA=5 --assign FSAAAppControlled=0 --assign FSAAAppEnhanced=0
+</pre>
+<p></p>
+<p>The driver may not be able to support a particular FSAA mode for
+a given application due to video or system memory limitations. In
+that case, the driver will silently fall back to a less demanding
+FSAA mode.</p>
+<h3>Fast approximate antialiasing (FXAA)</h3>
+<p>Fast approximate antialiasing is an antialiasing mode supported
+by the NVIDIA graphics driver that offers advantages over
+traditional multisampling and supersampling methods. This mode is
+incompatible with UBB, triple buffering, and other antialiasing
+methods. To enable this mode, run:</p>
+<pre class="screen">
+ nvidia-settings --assign FXAA=1
+</pre>
+<p>nvidia-settings will automatically disable incompatible features
+when this command is run. Users may wish to disable use of FXAA for
+individual applications when FXAA is globally enabled. This can be
+done by setting the environment variable __GL_ALLOW_FXAA_USAGE to
+0. __GL_ALLOW_FXAA_USAGE has no effect when FXAA is globally
+disabled.</p>
+<h3>Anisotropic texture filtering</h3>
+<p>Automatic anisotropic texture filtering can be enabled by
+setting the environment variable __GL_LOG_MAX_ANISO. The possible
+values are:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>__GL_LOG_MAX_ANISO</th>
+<th>Filtering Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>No anisotropic filtering</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2x anisotropic filtering</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4x anisotropic filtering</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8x anisotropic filtering</td>
+</tr>
+<tr>
+<td>4</td>
+<td>16x anisotropic filtering</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p><a name="vblanksyncing" id="vblanksyncing"></a></p>
+<h3>Vblank syncing</h3>
+<p>The __GL_SYNC_TO_VBLANK (boolean) environment variable can be
+used to control whether swaps are synchronized to a display
+device's vertical refresh.</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Setting __GL_SYNC_TO_VBLANK=0 allows glXSwapBuffers to swap
+without waiting for vblank.</p>
+</li>
+<li>
+<p>Setting __GL_SYNC_TO_VBLANK=1 forces glXSwapBuffers to
+synchronize with the vertical blanking period. This is the default
+behavior.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>When sync to vblank is enabled with TwinView, OpenGL can only
+sync to one of the display devices; this may cause tearing
+corruption on the display device to which OpenGL is not syncing.
+You can use the environment variable __GL_SYNC_DISPLAY_DEVICE to
+specify to which display device OpenGL should sync. You should set
+this environment variable to the name of a display device; for
+example "CRT-1". Look for the line "Connected display device(s):"
+in your X log file for a list of the display devices present and
+their names. You may also find it useful to review <a href=
+"configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+Chapter&nbsp;12, <i>Configuring Multiple Display Devices on One X
+Screen</i></a> "Configuring Twinview" and the section on Ensuring
+Identical Mode Timings in <a href="programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">Chapter&nbsp;18,
+<i>Programming Modes</i></a>.</p>
+<p>If a display device is being provided by a synchronized RandR
+1.4 Output Sink, it will not be listed under "Connected display
+device(s):", but can still be used with __GL_SYNC_DISPLAY_DEVICE.
+The names of these display devices can be found using the
+<code class="computeroutput">xrandr</code> command line tool. See
+<a href="randr14.html#randr14sync" title=
+"Synchronized RandR 1.4 Outputs">Synchronized RandR 1.4 Outputs</a>
+for information on synchronized RandR 1.4 Output Sinks.</p>
+<h3>Controlling the sorting of OpenGL FBConfigs</h3>
+<p>The NVIDIA GLX implementation sorts FBConfigs returned by
+glXChooseFBConfig() as described in the GLX specification. To
+disable this behavior set __GL_SORT_FBCONFIGS to 0 (zero), then
+FBConfigs will be returned in the order they were received from the
+X server. To examine the order in which FBConfigs are returned by
+the X server run:</p>
+<pre class="screen">
+nvidia-settings --glxinfo
+</pre>
+<p>This option may be be useful to work around problems in which
+applications pick an unexpected FBConfig.</p>
+<h3>OpenGL yield behavior</h3>
+<p>There are several cases where the NVIDIA OpenGL driver needs to
+wait for external state to change before continuing. To avoid
+consuming too much CPU time in these cases, the driver will
+sometimes yield so the kernel can schedule other processes to run
+while the driver waits. For example, when waiting for free space in
+a command buffer, if the free space has not become available after
+a certain number of iterations, the driver will yield before it
+continues to loop.</p>
+<p>By default, the driver calls sched_yield() to do this. However,
+this can cause the calling process to be scheduled out for a
+relatively long period of time if there are other, same-priority
+processes competing for time on the CPU. One example of this is
+when an OpenGL-based composite manager is moving and repainting a
+window and the X server is trying to update the window as it moves,
+which are both CPU-intensive operations.</p>
+<p>You can use the __GL_YIELD environment variable to work around
+these scheduling problems. This variable allows the user to specify
+what the driver should do when it wants to yield. The possible
+values are:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>__GL_YIELD</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt;unset&gt;</td>
+<td>By default, OpenGL will call sched_yield() to yield.</td>
+</tr>
+<tr>
+<td>"NOTHING"</td>
+<td>OpenGL will never yield.</td>
+</tr>
+<tr>
+<td>"USLEEP"</td>
+<td>OpenGL will call usleep(0) to yield.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<h3>Controlling which OpenGL FBConfigs are available</h3>
+<p>The NVIDIA GLX implementation will hide FBConfigs that are
+associated with a 32-bit ARGB visual when the
+XLIB_SKIP_ARGB_VISUALS environment variable is defined. This
+matches the behavior of libX11, which will hide those visuals from
+XGetVisualInfo and XMatchVisualInfo. This environment variable is
+useful when applications are confused by the presence of these
+FBConfigs.</p>
+<p><a name="unofficialprotoenv" id="unofficialprotoenv"></a></p>
+<h3>Using Unofficial GLX protocol</h3>
+<p>By default, the NVIDIA GLX implementation will not expose GLX
+protocol for GL commands if the protocol is not considered
+complete. Protocol could be considered incomplete for a number of
+reasons. The implementation could still be under development and
+contain known bugs, or the protocol specification itself could be
+under development or going through review. If users would like to
+test the client-side portion of such protocol when using indirect
+rendering, they can set the __GL_ALLOW_UNOFFICIAL_PROTOCOL
+environment variable to a non-zero value before starting their GLX
+application. When an NVIDIA GLX server is used, the related X
+Config option <a href=
+"xconfigoptions.html#AllowUnofficialGLXProtocol">AllowUnofficialGLXProtocol</a>
+will need to be set as well to enable support in the server.</p>
+<h3>Overriding driver detection of SELinux policy booleans</h3>
+<p>On Linux, the NVIDIA GLX implementation will attempt to detect
+whether SELinux is enabled and modify its behavior to respect
+SELinux policy. By default, the driver adheres to SELinux policy
+boolean settings at the beginning of a client process's execution;
+due to shared library limitations, these settings remain fixed
+throughout the lifetime of the driver instance. Additionally, the
+driver will adhere to policy boolean settings regardless of whether
+SELinux is running in permissive mode or enforcing mode. The
+__GL_SELINUX_BOOLEANS environment variable allows the user to
+override driver detection of specified SELinux booleans so the
+driver acts as if these booleans were set or unset. This allows the
+user, for example, to run the driver under a more restrictive
+policy than specified by SELinux, or to work around problems when
+running the driver under SELinux while operating in permissive
+mode.</p>
+<p>__GL_SELINUX_BOOLEANS should be set to a comma-separated list of
+key/value pairs:</p>
+<pre class="screen">
+ __GL_SELINUX_BOOLEANS="key1=val1,key2=val2,key3=val3,..."
+</pre>
+<p>Valid keys are any SELinux booleans specified by "getsebool -a",
+and valid values are 1, true, yes, or on to enable the boolean, and
+0, false, no, or off to disable it. There should be no whitespace
+between any key, value, or delimiter. If this environment variable
+is set, the driver assumes that SELinux is enabled on the system.
+Currently, the driver only uses the "allow_execmem" and
+"deny_execmem" booleans to determine whether it can apply
+optimizations that use writable, executable memory. Users can
+explicitly request that these optimizations be turned off by using
+the __GL_WRITE_TEXT_SECTION environment variable (see <a href=
+"openglenvvariables.html#disableexecmem" title=
+"Disabling executable memory optimizations">Disabling executable
+memory optimizations</a> below). By default, if the driver cannot
+detect the value of one or both of these booleans, it assumes the
+most permissive setting (i.e. executable memory is allowed).</p>
+<h3>Limiting heap allocations in the OpenGL driver</h3>
+<p>The NVIDIA OpenGL implementation normally does not enforce
+limits on dynamic system memory allocations (i.e., memory allocated
+by the driver from the C library via the malloc(3) memory
+allocation package). The __GL_HEAP_ALLOC_LIMIT environment variable
+enables the user to specify a per-process heap allocation limit for
+as long as libGL is loaded in the application.</p>
+<p>__GL_HEAP_ALLOC_LIMIT is specified in the form BYTES SUFFIX,
+where BYTES is a nonnegative integer and SUFFIX is an optional
+multiplicative suffix: kB = 1000, k = 1024, MB = 1000*1000, M =
+1024*1024, GB = 1000*1000*1000, and G = 1024*1024*1024. SUFFIX is
+not case-sensitive. For example, to specify a heap allocation limit
+of 20 megabytes:</p>
+<pre class="screen">
+__GL_HEAP_ALLOC_LIMIT="20 MB"
+</pre>
+<p>If SUFFIX is not specified, the limit is assumed to be given in
+bytes. The minimum heap allocation limit is 12 MB. If a lower limit
+is specified, the limit is clamped to the minimum.</p>
+<p>The GNU C library provides several hooks that may be used by
+applications to modify the behavior of malloc(3), realloc(3), and
+free(3). In addition, an application or library may specify
+allocation symbols that the driver will use in place of those
+exported by libc. Heap allocation tracking is incompatible with
+these features, and the driver will disable the heap allocation
+limit if it detects that they are in use.</p>
+<p>WARNING: Enforcing a limit on heap allocations may cause
+unintended behavior and lead to application crashes, data
+corruption, and system instability. ENABLE AT YOUR OWN RISK.</p>
+<h3>OpenGL Shader Disk Cache</h3>
+<p>The NVIDIA OpenGL driver utilizes a shader disk cache. This
+optimization benefits some applications, by reusing shader binaries
+instead of compiling them repeatedly. The related environment
+variables __GL_SHADER_DISK_CACHE and __GL_SHADER_DISK_CACHE_PATH,
+as well as the GLShaderDiskCache X configuration option, allow
+fine-grained configuration of the shader cache behavior. The shader
+disk cache:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>is always disabled for indirect rendering</p>
+</li>
+<li>
+<p>is always disabled for setuid and setgid binaries</p>
+</li>
+<li>
+<p>by default, is disabled for direct rendering when the OpenGL
+application is run as the root user</p>
+</li>
+<li>
+<p>by default, is enabled for direct rendering when the OpenGL
+application is run as a non-root user</p>
+</li>
+</ol>
+</div>
+<p>The GLShaderDiskCache X configuration option forcibly enables or
+disables the shader disk cache, for direct rendering as a non-root
+user.</p>
+<p>The following environment variables configure shader disk cache
+behavior, and override the GLShaderDiskCache configuration
+option:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Environment Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>__GL_SHADER_DISK_CACHE (boolean)</td>
+<td>Enables or disables the shader cache for direct rendering.</td>
+</tr>
+<tr>
+<td>__GL_SHADER_DISK_CACHE_PATH (string)</td>
+<td>Enables configuration of where shader caches are stored on
+disk.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>If __GL_SHADER_DISK_CACHE_PATH is unset, caches will be stored
+in $XDG_CACHE_HOME/.nv/GLCache if XDG_CACHE_HOME is set, or in
+$HOME/.nv/GLCache if HOME is set. If none of the environment
+variables __GL_SHADER_DISK_CACHE_PATH, XDG_CACHE_HOME, or HOME is
+set, the shader cache will be disabled. Caches are persistent
+across runs of an application. Cached shader binaries are specific
+to each driver version; changing driver versions will cause
+binaries to be recompiled.</p>
+<h3>Threaded Optimizations</h3>
+<p>The NVIDIA OpenGL driver supports offloading its CPU computation
+to a worker thread. These optimizations typically benefit
+CPU-intensive applications, but may cause a decrease of performance
+in applications that heavily rely on synchronous OpenGL calls such
+as glGet*. They are enabled by default on Linux (under certain
+conditions), but will self-disable if they are not increasing
+performance.</p>
+<p>Setting the __GL_THREADED_OPTIMIZATIONS environment variable to
+"1" before loading the NVIDIA OpenGL driver library will force (if
+the requirements covered below are met) these optimizations to be
+enabled for the lifetime of the application, with no self-disable
+possible. This is how the driver has historically behaved since
+threaded optimizations (disabled by default) were introduced. It is
+not advised to force these optimizations enabled. Relying on the
+automated mechanism is preferable. Setting the variable to "0" will
+force these optimizations to be disabled. Not setting the variable
+at all will attempt to enable the optimizations, but with the
+self-disabling mechanism activated. This mechanism is, among the
+Unix platforms supported by the NVIDIA driver, only functional on
+Linux. Where it is not functional, the optimizations are disabled
+by default.</p>
+<p>Please note that these optimizations will only work if the
+target application dynamically links against pthreads. If this
+isn't the case, the dynamic loader can be instructed to do so at
+runtime by setting the LD_PRELOAD environment variable to include
+the pthreads library.</p>
+<p>Additionally, these optimizations require Xlib to function in
+thread-safe mode. The NVIDIA OpenGL driver cannot reliably enable
+Xlib thread-safe mode itself, therefore the application needs to
+call XInitThreads() before making any other Xlib call. Otherwise,
+the threaded optimizations in the NVIDIA driver will not be
+enabled.</p>
+<h3>Conformant glBlitFramebuffer() scissor test behavior</h3>
+<p>This option enables the glBlitFramebuffer() scissor test, which
+must be enabled for glBlitFramebuffer() to behave in a conformant
+manner. Setting the __GL_ConformantBlitFramebufferScissor
+environment variable to 0 disables the glBlitFramebuffer() scissor
+test, and setting it to 1 enables it. By default, the
+glBlitFramebuffer() scissor test is enabled.</p>
+<p>Some applications have bugs which cause them to not display
+properly with a conformant glBlitFramebuffer(). See <a href=
+"knownissues.html" title=
+"Chapter&nbsp;9.&nbsp;Known Issues">Chapter&nbsp;9, <i>Known
+Issues</i></a> for more details.</p>
+<h3>G-SYNC</h3>
+<p>When a G-SYNC-capable monitor is attached, this option controls
+whether G-SYNC, also called &ldquo;<span class="quote">variable
+refresh rate</span>&rdquo;, can be used. Setting the
+__GL_GSYNC_ALLOWED environment variable to 0 disables G-SYNC.
+Setting it to 1 allows G-SYNC to be used when possible.</p>
+<p>When G-SYNC is active and __GL_SYNC_TO_VBLANK is disabled,
+applications rendering faster than the maximum refresh rate will
+tear. This eliminates tearing for frame rates below the monitor's
+maximum refresh rate while minimizing latency for frame rates above
+it. When __GL_SYNC_TO_VBLANK is enabled, the frame rate is limited
+to the monitor's maximum refresh rate to eliminate tearing
+completely.</p>
+<p>G-SYNC cannot be used when workstation stereo or workstation
+overlays are enabled, or when there is more than one X screen. In
+addition, G-SYNC cannot be used when an SLI mode other than Mosaic
+is enabled.</p>
+<p><a name="disableexecmem" id="disableexecmem"></a></p>
+<h3>Disabling executable memory optimizations</h3>
+<p>By default, the NVIDIA driver will attempt to use optimizations
+which rely on being able to write to executable memory. This may
+cause problems in certain system configurations (e.g., on SELinux
+when the "allow_execmem" boolean is disabled or "deny_execmem"
+boolean is enabled, and on grsecurity kernels configured with
+CONFIG_PAX_MPROTECT). When possible, the driver will attempt to
+detect when it is running on an unsupported configuration and
+disable these optimizations automatically. If the
+__GL_WRITE_TEXT_SECTION environment variable is set to 0, the
+driver will unconditionally disable these optimizations.</p>
+<h3>Ignoring GLSL (OpenGL Shading Language) extension checks</h3>
+<p>Some applications may use GLSL shaders that reference global
+variables defined only in an OpenGL extension without including a
+corresponding #extension directive in their source code.
+Additionally, some applications may use GLSL shaders version 150 or
+greater that reference global variables defined in a compatibility
+profile, without specifying that a compatibility profile should be
+used in their #version directive. Setting the
+__GL_IGNORE_GLSL_EXT_REQS environment variable to 1 will cause the
+driver to ignore this class of errors, which may allow these
+shaders to successfully compile.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"dma_issues.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"configtwinview.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit
+Platforms&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on
+One X Screen</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit
+Platforms</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="knownissues.html" title=
+"Chapter&nbsp;9.&nbsp;Known Issues">
+<link rel="next" href="openglenvvariables.html" title=
+"Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable Settings">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;10.&nbsp;Allocating DMA
+Buffers on 64-bit Platforms</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"knownissues.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"openglenvvariables.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="dma_issues" id=
+"dma_issues"></a>Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on
+64-bit Platforms</h2>
+</div>
+</div>
+</div>
+<p>NVIDIA GPUs have limits on how much physical memory they can
+address. This directly impacts DMA buffers, as a DMA buffer
+allocated in physical memory that is unaddressable by the NVIDIA
+GPU cannot be used (or may be truncated, resulting in bad memory
+accesses). See <a href="addressingcapabilities.html" title=
+"Chapter&nbsp;34.&nbsp;Addressing Capabilities">Chapter&nbsp;34,
+<i>Addressing Capabilities</i></a> for details on the addressing
+limitations of specific GPUs.</p>
+<p>When an NVIDIA GPU has an addressing limit less than the maximum
+possible physical system memory address, the NVIDIA Linux driver
+will use the __GFP_DMA32 flag to limit system memory allocations to
+the lowest 4 GB of physical memory in order to guarantee
+accessibility. This restriction applies even if there is hardware
+capable of remapping physical memory into an accessible range
+present, such as an IOMMU, because the NVIDIA Linux driver cannot
+determine at the time of memory allocation whether the memory can
+be remapped. This limitation can significantly reduce the amount of
+physical memory available to the NVIDIA GPU in some
+configurations.</p>
+<p>The Linux kernel requires that device drivers use the DMA
+remapping APIs to make physical memory accessible to devices, even
+when no remapping hardware is present. The NVIDIA Linux driver
+generally adheres to this requirement, except when it detects that
+the remapping is implemented using the SWIOTLB, which is not
+supported by the NVIDIA Linux driver. When the NVIDIA Linux driver
+detects that the SWIOTLB is in use, it will instead calculate the
+correct bus address needed to access a physical allocation instead
+of calling the kernel DMA remapping APIs to do so, as SWIOTLB space
+is very limited and exhaustion can result in a kernel panic.</p>
+<p>The NVIDIA Linux driver does not generally limit its usage of
+the Linux kernel DMA remapping APIs, and this can result in IOMMU
+space exhaustion when large amounts of physical memory are remapped
+for use by the NVIDIA GPU. Most modern IOMMU drivers generally fail
+gracefully when IOMMU space is exhausted, but NVIDIA recommends
+configuring the IOMMU in such a way to avoid resource exhaustion if
+possible, either by increasing the size of the IOMMU or disabling
+the IOMMU.</p>
+<p>On AMD's AMD64 platform, the size of the IOMMU can be configured
+in the system BIOS or, if no IOMMU BIOS option is available, using
+the 'iommu=memaper' kernel parameter. This kernel parameter expects
+an order and instructs the Linux kernel to create an IOMMU of size
+32 MB^order overlapping physical memory. If the system's default
+IOMMU is smaller than 64 MB, the Linux kernel automatically
+replaces it with a 64 MB IOMMU.</p>
+<p>Also see the 'The X86-64 platform (AMD64/EM64T) and early Linux
+2.6 kernels' section in <a href=
+"knownissues.html#x86_64_platform">The X86-64 platform
+(AMD64/EM64T) and early Linux 2.6 kernels</a>.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"knownissues.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"openglenvvariables.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;9.&nbsp;Known Issues&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable
+Settings</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

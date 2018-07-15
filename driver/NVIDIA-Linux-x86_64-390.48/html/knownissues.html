@@ -1,0 +1,607 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;9.&nbsp;Known Issues</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="commonproblems.html" title=
+"Chapter&nbsp;8.&nbsp;Common Problems">
+<link rel="next" href="dma_issues.html" title=
+"Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit Platforms">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;9.&nbsp;Known
+Issues</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"commonproblems.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"dma_issues.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="knownissues" id=
+"knownissues"></a>Chapter&nbsp;9.&nbsp;Known Issues</h2>
+</div>
+</div>
+</div>
+<p>The following problems still exist in this release and are in
+the process of being resolved.</p>
+<div class="variablelist">
+<p class="title"><b>Known Issues</b></p>
+<dl>
+<dt><span class="term">OpenGL and dlopen()</span></dt>
+<dd>
+<p>There are some issues with older versions of the glibc dynamic
+loader (e.g., the version that shipped with Red Hat Linux 7.2) and
+applications such as Quake3 and Radiant, that use dlopen(). See
+<a href="faq.html" title=
+"Chapter&nbsp;7.&nbsp;Frequently Asked Questions">Chapter&nbsp;7,
+<i>Frequently Asked Questions</i></a> for more details.</p>
+</dd>
+<dt><span class="term">Interaction with pthreads</span></dt>
+<dd>
+<p>Single-threaded applications that use dlopen() to load NVIDIA's
+libGL library, and then use dlopen() to load any other library that
+is linked against libpthread will crash in libGL. This does not
+happen in NVIDIA's new ELF TLS OpenGL libraries (see <a href=
+"installedcomponents.html" title=
+"Chapter&nbsp;5.&nbsp;Listing of Installed Components">Chapter&nbsp;5,
+<i>Listing of Installed Components</i></a> for a description of the
+ELF TLS OpenGL libraries). Possible workarounds for this problem
+are:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Load the library that is linked with libpthread before loading
+libGL.</p>
+</li>
+<li>
+<p>Link the application with libpthread.</p>
+</li>
+</ol>
+</div>
+<p></p>
+</dd>
+<dt><a name="x86_64_platform" id="x86_64_platform"></a><span class=
+"term">The X86-64 platform (AMD64/EM64T) and early Linux 2.6
+kernels</span></dt>
+<dd>
+<p>Early Linux 2.6 x86_64 kernels have an accounting problem in
+their implementation of the change_page_attr kernel interface.
+These kernels include a check that triggers a BUG() when this
+situation is encountered (triggering a BUG() results in the current
+application being killed by the kernel; this application would be
+your OpenGL application or potentially the X server). The
+accounting issue has been resolved in the 2.6.11 kernel.</p>
+<p>We have added checks to recognize that the NVIDIA kernel module
+is being compiled for the x86-64 platform on a kernel between Linux
+2.6.0 and Linux 2.6.11. In this case, we will disable usage of the
+change_page_attr kernel interface. This will avoid the accounting
+issue but leaves the system in danger of cache aliasing (see entry
+below on Cache Aliasing for more information about cache aliasing).
+Note that this change_page_attr accounting issue and BUG() can be
+triggered by other kernel subsystems that rely on this
+interface.</p>
+<p>If you are using a Linux 2.6 x86_64 kernel, it is recommended
+that you upgrade to Linux 2.6.11 or to a later kernel.</p>
+<p>Also take note of common dma issues on 64-bit platforms in
+<a href="dma_issues.html" title=
+"Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit Platforms">Chapter&nbsp;10,
+<i>Allocating DMA Buffers on 64-bit Platforms</i></a>.</p>
+</dd>
+<dt><span class="term">Cache Aliasing</span></dt>
+<dd>
+<p>Cache aliasing occurs when multiple mappings to a physical page
+of memory have conflicting caching states, such as cached and
+uncached. Due to these conflicting states, data in that physical
+page may become corrupted when the processor's cache is flushed. If
+that page is being used for DMA by a driver such as NVIDIA's
+graphics driver, this can lead to hardware stability problems and
+system lockups.</p>
+<p>NVIDIA has encountered bugs with some Linux kernel versions that
+lead to cache aliasing. Although some systems will run perfectly
+fine when cache aliasing occurs, other systems will experience
+severe stability problems, including random lockups. Users
+experiencing stability problems due to cache aliasing will benefit
+from updating to a kernel that does not cause cache aliasing to
+occur.</p>
+</dd>
+<dt><span class="term">64-Bit BARs (Base Address
+Registers)</span></dt>
+<dd>
+<p>NVIDIA GPUs advertise a 64-bit BAR capability (a Base Address
+Register stores the location of a PCI I/O region, such as registers
+or a frame buffer). This means that the GPU's PCI I/O regions
+(registers and frame buffer) can be placed above the 32-bit address
+space (the first 4 gigabytes of memory).</p>
+<p>The decision of where the BAR is placed is made by the system
+BIOS at boot time. If the BIOS supports 64-bit BARs, then the
+NVIDIA PCI I/O regions may be placed above the 32-bit address
+space. If the BIOS does not support this feature, then our PCI I/O
+regions will be placed within the 32-bit address space as they have
+always been.</p>
+<p>Unfortunately, some Linux kernels (such as 2.6.11.x) do not
+understand or support 64-bit BARs. If the BIOS does place any
+NVIDIA PCI I/O regions above the 32-bit address space, such kernels
+will reject the BAR and the NVIDIA driver will not work.</p>
+<p>The only known workaround is to upgrade to a newer kernel.</p>
+</dd>
+<dt><a name="kva_exhaustion" id="kva_exhaustion"></a><span class=
+"term">Kernel virtual address space exhaustion on the X86
+platform</span></dt>
+<dd>
+<p>On X86 systems and AMD64/EM64T systems using X86 kernels, only
+4GB of virtual address space are available, which the Linux kernel
+typically partitions such that user processes are allocated 3GB,
+the kernel itself 1GB. Part of the kernel's share is used to create
+a direct mapping of system memory (RAM). Depending on how much
+system memory is installed, the kernel virtual address space
+remaining for other uses varies in size and may be as small as
+128MB, if 1GB of system memory (or more) are installed. The kernel
+typically reserves a minimum of 128MB by default.</p>
+<p>The kernel virtual address space still available after the
+creation of the direct system memory mapping is used by both the
+kernel and by drivers to map I/O resources, and for some memory
+allocations. Depending on the number of consumers and their
+respective requirements, the Linux kernel's virtual address space
+may be exhausted. Typically when this happens, the kernel prints an
+error message that looks like</p>
+<pre class="screen">
+allocation failed: out of vmalloc space - use vmalloc=&lt;size&gt; to increase size.
+</pre>
+<p>or</p>
+<pre class="screen">
+vmap allocation for size 16781312 failed: use vmalloc=&lt;size&gt; to increase size.
+</pre>
+<p></p>
+<p>The NVIDIA kernel module requires portions of the kernel's
+virtual address space for each GPU and for certain memory
+allocations. If no more than 128MB are available to the kernel and
+device drivers at boot time, the NVIDIA kernel module may be unable
+to initialize all GPUs, or fail memory allocations. This is not
+usually a problem with only 1 or 2 GPUs, however depending on the
+number of other drivers and their usage patterns, it can be; it is
+likely to be a problem with 3 or more GPUs.</p>
+<p>Possible solutions for this problem include:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>If your system is equipped with an X86-64 (AMD64/EM64T)
+processor, it is recommended that you switch to a 64-bit Linux
+kernel/distribution. Due to the significantly larger address space
+provided by the X86-64 processors' addressing capabilities, X86-64
+kernels will not run out of kernel virtual address space in the
+foreseeable future.</p>
+</li>
+<li>
+<p>If a 64-bit kernel cannot be used, the 'vmalloc' kernel
+parameter can be used on recent kernels to increase the size of the
+kernel virtual address space reserved by the Linux kernel (the
+default is usually 128MB). Incrementally raising this to find the
+best balance between the size of the kernel virtual address space
+made available and the size of the direct system memory mapping is
+recommended. You can achieve this by passing 'vmalloc=192M',
+'vmalloc=256MB', ..., to the kernel and checking if the above error
+message continues to be printed.</p>
+<p>Note that some versions of the GRUB boot loader have problems
+calculating the memory layout and loading the initrd if the
+'vmalloc' kernel parameter is used. The 'uppermem' GRUB command can
+be used to force GRUB to load the initrd into a lower region of
+system memory to work around this problem. This will not adversely
+affect system performance once the kernel has been loaded. The
+suggested syntax (assuming GRUB version 1) is:</p>
+<pre class="screen">
+title     Kernel Title
+uppermem  524288
+kernel    (hdX,Y)/boot/vmlinuz...
+</pre>
+<p></p>
+</li>
+<li>
+<p>In some cases, disabling frame buffer drivers such as vesafb can
+help, as such drivers may attempt to map all or a large part of the
+installed graphics cards' video memory into the kernel's virtual
+address space, which rapidly consumes this resource. You can
+disable the vesafb frame buffer driver by passing these parameters
+to the kernel: 'video=vesa:off vga=normal'.</p>
+</li>
+<li>
+<p>Some Linux kernels can be configured with alternate address
+space layouts (e.g. 2.8GB:1.2GB, 2GB:2GB, etc.). This option can be
+used to avoid exhaustion of the kernel virtual address space
+without reducing the size of the direct system memory mapping. Some
+Linux distributors also provide kernels that use separate 4GB
+address spaces for user processes and the kernel. Such Linux
+kernels provide sufficient kernel virtual address space on typical
+systems.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</dd>
+<dt><span class="term">Valgrind</span></dt>
+<dd>
+<p>The NVIDIA OpenGL implementation makes use of self modifying
+code. To force Valgrind to retranslate this code after a
+modification you must run using the Valgrind command line
+option:</p>
+<pre class="screen">
+--smc-check=all
+</pre>
+<p>Without this option Valgrind may execute incorrect code causing
+incorrect behavior and reports of the form:</p>
+<pre class="screen">
+==30313== Invalid write of size 4
+</pre>
+<p></p>
+</dd>
+<dt><span class="term">MMConfig-based PCI Configuration Space
+Accesses</span></dt>
+<dd>
+<p>2.6 kernels have added support for Memory-Mapped PCI
+Configuration Space accesses. Unfortunately, there are many
+problems with this mechanism, and the latest kernel updates are
+more careful about enabling this support.</p>
+<p>The NVIDIA driver may be unable to reliably read/write the PCI
+Configuration Space of NVIDIA devices when the kernel is using the
+MMCONFIG method to access PCI Configuration Space, specifically
+when using multiple GPUs and multiple CPUs on 32-bit kernels.</p>
+<p>This access method can be identified by the presence of the
+string "PCI: Using MMCONFIG" in the 'dmesg' output on your system.
+This access method can be disabled via the "pci=nommconf" kernel
+parameter.</p>
+</dd>
+<dt><a name="alsa_infoframe_checksum" id=
+"alsa_infoframe_checksum"></a><span class="term">HDMI screen blanks
+unless audio is played</span></dt>
+<dd>
+<p>The ALSA audio driver in some Linux kernels contains a bug
+affecting some systems with integrated graphics that causes the
+display to go blank on some HDMI TVs whenever audio is not being
+played. This bug occurs when the ALSA audio driver configures the
+HDMI hardware to send an HDMI audio info frame that contains an
+invalid checksum. Some TVs blank the video when they receive such
+invalid audio packets.</p>
+<p>To ensure proper display, please make sure your Linux kernel
+contains commit 1f348522844bb1f6e7b10d50b9e8aa89a2511b09. This fix
+is in Linux 2.6.39-rc3 and later, and may be be back-ported to some
+older kernels.</p>
+</dd>
+<dt><a name="msi_interrupts" id="msi_interrupts"></a><span class=
+"term">Driver fails to initialize when MSI interrupts are
+enabled</span></dt>
+<dd>
+<p>The Linux NVIDIA driver uses Message Signaled Interrupts (MSI)
+by default. This provides compatibility and scalability benefits,
+mainly due to the avoidance of IRQ sharing.</p>
+<p>Some systems have been seen to have problems supporting MSI,
+while working fine with virtual wire interrupts. These problems
+manifest as an inability to start X with the NVIDIA driver, or CUDA
+initialization failures. The NVIDIA driver will then report an
+error indicating that the NVIDIA kernel module does not appear to
+be receiving interrupts generated by the GPU.</p>
+<p>Problems have also been seen with suspend/resume while MSI is
+enabled. All known problems have been fixed, but if you observe
+problems with suspend/resume that you did not see with previous
+drivers, disabling MSI may help you.</p>
+<p>NVIDIA is working on a long-term solution to improve the
+driver's out of the box compatibility with system configurations
+that do not fully support MSI.</p>
+<p>MSI interrupts can be disabled via the NVIDIA kernel module
+parameter "NVreg_EnableMSI=0". This can be set on the command line
+when loading the module, or more appropriately via your
+distribution's kernel module configuration files (such as those
+under /etc/modprobe.d/).</p>
+</dd>
+<dt><a name="console_restore" id="console_restore"></a><span class=
+"term">Console restore behavior</span></dt>
+<dd>
+<p>The Linux NVIDIA driver uses the nvidia-modeset module for
+console restore whenever it can. Currently, the improved console
+restore mechanism is used on systems that boot with the UEFI
+Graphics Output Protocol driver, and on systems that use supported
+VESA linear graphical modes. Note that VGA text, color index,
+planar, banked, and some linear modes cannot be supported, and will
+use the older console restore method instead.</p>
+<p>When the new console restore mechanism is in use and the
+nvidia-modeset module is initialized (e.g. because an X server is
+running on a different VT, nvidia-persistenced is running, or the
+nvidia-drm module is loaded with the <code class=
+"computeroutput">modeset=1</code> parameter), then nvidia-modeset
+will respond to hot plug events by displaying the console on as
+many displays as it can. Note that to save power, it may not
+display the console on all connected displays.</p>
+</dd>
+<dt><a name="vulkan_devices" id="vulkan_devices"></a><span class=
+"term">Vulkan and device enumeration</span></dt>
+<dd>
+<p>It is currently not possible to enumerate multiple devices if
+one of them will be used to present to an X11 swapchain. It is
+still possible to enumerate multiple devices even if one of them is
+driving an X screen given that they will be used for Vulkan
+offscreen rendering or presenting to a display swapchain. For that,
+make sure that the application cannot open a display connection to
+an X server by, for example, unsetting the DISPLAY environment
+variable.</p>
+</dd>
+<dt><span class="term">Notebooks</span></dt>
+<dd>
+<p>If you are using a notebook see the "Known Notebook Issues" in
+<a href="configlaptop.html" title=
+"Chapter&nbsp;16.&nbsp;Configuring a Notebook">Chapter&nbsp;16,
+<i>Configuring a Notebook</i></a>.</p>
+</dd>
+<dt><a name="texture_clamping" id=
+"texture_clamping"></a><span class="term">Texture seams in Quake 3
+engine</span></dt>
+<dd>
+<p>Many games based on the Quake 3 engine set their textures to use
+the <code class="computeroutput">GL_CLAMP</code> clamping mode when
+they should be using <code class=
+"computeroutput">GL_CLAMP_TO_EDGE</code>. This was an oversight
+made by the developers because some legacy NVIDIA GPUs treat the
+two modes as equivalent. The result is seams at the edges of
+textures in these games. To mitigate this, older versions of the
+NVIDIA display driver remap <code class=
+"computeroutput">GL_CLAMP</code> to <code class=
+"computeroutput">GL_CLAMP_TO_EDGE</code> internally to emulate the
+behavior of the older GPUs, but this workaround has been disabled
+by default. To re-enable it, uncheck the "Use Conformant Texture
+Clamping" checkbox in nvidia-settings before starting any affected
+applications.</p>
+</dd>
+<dt><span class="term">FSAA</span></dt>
+<dd>
+<p>When FSAA is enabled (the __GL_FSAA_MODE environment variable is
+set to a value that enables FSAA and a multisample visual is
+chosen), the rendering may be corrupted when resizing the
+window.</p>
+</dd>
+<dt><span class="term">libGL DSO finalizer and pthreads</span></dt>
+<dd>
+<p>When a multithreaded OpenGL application exits, it is possible
+for libGL's DSO finalizer (also known as the destructor, or
+"_fini") to be called while other threads are executing OpenGL
+code. The finalizer needs to free resources allocated by libGL.
+This can cause problems for threads that are still using these
+resources. Setting the environment variable "__GL_NO_DSO_FINALIZER"
+to "1" will work around this problem by forcing libGL's finalizer
+to leave its resources in place. These resources will still be
+reclaimed by the operating system when the process exits. Note that
+the finalizer is also executed as part of dlclose(3), so if you
+have an application that dlopens(3) and dlcloses(3) libGL
+repeatedly, "__GL_NO_DSO_FINALIZER" will cause libGL to leak
+resources until the process exits. Using this option can improve
+stability in some multithreaded applications, including Java3D
+applications.</p>
+</dd>
+<dt><span class="term">Thread cancellation</span></dt>
+<dd>
+<p>Canceling a thread (see pthread_cancel(3)) while it is executing
+in the OpenGL driver causes undefined behavior. For applications
+that wish to use thread cancellation, it is recommended that
+threads disable cancellation using pthread_setcancelstate(3) while
+executing OpenGL or GLX commands.</p>
+</dd>
+</dl>
+</div>
+<p>This section describes problems that will not be fixed. Usually,
+the source of the problem is beyond the control of NVIDIA.
+Following is the list of problems:</p>
+<div class="variablelist">
+<p class="title"><b>Problems that Will Not Be Fixed</b></p>
+<dl>
+<dt><span class="term">NV-CONTROL versions 1.8 and 1.9</span></dt>
+<dd>
+<p>Version 1.8 of the NV-CONTROL X Extension introduced target
+types for setting and querying attributes as well as receiving
+event notification on targets. Targets are objects like X Screens,
+GPUs and Quadro Sync devices. Previously, all attributes were
+described relative to an X Screen. These new bits of information
+(target type and target id) were packed in a non-compatible way in
+the protocol stream such that addressing X Screen 1 or higher would
+generate an X protocol error when mixing NV-CONTROL client and
+server versions.</p>
+<p>This packing problem has been fixed in the NV-CONTROL 1.10
+protocol, making it possible for the older (1.7 and prior) clients
+to communicate with NV-CONTROL 1.10 servers. Furthermore, the
+NV-CONTROL 1.10 client library has been updated to accommodate the
+target protocol packing bug when communicating with a 1.8 or 1.9
+NV-CONTROL server. This means that the NV-CONTROL 1.10 client
+library should be able to communicate with any version of the
+NV-CONTROL server.</p>
+<p>NVIDIA recommends that NV-CONTROL client applications relink
+with version 1.10 or later of the NV-CONTROL client library
+(libXNVCtrl.a, in the nvidia-settings-390.48.tar.bz2 tarball).
+The version of the client library can be determined by checking the
+NV_CONTROL_MAJOR and NV_CONTROL_MINOR definitions in the
+accompanying nv_control.h.</p>
+<p>The only web released NVIDIA Linux driver that is affected by
+this problem (i.e., the only driver to use either version 1.8 or
+1.9 of the NV-CONTROL X extension) is 1.0-8756.</p>
+</dd>
+<dt><span class="term">CPU throttling reducing memory bandwidth on
+IGP systems</span></dt>
+<dd>
+<p>For some models of CPU, the CPU throttling technology may affect
+not only CPU core frequency, but also memory frequency/bandwidth.
+On systems using integrated graphics, any reduction in memory
+bandwidth will affect the GPU as well as the CPU. This can
+negatively affect applications that use significant memory
+bandwidth, such as video decoding using VDPAU, or certain OpenGL
+operations. This may cause such applications to run with lower
+performance than desired.</p>
+<p>To work around this problem, NVIDIA recommends configuring your
+CPU throttling implementation to avoid reducing memory bandwidth.
+This may be as simple as setting a certain minimum frequency for
+the CPU.</p>
+<p>Depending on your operating system and/or distribution, this may
+be as simple as writing to a configuration file in the /sys or
+/proc filesystems, or other system configuration file. Please read,
+or search the Internet for, documentation regarding CPU throttling
+on your operating system.</p>
+</dd>
+<dt><span class="term">VDPAU initialization failures on supported
+GPUs</span></dt>
+<dd>
+<p>If VDPAU gives the VDP_STATUS_NO_IMPLEMENTATION error message on
+a GPU which was labeled or specified as supporting PureVideo or
+PureVideo HD, one possible reason is a hardware defect. After
+ruling out any other software problems, NVIDIA recommends returning
+the GPU to the manufacturer for a replacement.</p>
+</dd>
+<dt><a name="extension_string_size" id=
+"extension_string_size"></a><span class="term">Some applications,
+such as Quake 3, crash after querying the OpenGL extension
+string</span></dt>
+<dd>
+<p>Some applications have bugs that are triggered when the
+extension string is longer than a certain size. As more features
+are added to the driver, the length of this string increases and
+can trigger these sorts of bugs.</p>
+<p>You can limit the extensions listed in the OpenGL extension
+string to the ones that appeared in a particular version of the
+driver by setting the <code class=
+"computeroutput">__GL_ExtensionStringVersion</code> environment
+variable to a particular version number. For example,</p>
+<pre class="screen">
+__GL_ExtensionStringVersion=17700 quake3
+</pre>
+<p>will run Quake 3 with the extension string that appeared in the
+177.* driver series. Limiting the size of the extension string can
+work around this sort of application bug.</p>
+</dd>
+<dt><span class="term">XVideo and the Composite X
+extension</span></dt>
+<dd>
+<p>XVideo will not work correctly when Composite is enabled unless
+using X.Org 7.1 or later. See <a href="xcompositeextension.html"
+title=
+"Chapter&nbsp;22.&nbsp;Using the X Composite Extension">Chapter&nbsp;22,
+<i>Using the X Composite Extension</i></a>.</p>
+</dd>
+<dt><span class="term">GLX visuals in Xinerama</span></dt>
+<dd>
+<p>X servers prior to version 1.5.0 have a limitation in the number
+of visuals that can be available when Xinerama is enabled.
+Specifically, visuals with ID values over 255 will cause the server
+to corrupt memory, leading to incorrect behavior or crashes. In
+some configurations where many GLX features are enabled at once,
+the number of GLX visuals will exceed this limit. To avoid a crash,
+the NVIDIA X driver will discard visuals above the limit. To see
+which visuals are being discarded, run the X server with the
+<code class="option">-logverbose 6</code> option and then check the
+X server log file.</p>
+<p>Please see <a href="faq.html#xversions">&ldquo;How do I
+interpret X server version numbers?&rdquo;</a> when determining
+whether your X server is new enough to contain this fix.</p>
+</dd>
+<dt><a name="xserver_needs_busids" id=
+"xserver_needs_busids"></a><span class="term">Some X servers have
+trouble with multiple GPUs</span></dt>
+<dd>
+<p>Some versions of the X.Org X server starting with 1.5.0 have a
+bug that causes X to fail with an error similar to the following
+when there is more than one GPU in the computer:</p>
+<p></p>
+<pre class="screen">
+(!!) More than one possible primary device found
+(II) Primary Device is:
+(EE) No devices detected.
+
+Fatal server error:
+no screens found
+</pre>
+<p></p>
+<p>This bug was fixed in the X.Org X Server 1.7 release.</p>
+<p>You can work around this problem by specifying the bus ID of the
+device you wish to use. For more details, please search the
+xorg.conf manual page for "BusID". You can configure the X server
+with an X screen on each NVIDIA GPU by running:</p>
+<p></p>
+<pre class="screen">
+nvidia-xconfig --enable-all-gpus
+</pre>
+<p></p>
+<p>Please see <a href=
+"http://bugs.freedesktop.org/show_bug.cgi?id=18321" target=
+"_top">Bugzilla bug #18321</a> for more details on this X server
+problem. In addition, please see <a href=
+"faq.html#xversions">&ldquo;How do I interpret X server version
+numbers?&rdquo;</a> when determining whether your X server is new
+enough to contain this fix.</p>
+</dd>
+<dt><a name="gnome_shell_doesnt_update" id=
+"gnome_shell_doesnt_update"></a><span class="term">gnome-shell
+doesn't update until a window is moved</span></dt>
+<dd>
+<p>Versions of libcogl prior to 1.10.x have a bug which causes
+glBlitFramebuffer() calls used to update the window to be clipped
+by a 0x0 scissor (see <a href=
+"https://bugzilla.gnome.org/show_bug.cgi?id=690451" target=
+"_top">GNOME bug #690451</a> for more details). To work around this
+bug, the scissor test can be disabled by setting the <code class=
+"computeroutput">__GL_ConformantBlitFramebufferScissor</code>
+environment variable to 0. Note this version of the NVIDIA driver
+comes with an application profile which automatically disables this
+test if libcogl is detected in the process.</p>
+</dd>
+<dt><a name="Xserver_compares_only_the_matrix_part_of_a_transform"
+id=
+"Xserver_compares_only_the_matrix_part_of_a_transform"></a><span class="term">Some
+X servers ignore the RandR transform filter during a modeset
+request</span></dt>
+<dd>
+<p>The RandR layer of the X server attempts to ignore redundant
+RRSetCrtcConfig requests. If the only property changed by an
+RRSetCrtcConfig request is the transform filter, some X servers
+will ignore the request as redundant. This can be worked around by
+also changing other properties, such as the mode, transformation
+matrix, etc.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"commonproblems.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"dma_issues.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;8.&nbsp;Common Problems&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;10.&nbsp;Allocating DMA Buffers on 64-bit
+Platforms</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

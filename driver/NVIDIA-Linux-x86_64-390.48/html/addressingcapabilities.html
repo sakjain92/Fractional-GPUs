@@ -1,0 +1,269 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;34.&nbsp;Addressing Capabilities</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="kms.html" title=
+"Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel Modesetting (DRM KMS)">
+<link rel="next" href="addtlresources.html" title=
+"Chapter&nbsp;35.&nbsp;NVIDIA Contact Info and Additional Resources">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;34.&nbsp;Addressing
+Capabilities</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"kms.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"addtlresources.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="addressingcapabilities" id=
+"addressingcapabilities"></a>Chapter&nbsp;34.&nbsp;Addressing
+Capabilities</h2>
+</div>
+</div>
+</div>
+<p>Many PCIe devices have limitations in what memory addresses they
+can access for DMA purposes (based on the number of lines dedicated
+to memory addressing). This can cause problems if the host system
+has memory mapped to addresses beyond what the PCIe device can
+support. If a PCIe device is allocated memory at an address beyond
+what the device can support, the address may be truncated and the
+device will access the incorrect memory location.</p>
+<p>Note that since certain system resources, such as ACPI tables
+and PCI I/O regions, are mapped to address ranges below the 4 GB
+boundary, the RAM installed in x86/x86-64 systems cannot
+necessarily be mapped contiguously. Similarly, system firmware is
+free to map the available RAM at its or its users' discretion. As a
+result, it is common for systems to have RAM mapped outside of the
+address range [0, RAM_SIZE], where RAM_SIZE is the amount of RAM
+installed in the system.</p>
+<p>For example, it is common for a system with 512 GB of RAM
+installed to have physical addresses up to ~513 GB. In this
+scenario, a GPU with an addressing capability of 512 GB would force
+the driver to fall back to the 4 GB DMA zone for this GPU.</p>
+<p>The NVIDIA Linux driver attempts to identify the scenario where
+the host system has more memory than a given GPU can address. If
+this scenario is detected, the NVIDIA driver will drop back to
+allocations from the 4 GB DMA zone to avoid address truncation.
+This means that the driver will use the __GFP_DMA32 flag and limit
+itself to memory addresses below the 4 GB boundary. This is done on
+a per-GPU basis, so limiting one GPU will not limit other GPUs in
+the system.</p>
+<p>The addressing capabilities of an NVIDIA GPU can be queried at
+runtime via the procfs interface:</p>
+<pre class="screen">
+% cat /proc/driver/nvidia/gpus/domain:bus:device.function/information
+...
+DMA Size:        40 bits
+DMA Mask:        0xffffffffff
+...
+</pre>
+<p>The memory mapping of RAM on a given system can be seen in the
+BIOS-e820 table printed out by the kernel and available via
+`dmesg`. Note that the 'usable' ranges are actual RAM:</p>
+<pre class="screen">
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000]  BIOS-e820: 0000000000000000 - 000000000009f000 (usable)
+[    0.000000]  BIOS-e820: 000000000009f000 - 00000000000a0000 (reserved)
+[    0.000000]  BIOS-e820: 0000000000100000 - 000000003fe5a800 (usable)
+[    0.000000]  BIOS-e820: 000000003fe5a800 - 0000000040000000 (reserved)
+</pre>
+<h3>Individual Capabilities</h3>
+<p>Listing of per-board addressing capabilities.</p>
+<h3>GeForce Capabilities</h3>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>1 Terabyte (40 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>All GeForce GPUs (minus following exceptions)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>512 Gigabytes (39 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>GeForce GTX 460, 460 SE, 465, 470, 480</p>
+</li>
+<li>
+<p>GeForce GTX 470M, 480M, 485M</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>128 Gigabytes (37 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>GeForce GT 420, 430, 440, 520, 530, 610, 620, 630</p>
+</li>
+<li>
+<p>GeForce GT 415M, 420M, 425M, 435M, 520M, 525M, 540M, 550M, 555M,
+610M, 620M, 630M, 635M</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<h3>Quadro Capabilities</h3>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>1 Terabyte (40 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>All Quadro GPUs (minus following exceptions)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>512 Gigabytes (39 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Quadro 3000M, 4000, 4000M, 5000, 5000M, 6000</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>128 Gigabytes (37 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Quadro 500M, 600, 1000M</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<h3>Tesla Capabilities</h3>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>1 Terabyte (40 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>All Tesla GPUs (minus following exceptions)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>512 Gigabytes (39 bits)</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Tesla T20, C2050, C2070, M2070, M2070-Q</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<h3>Solutions</h3>
+<p>There are multiple potential ways to solve a discrepancy between
+your system configuration and a GPU's addressing capabilities.</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Select a GPU with addressing capabilities that match your target
+configuration.</p>
+<p>The best way to achieve optimal system and GPU performance is to
+make sure that the capabilities of the two are in alignment. This
+is especially important with multiple GPUs in the system, as the
+GPUs may have different addressing capabilities. In this multiple
+GPU scenario, other solutions could needlessly impact the GPU that
+has larger addressing capabilities.</p>
+</li>
+<li>
+<p>Configure the system's IOMMU to the GPU's addressing
+capabilities.</p>
+<p>This is a solution targeted at developers and system builders.
+The use of IOMMU may be an option, depending on system
+configuration and IOMMU capabilities. Please contact NVIDIA to
+discuss solutions for specific configurations.</p>
+</li>
+<li>
+<p>Limit the amount of memory seen by the Operating System to match
+your GPU's addressing capabilities with kernel configuration.</p>
+<p>This is best used in the scenario where RAM is mapped to
+addresses that slightly exceeds a GPU's capabilities and other
+solutions are either not achievable or more intrusive. A good
+example is the 512 GB RAM scenario outlined above with a GPU
+capable of addressing 512 GB. The kernel parameter can be used to
+ignore the RAM mapped above 512 GB.</p>
+<p>This can be achieved in Linux by use of the "mem" kernel
+parameter. See the kernel-parameters.txt documentation for more
+details on this parameter.</p>
+<p>This solution does affect the entire system and will limit how
+much memory the OS and other devices can use. In scenarios where
+there is a large discrepancy between the system configuration and
+GPU capabilities, this is not a desirable solution.</p>
+</li>
+<li>
+<p>Remove RAM from the system to align with the GPU's addressing
+capabilities.</p>
+<p>This is the most heavy-handed, but may ultimately be the most
+reliable solution.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"kms.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"addtlresources.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel Modesetting
+(DRM KMS)&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;35.&nbsp;NVIDIA Contact Info and Additional
+Resources</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="selectdriver.html" title=
+"Chapter&nbsp;3.&nbsp;Selecting and Downloading the NVIDIA Packages for Your System">
+<link rel="next" href="installedcomponents.html" title=
+"Chapter&nbsp;5.&nbsp;Listing of Installed Components">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;4.&nbsp;Installing the
+NVIDIA Driver</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"selectdriver.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"installedcomponents.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="installdriver" id=
+"installdriver"></a>Chapter&nbsp;4.&nbsp;Installing the NVIDIA
+Driver</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"installdriver.html#BeforeYouBegin89f39">Before you
+Begin</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#StartingTheInst6624e">Starting the
+Installer</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#InstallingTheKe997db">Installing the Kernel
+Interface</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#RegisteringTheNda02d">Registering the NVIDIA
+Kernel Module with DKMS</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#modulesigning">Signing the NVIDIA Kernel
+Module</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#AddingPrecompil0c783">Adding Precompiled Kernel
+Interfaces to the Installer Package</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#OtherFeaturesOfd7638">Other Features of the
+Installer</a></span></dt>
+</dl>
+</div>
+<p>This chapter provides instructions for installing the NVIDIA
+driver. Note that after installation, but prior to using the
+driver, you must complete the steps described in <a href=
+"editxconfig.html" title=
+"Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver">Chapter&nbsp;6,
+<i>Configuring X for the NVIDIA Driver</i></a>. Additional details
+that may be helpful for the new Linux user are provided in <a href=
+"newusertips.html" title=
+"Appendix&nbsp;I.&nbsp;Tips for New Linux Users">Appendix&nbsp;I,
+<i>Tips for New Linux Users</i></a>.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="BeforeYouBegin89f39"
+id="BeforeYouBegin89f39"></a>Before you Begin</h2>
+</div>
+</div>
+</div>
+<p>Before you begin the installation, exit the X server and
+terminate all OpenGL applications (note that it is possible that
+some OpenGL applications persist even after the X server has
+stopped). You should also set the default run level on your system
+such that it will boot to a VGA console, and not directly to X.
+Doing so will make it easier to recover if there is a problem
+during the installation process. See <a href="newusertips.html"
+title=
+"Appendix&nbsp;I.&nbsp;Tips for New Linux Users">Appendix&nbsp;I,
+<i>Tips for New Linux Users</i></a> for details.</p>
+<p>If you're installing on a system that is set up to use the
+Nouveau driver, then you should first disable it before attempting
+to install the NVIDIA driver. See <a href=
+"commonproblems.html#nouveau" title=
+"Interaction with the Nouveau Driver">Q &amp; A&nbsp;8.1,
+&ldquo;Interaction with the Nouveau Driver&rdquo;</a> for
+details.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"StartingTheInst6624e" id="StartingTheInst6624e"></a>Starting the
+Installer</h2>
+</div>
+</div>
+</div>
+<p>After you have downloaded the file <code class=
+"filename">NVIDIA-Linux-x86_64-390.48.run</code>, change to
+the directory containing the downloaded file, and as the
+<code class="systemitem">root</code> user run the executable:</p>
+<pre class="screen">
+    # cd yourdirectory
+    # sh NVIDIA-Linux-x86_64-390.48.run
+</pre>
+<p>The <code class="filename">.run</code> file is a self-extracting
+archive. When executed, it extracts the contents of the archive and
+runs the contained <code class="filename">nvidia-installer</code>
+utility, which provides an interactive interface to walk you
+through the installation.</p>
+<p><code class="filename">nvidia-installer</code> will also install
+itself to <code class="filename">/usr/bin/nvidia-installer</code>,
+which may be used at some later time to uninstall drivers,
+auto-download updated drivers, etc. The use of this utility is
+detailed later in this chapter.</p>
+<p>You may also supply command line options to the <code class=
+"filename">.run</code> file. Some of the more common options are
+listed below.</p>
+<div class="variablelist">
+<p class="title"><b>Common <code class="filename">.run</code>
+Options</b></p>
+<dl>
+<dt><span class="term"><code class=
+"option">--info</code></span></dt>
+<dd>
+<p>Print embedded info about the <code class="filename">.run</code>
+file and exit.</p>
+</dd>
+<dt><span class="term"><code class=
+"option">--check</code></span></dt>
+<dd>
+<p>Check integrity of the archive and exit.</p>
+</dd>
+<dt><span class="term"><code class=
+"option">--extract-only</code></span></dt>
+<dd>
+<p>Extract the contents of <code class=
+"filename">./NVIDIA-Linux-x86_64-390.48.run</code>, but do not
+run <code class="filename">nvidia-installer</code>.</p>
+</dd>
+<dt><span class="term"><code class=
+"option">--help</code></span></dt>
+<dd>
+<p>Print usage information for the common commandline options and
+exit.</p>
+</dd>
+<dt><span class="term"><code class=
+"option">--advanced-options</code></span></dt>
+<dd>
+<p>Print usage information for common command line options as well
+as the advanced options, and then exit.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"InstallingTheKe997db" id="InstallingTheKe997db"></a>Installing the
+Kernel Interface</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA kernel module has a kernel interface layer that must
+be compiled specifically for each kernel. NVIDIA distributes the
+source code to this kernel interface layer.</p>
+<p>When the installer is run, it will check your system for the
+required kernel sources and compile the kernel interface. You must
+have the source code for your kernel installed for compilation to
+work. On most systems, this means that you will need to locate and
+install the correct kernel-source, kernel-headers, or kernel-devel
+package; on some distributions, no additional packages are
+required.</p>
+<p>After the correct kernel interface has been compiled, the kernel
+interface will be linked with the closed-source portion of the
+NVIDIA kernel module. This requires that you have a linker
+installed on your system. The linker, usually <code class=
+"filename">/usr/bin/ld</code>, is part of the binutils package. You
+must have a linker installed prior to installing the NVIDIA
+driver.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"RegisteringTheNda02d" id="RegisteringTheNda02d"></a>Registering
+the NVIDIA Kernel Module with DKMS</h2>
+</div>
+</div>
+</div>
+<p>The installer will check for the presence of DKMS on your
+system. If DKMS is found, you will be given the option of
+registering the kernel module with DKMS, and using the DKMS
+infrastructure to build and install the kernel module. On most
+systems with DKMS, DKMS will take care of automatically rebuilding
+registered kernel modules when installing a different Linux
+kernel.</p>
+<p>If <code class="filename">nvidia-installer</code> is unable to
+install the kernel module through DKMS, the installation will be
+aborted and no kernel module will be installed. If this happens,
+installation should be attempted again, without the DKMS
+option.</p>
+<p>Note that versions of <code class=
+"filename">nvidia-installer</code> shipped with drivers before
+release 304 do not interact with DKMS. If you choose to register
+the NVIDIA kernel module with DKMS, please ensure that the module
+is removed from the DKMS database before using a non-DKMS aware
+version of <code class="filename">nvidia-installer</code> to
+install an older driver; otherwise, module source files may be
+deleted without first unregistering the module, potentially leaving
+the DKMS database in an inconsistent state. Running <code class=
+"filename">nvidia-uninstall</code> before installing a driver using
+an older installer will invoke the correct <strong class=
+"userinput"><code>dkms remove</code></strong> command to clean up
+the installation.</p>
+<p>Due to the lack of secure storage for private keys that can be
+utilized by automated processes such as DKMS, it is not possible to
+use DKMS in conjunction with the module signing support built into
+<code class="filename">nvidia-installer</code>.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="modulesigning" id=
+"modulesigning"></a>Signing the NVIDIA Kernel Module</h2>
+</div>
+</div>
+</div>
+<p>Some kernels may require that kernel modules be
+cryptographically signed by a key trusted by the kernel in order to
+be loaded. In particular, many distributions require modules to be
+signed when loaded into kernels running on UEFI systems with Secure
+Boot enabled. <code class="filename">nvidia-installer</code>
+includes support for signing the kernel module before installation,
+to ensure that it can be loaded on such systems. Note that not all
+UEFI systems have Secure Boot enabled, and not all kernels running
+on UEFI Secure Boot systems will require signed kernel modules, so
+if you are uncertain about whether your system requires signed
+kernel modules, you may try installing the driver without signing
+the kernel module, to see if the unsigned kernel module can be
+loaded.</p>
+<p>In order to sign the kernel module, you will need a private
+signing key, and an X.509 certificate for the corresponding public
+key. The X.509 certificate must be trusted by the kernel before the
+module can be loaded: we recommend ensuring that the signing key be
+trusted before beginning the driver installation, so that the newly
+signed module can be used immediately. If you do not already have a
+key pair suitable for module signing use, you must generate one.
+Please consult your distribution's documentation for details on the
+types of keys suitable for module signing, and how to generate
+them. <code class="filename">nvidia-installer</code> can generate a
+key pair for you at install time, but it is preferable to have a
+key pair already generated and trusted by the kernel before
+installation begins.</p>
+<p>Once you have a key pair ready, you can use that key pair in
+<code class="filename">nvidia-installer</code> by passing the keys
+to the installer on the command line with the <code class=
+"option">--module-signing-secret-key</code> and <code class=
+"option">--module-signing-public-key</code> options. As an example,
+it is possible to install the driver with a signed kernel module in
+silent mode (i.e., non-interactively) by running:</p>
+<pre class="screen">
+ # sh ./NVIDIA-Linux-x86_64-390.48.run -s \
+--module-signing-secret-key=/path/to/signing.key \
+--module-signing-public-key=/path/to/signing.x509
+</pre>
+<p>In the example above, <code class="filename">signing.key</code>
+and <code class="filename">signing.x509</code> are a private/public
+key pair, and the public key is already enrolled in one of the
+kernel's trusted module signing key sources.</p>
+<p>On UEFI systems with secure boot enabled, nvidia-installer will
+present a series of interactive prompts to guide users through the
+module signing process. As an alternative to setting the key paths
+on the command line, the paths can be provided interactively in
+response to the prompts. These prompts will also appear when
+building the NVIDIA kernel module against a kernel which has
+CONFIG_MODULE_SIG_FORCE enabled in its configuration, or if the
+installer is run in expert mode.</p>
+<h3>Key Sources Trusted by the Kernel</h3>
+<p>In order to load a kernel module into a kernel that requires
+module signatures, the module must be signed by a key that the
+kernel trusts. There are several sources that a kernel may draw
+upon to build its pool of trusted keys. If you have generated a key
+pair, but it is not yet trusted by your kernel, you must add a
+certificate for your public key to a trusted key source before it
+can be used to verify signatures of signed kernel modules. These
+trusted sources include:</p>
+<div class="variablelist">
+<dl>
+<dt><span class="term">Certificates embedded into the kernel
+image</span></dt>
+<dd>
+<p>On kernels with <code class="option">CONFIG_MODULE_SIG</code>
+set, a certificate for the public key used to sign the in-tree
+kernel modules is embedded, along with any additional module
+signing certificates provided at build time, into the kernel image.
+Modules signed by the private keys that correspond to the embedded
+public key certificates will be trusted by the kernel.</p>
+<p>Since the keys are embedded at build time, the only way to add a
+new public key is to build a new kernel. On UEFI systems with
+Secure Boot enabled, the kernel image will, in turn, need to be
+signed by a key that is trusted by the bootloader, so users
+building their own kernels with custom embedded keys should have a
+plan for making sure that the bootloader will load the new
+kernel.</p>
+</dd>
+<dt><span class="term">Certificates stored in the UEFI firmware
+database</span></dt>
+<dd>
+<p>On kernels with <code class=
+"option">CONFIG_MODULE_SIG_UEFI</code>, in addition to any
+certificates embedded into the kernel image, the kernel can use
+certificates stored in the <code class="filename">db</code>,
+<code class="filename">KEK</code>, or <code class=
+"filename">PK</code> databases of the computer's UEFI firmware to
+verify the signatures of kernel modules, as long as they are not in
+the UEFI <code class="filename">dbx</code> blacklist.</p>
+<p>Any user who holds the private key for the Secure Boot
+<code class="filename">PK</code>, or any of the keys in the
+<code class="filename">KEK</code> list should be able to add new
+keys that can be used by a kernel with <code class=
+"option">CONFIG_MODULE_SIG_UEFI</code>, and any user with physical
+access to the computer should be able to delete any existing Secure
+Boot keys, and install his or her own keys instead. Please consult
+the documentation for your UEFI-based computer system for details
+on how to manage the UEFI Secure Boot keys.</p>
+</dd>
+<dt><span class="term">Certificates stored in a supplementary key
+database</span></dt>
+<dd>
+<p>Some distributions include utilities that allow for the secure
+storage and management of cryptographic keys in a database that is
+separate from the kernel's built-in key list, and the key lists in
+the UEFI firmware. A prominent example is the MOK (Machine Owner
+Key) database used by some versions of the <code class=
+"filename">shim</code> bootloader, and the associated management
+utilities, <code class="filename">mokutil</code> and <code class=
+"filename">MokManager</code>.</p>
+<p>Such a system allows users to enroll additional keys without the
+need to build a new kernel or manage the UEFI Secure Boot keys.
+Please consult your distribution's documentation for details on
+whether such a supplementary key database is available, and if so,
+how to manage its keys.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+<h3>Generating Signing Keys in nvidia-installer</h3>
+<p><code class="filename">nvidia-installer</code> can generate keys
+that can be used for module signing, if existing keys are not
+readily available. Note that a module signed by a newly generated
+key cannot be loaded into a kernel that requires signed modules
+until its key is trusted, and when such a module is installed on
+such a system, the installed driver will not be immediately usable,
+even if the installation was successful.</p>
+<p>When <code class="filename">nvidia-installer</code> generates a
+key pair and uses it to sign a kernel module, an X.509 certificate
+containing the public key will be installed to disk, so that it can
+be added to one of the kernel's trusted key sources. <code class=
+"filename">nvidia-installer</code> will report the location of the
+installed certificate: make a note of this location, and of the
+certificate's SHA1 fingerprint, so that you will be able to enroll
+the certificate and verify that it is correct, after the
+installation is finished.</p>
+<p>By default, <code class="filename">nvidia-installer</code> will
+attempt to securely delete the generated private key with
+<code class="filename">shred -u</code> after the module is signed.
+This is to prevent the key from being exploited to sign a malicious
+kernel module, but it also means that the same key can't be used
+again to install a different driver, or even to install the same
+driver on a different kernel. <code class=
+"filename">nvidia-installer</code> can optionally install the
+private signing key to disk, as it does with the public
+certificate, so that the key pair can be reused in the future.</p>
+<p>If you elect to install the private key, please make sure that
+appropriate precautions are taken to ensure that it cannot be
+stolen. Some examples of precautions you may wish to take:</p>
+<div class="variablelist">
+<dl>
+<dt><span class="term">Prevent the key from being read by anybody
+without physical access to the computer</span></dt>
+<dd>
+<p>In general, physical access is required to install Secure Boot
+keys, including keys managed outside of the standard UEFI key
+databases, to prevent attackers who have remotely compromised the
+security of the operating system from installing malicious boot
+code. If a trusted key is available to remote users, even root,
+then it will be possible for an attacker to sign arbitrary kernel
+modules without first having physical access, making the system
+less secure.</p>
+<p>One way to ensure that the key is not available to remote users
+is to keep it on a removable storage medium, which is disconnected
+from the computer except when signing modules.</p>
+</dd>
+<dt><span class="term">Do not store the unencrypted private
+key</span></dt>
+<dd>
+<p>Encrypting the private key can add an extra layer of security:
+the key will not be useful for signing modules unless it can be
+successfully decrypted, first. Make sure not to store unencrypted
+copies of the key on persistent storage: either use volatile
+storage (e.g. a RAM disk), or securely delete any unencrypted
+copies of the key when not in use (e.g. using <code class=
+"filename">shred</code> instead of <code class=
+"filename">rm</code>). Note that using <code class=
+"filename">shred</code> may not be sufficient to fully purge data
+from some storage devices, in particular, some types of solid state
+storage.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+<h3>Alternatives to the Installer's Module Signing Support</h3>
+<p>It is possible to load the NVIDIA kernel module on a system that
+requires signed modules, without using the installer's module
+signing support. Depending on your particular use case, you may
+find one of these alternatives more suitable than signing the
+module with <code class="filename">nvidia-installer</code>:</p>
+<div class="variablelist">
+<dl>
+<dt><span class="term">Disable UEFI Secure Boot, if
+applicable</span></dt>
+<dd>
+<p>On some kernels, a requirement for signed modules is only
+enforced when booted on a UEFI system with Secure Boot enabled.
+Some users of such kernels may find it more convenient to disable
+Secure Boot; however, note that this will reduce the security of
+your system by making it easier for malicious users to install
+potentially harmful boot code, kernels, or kernel modules.</p>
+</dd>
+<dt><span class="term">Use a kernel that doesn't require signed
+modules</span></dt>
+<dd>
+<p>The kernel can be configured not to check module signatures, or
+to check module signatures, but allow modules without a trusted
+signature to be loaded, anyway. Installing a kernel configured in
+such a way will allow the installation of unsigned modules. Note
+that on Secure Boot systems, you will still need to ensure that the
+kernel be signed with a key trusted by the bootloader and/or boot
+firmware, and that a kernel that doesn't enforce module signature
+verification may be slightly less secure than one that does.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"AddingPrecompil0c783" id="AddingPrecompil0c783"></a>Adding
+Precompiled Kernel Interfaces to the Installer Package</h2>
+</div>
+</div>
+</div>
+<p>When <code class="filename">nvidia-installer</code> runs, it
+searches for a pre-compiled kernel interface layer for the target
+kernel: if one is found, then the complete kernel module can be
+produced by linking the precompiled interface with <code class=
+"filename">nv-kernel.o</code>, instead of needing to compile the
+kernel interface on the target system. <code class=
+"filename">nvidia-installer</code> includes a feature which allows
+users to add a precompiled interface to the installer package. This
+is useful in many use cases; for example, an administrator of a
+large group of similarly configured computers can prepare an
+installer package with a precompiled interface for the kernel
+running on those computers, then deploy the customized installer,
+which will be able to install the NVIDIA kernel module without
+needing to have the kernel development headers or a compiler
+installed on the target systems. (A linker is still required.)</p>
+<p>To use this feature, simply invoke the <code class=
+"filename">.run</code> installer package with the <code class=
+"option">--add-this-kernel</code> option; e.g.</p>
+<pre class="screen">
+ # sh ./NVIDIA-Linux-x86_64-390.48.run --add-this-kernel
+</pre>
+<p>This will unpack <code class=
+"filename">NVIDIA-Linux-x86_64-390.48.run</code>, compile a
+kernel interface layer for the currently running kernel (use the
+<code class="option">--kernel-source-path</code> and <code class=
+"option">--kernel-output-path</code> options to specify a target
+kernel other than the currently running one), and create a new
+installer package with the kernel interface layer added.</p>
+<p>Administrators of large groups of similarly configured computers
+that are configured to require trusted signatures in order to load
+kernel modules may find this feature especially useful when
+combined with the built-in support for module signing in
+<code class="filename">nvidia-installer</code>. To package a .run
+file with a precompiled kernel interface layer, plus a detached
+module signature for the linked module, just use the <code class=
+"option">--module-signing-secret-key</code> and <code class=
+"option">--module-signing-public-key</code> options alongside the
+<code class="option">--add-this-kernel</code> option. The resulting
+package, besides being installable without kernel headers or a
+compiler on the target system, has the added benefit of being able
+to produce a signed module without needing access to the private
+key on the install target system. Note that the detached signature
+will only be valid if the result of linking the precompiled
+interface with <code class="filename">nv-kernel.o</code> on the
+target system is exactly the same as the result of linking those
+two files on the system that was used to create the custom
+installer. To ensure optimal compatibility, the linker used on both
+the package preparation system and the install target system should
+be the same.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"OtherFeaturesOfd7638" id="OtherFeaturesOfd7638"></a>Other Features
+of the Installer</h2>
+</div>
+</div>
+</div>
+<p>Without options, the <code class="filename">.run</code> file
+executes the installer after unpacking it. The installer can be run
+as a separate step in the process, or can be run at a later time to
+get updates, etc. Some of the more important commandline options of
+<code class="filename">nvidia-installer</code> are:</p>
+<div class="variablelist">
+<p class="title"><b><code class="filename">nvidia-installer</code>
+options</b></p>
+<dl>
+<dt><span class="term"><code class=
+"option">--uninstall</code></span></dt>
+<dd>
+<p>During installation, the installer will make backups of any
+conflicting files and record the installation of new files. The
+uninstall option undoes an install, restoring the system to its
+pre-install state.</p>
+</dd>
+<dt><span class="term"><code class=
+"option">--ui=none</code></span></dt>
+<dd>
+<p>The installer uses an ncurses-based user interface if it is able
+to locate the correct ncurses library. Otherwise, it will fall back
+to a simple commandline user interface. This option disables the
+use of the ncurses library.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"selectdriver.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"installedcomponents.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;3.&nbsp;Selecting and Downloading the NVIDIA Packages
+for Your System&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;5.&nbsp;Listing of Installed Components</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

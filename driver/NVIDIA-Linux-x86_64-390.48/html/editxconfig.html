@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA
+Driver</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="installedcomponents.html" title=
+"Chapter&nbsp;5.&nbsp;Listing of Installed Components">
+<link rel="next" href="faq.html" title=
+"Chapter&nbsp;7.&nbsp;Frequently Asked Questions">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;6.&nbsp;Configuring X
+for the NVIDIA Driver</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"installedcomponents.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"faq.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="editxconfig" id=
+"editxconfig"></a>Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA
+Driver</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"editxconfig.html#UsingNvidiaxcon2beec">Using nvidia-xconfig to
+configure the X server</a></span></dt>
+<dt><span class="section"><a href=
+"editxconfig.html#ManuallyEditing1ae61">Manually Editing the
+Configuration File</a></span></dt>
+<dt><span class="section"><a href=
+"editxconfig.html#RestoringTheXCof7145">Restoring the X
+Configuration after Uninstalling the Driver</a></span></dt>
+</dl>
+</div>
+<p>The X configuration file provides a means to configure the X
+server. This section describes the settings necessary to enable the
+NVIDIA driver. A comprehensive list of parameters is provided in
+<a href="xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a>.</p>
+<p>The NVIDIA Driver includes a utility called nvidia-xconfig,
+which is designed to make editing the X configuration file easy.
+You can also edit it by hand.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"UsingNvidiaxcon2beec" id="UsingNvidiaxcon2beec"></a>Using
+nvidia-xconfig to configure the X server</h2>
+</div>
+</div>
+</div>
+<p>nvidia-xconfig will find the X configuration file and modify it
+to use the NVIDIA X driver. In most cases, you can simply answer
+"Yes" when the installer asks if it should run it. If you need to
+reconfigure your X server later, you can run nvidia-xconfig again
+from a terminal. nvidia-xconfig will make a backup copy of your
+configuration file before modifying it.</p>
+<p>Note that the X server must be restarted for any changes to its
+configuration file to take effect.</p>
+<p>More information about nvidia-xconfig can be found in the
+nvidia-xconfig manual page by running.</p>
+<pre class="screen">
+    % man nvidia-xconfig
+</pre>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ManuallyEditing1ae61" id="ManuallyEditing1ae61"></a>Manually
+Editing the Configuration File</h2>
+</div>
+</div>
+</div>
+<p>In April 2004 the X.Org Foundation released an X server based on
+the XFree86 server. While your release may use the X.Org X server,
+rather than XFree86, the differences between the two should have no
+impact on NVIDIA Linux users with two exceptions:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The X.Org configuration file is <code class=
+"filename">/etc/X11/xorg.conf</code> while the XFree86
+configuration file is <code class=
+"filename">/etc/X11/XF86Config</code>. The files use the same
+syntax. This document refers to both files as &ldquo;<span class=
+"quote">the X config file</span>&rdquo;.</p>
+</li>
+<li>
+<p>The X.Org log file is <code class=
+"filename">/var/log/Xorg.#.log</code> while the XFree86 log file is
+<code class="filename">/var/log/XFree86.#.log</code> (where
+<code class="filename">#</code> is the server number -- usually 0).
+The format of the log files is nearly identical. This document
+refers to both files as &ldquo;<span class="quote">the X log
+file</span>&rdquo;.</p>
+</li>
+</ul>
+</div>
+<p>In order for any changes to be read into the X server, you must
+edit the file used by the server. While it is not unreasonable to
+simply edit both files, it is easy to determine the correct file by
+searching for the line</p>
+<pre class="screen">
+    (==) Using config file:
+</pre>
+<p>in the X log file. This line indicates the name of the X config
+file in use.</p>
+<p>If you do not have a working X config file, there are a few
+different ways to obtain one. A sample config file is included both
+with the XFree86 distribution and with the NVIDIA driver package
+(at <code class="filename">/usr/share/doc/NVIDIA_GLX-1.0/</code>).
+The <span><strong class="command">nvidia-xconfig</strong></span>
+utility, provided with the NVIDIA driver package, can generate a
+new X configuration file. Additional information on the X config
+syntax can be found in the XF86Config manual page (<strong class=
+"userinput"><code>man XF86Config</code></strong> or <strong class=
+"userinput"><code>man xorg.conf</code></strong>).</p>
+<p>If you have a working X config file for a different driver (such
+as the &ldquo;<span class="quote">vesa</span>&rdquo; or
+&ldquo;<span class="quote">fbdev</span>&rdquo; driver), then simply
+edit the file as follows.</p>
+<p>Remove the line:</p>
+<pre class="screen">
+      Driver "vesa"
+  (or Driver "fbdev")
+</pre>
+<p>and replace it with the line:</p>
+<pre class="screen">
+    Driver "nvidia"
+</pre>
+<p>Remove the following lines:</p>
+<pre class="screen">
+    Load "dri"
+    Load "GLCore"
+</pre>
+<p>In the <code class="computeroutput">Module</code> section of the
+file, add the line (if it does not already exist):</p>
+<pre class="screen">
+    Load "glx"
+</pre>
+<p>If the X config file does not have a <code class=
+"computeroutput">Module</code> section, you can safely skip the
+last step if the X server installed on your system is an X.Org X
+server or an XFree86 X release version 4.4.0 or greater. If you are
+using an older XFree86 X server, add the following to your X config
+file:</p>
+<pre class="screen">
+Section "Module"
+    Load "extmod"
+    Load "dbe"
+    Load "type1"
+    Load "freetype"
+    Load "glx"
+EndSection
+</pre>
+<p>There are numerous options that may be added to the X config
+file to tune the NVIDIA X driver. See <a href="xconfigoptions.html"
+title="Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B,
+<i>X Config Options</i></a> for a complete list of these
+options.</p>
+<p>Once you have completed these edits to the X config file, you
+may restart X and begin using the accelerated OpenGL libraries.
+After restarting X, any OpenGL application should automatically use
+the new NVIDIA libraries. (NOTE: If you encounter any problems, see
+<a href="commonproblems.html" title=
+"Chapter&nbsp;8.&nbsp;Common Problems">Chapter&nbsp;8, <i>Common
+Problems</i></a> for common problem diagnoses.)</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"RestoringTheXCof7145" id="RestoringTheXCof7145"></a>Restoring the
+X Configuration after Uninstalling the Driver</h2>
+</div>
+</div>
+</div>
+<p>If X is explicitly configured to use the NVIDIA driver, then the
+X config file should be edited to use a different X driver after
+uninstalling the NVIDIA driver. Otherwise, X may fail to start,
+since the driver it was configured to use will no longer be present
+on the system after uninstallation.</p>
+<p>If you edited the file manually, revert any edits you made. If
+you used the <span><strong class=
+"command">nvidia-xconfig</strong></span> utility, either by
+answering "Yes" when prompted to configure the X server by the
+installer, or by running it manually later on, then you may restore
+the backed-up X config file, if it exists and reflects the X config
+state that existed before the NVIDIA driver was installed.</p>
+<p>If you do not recall any manual changes that you made to the
+file, or do not have a backed-up X config file that uses a
+non-NVIDIA X driver, you may want to try simply renaming the X
+configuration file, to see if your X server loads a sensible
+default.</p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"installedcomponents.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"faq.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;5.&nbsp;Listing of Installed Components&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;7.&nbsp;Frequently Asked Questions</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

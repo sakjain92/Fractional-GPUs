@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;22.&nbsp;Using the X Composite
+Extension</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="powermanagement.html" title=
+"Chapter&nbsp;21.&nbsp;Configuring Power Management Support">
+<link rel="next" href="nvidiasettings.html" title=
+"Chapter&nbsp;23.&nbsp;Using the nvidia-settings Utility">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;22.&nbsp;Using the X
+Composite Extension</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"powermanagement.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"nvidiasettings.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="xcompositeextension" id=
+"xcompositeextension"></a>Chapter&nbsp;22.&nbsp;Using the X
+Composite Extension</h2>
+</div>
+</div>
+</div>
+<p>X.Org X servers, beginning with X11R6.8.0, contain experimental
+support for a new X protocol extension called Composite. This
+extension allows windows to be drawn into pixmaps instead of
+directly onto the screen. In conjunction with the Damage and Render
+extensions, this allows a program called a composite manager to
+blend windows together to draw the screen.</p>
+<p>Performance will be degraded significantly if the <code class=
+"computeroutput">RenderAccel</code> option is disabled in
+xorg.conf. See <a href="xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a> for more details.</p>
+<p>When the NVIDIA X driver is used with an X.Org X server
+X11R6.9.0 or newer and the Composite extension is enabled, NVIDIA's
+OpenGL implementation interacts properly with the Damage and
+Composite X extensions. This means that OpenGL rendering is drawn
+into offscreen pixmaps and the X server is notified of the Damage
+event when OpenGL renders to the pixmap. This allows OpenGL
+applications to behave properly in a composited X desktop.</p>
+<p>If the Composite extension is enabled on an X server older than
+X11R6.9.0, then GLX will be disabled. You can force GLX on while
+Composite is enabled on pre-X11R6.9.0 X servers with the
+<code class="computeroutput">AllowGLXWithComposite</code> X
+configuration option. However, GLX will not render correctly in
+this environment. Upgrading your X server to X11R6.9.0 or newer is
+recommended.</p>
+<p>You can enable the Composite X extension by running
+<span><strong class="command">nvidia-xconfig
+--composite</strong></span>. Composite can be disabled with
+<span><strong class="command">nvidia-xconfig
+--no-composite</strong></span>. See the nvidia-xconfig(1) man page
+for details.</p>
+<p>If you are using an OpenGL-based composite manager, you may also
+need the <code class="computeroutput">DisableGLXRootClipping</code>
+option to obtain proper output.</p>
+<p>The Composite extension also causes problems with other driver
+components:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>In X servers prior to X.Org 7.1, Xv cannot draw into pixmaps
+that have been redirected offscreen and will draw directly onto the
+screen instead. For some programs you can work around this issue by
+using an alternative video driver. For example, "mplayer -vo x11"
+will work correctly, as will "xine -V xshm". If you must use Xv
+with an older server, you can also disable the compositing manager
+and re-enable it when you are finished.</p>
+<p>On X.Org 7.1 and higher, the driver will properly redirect video
+into offscreen pixmaps. Note that the Xv adaptors will ignore the
+sync-to-vblank option when drawing into a redirected window.</p>
+</li>
+<li>
+<p>Workstation overlays, stereo visuals, and the unified back
+buffer (UBB) are incompatible with Composite. These features will
+be automatically disabled when Composite is detected.</p>
+</li>
+<li>
+<p>The Composite extension is incompatible with Xinerama in X.Org X
+servers prior to version 1.10. Composite will be automatically
+disabled when Xinerama is enabled on those servers.</p>
+</li>
+<li>
+<p>Prior to X.Org X server version 1.15, the Damage extension does
+not properly report rendering events on all physical X screens in
+Xinerama configurations. This prevents most composite mangers from
+rendering correctly.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>This NVIDIA Linux driver supports OpenGL rendering to 32-bit
+ARGB windows on X.Org 7.2 and higher or when the <code class=
+"computeroutput">AddARGBGLXVisuals</code> X config file option is
+enabled. 32-bit visuals are only available on screens with depths
+24 or 30. If you are an application developer, you can use these
+new visuals in conjunction with a composite manager to create
+translucent OpenGL applications:</p>
+<pre class="screen">
+    int attrib[] = {
+        GLX_RENDER_TYPE, GLX_RGBA_BIT,
+        GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+        GLX_RED_SIZE, 1,
+        GLX_GREEN_SIZE, 1,
+        GLX_BLUE_SIZE, 1,
+        GLX_ALPHA_SIZE, 1,
+        GLX_DOUBLEBUFFER, True,
+        GLX_DEPTH_SIZE, 1,
+        None };
+    GLXFBConfig *fbconfigs, fbconfig;
+    int numfbconfigs, render_event_base, render_error_base;
+    XVisualInfo *visinfo;
+    XRenderPictFormat *pictFormat;
+
+    /* Make sure we have the RENDER extension */
+    if(!XRenderQueryExtension(dpy, &amp;render_event_base, &amp;render_error_base)) {
+        fprintf(stderr, "No RENDER extension found\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Get the list of FBConfigs that match our criteria */
+    fbconfigs = glXChooseFBConfig(dpy, scrnum, attrib, &amp;numfbconfigs);
+    if (!fbconfigs) {
+        /* None matched */
+        exit(EXIT_FAILURE);
+    }
+
+    /* Find an FBConfig with a visual that has a RENDER picture format that
+     * has alpha */
+    for (i = 0; i &lt; numfbconfigs; i++) {
+        visinfo = glXGetVisualFromFBConfig(dpy, fbconfigs[i]);
+        if (!visinfo) continue;
+        pictFormat = XRenderFindVisualFormat(dpy, visinfo-&gt;visual);
+        if (!pictFormat) continue;
+
+        if(pictFormat-&gt;direct.alphaMask &gt; 0) {
+            fbconfig = fbconfigs[i];
+            break;
+        }
+
+        XFree(visinfo);
+    }
+
+    if (i == numfbconfigs) {
+        /* None of the FBConfigs have alpha.  Use a normal (opaque)
+         * FBConfig instead */
+        fbconfig = fbconfigs[0];
+        visinfo = glXGetVisualFromFBConfig(dpy, fbconfig);
+        pictFormat = XRenderFindVisualFormat(dpy, visinfo-&gt;visual);
+    }
+
+    XFree(fbconfigs);
+</pre>
+<p></p>
+<p>When rendering to a 32-bit window, keep in mind that the X
+RENDER extension, used by most composite managers, expects
+"premultiplied alpha" colors. This means that if your color has
+components (r,g,b) and alpha value a, then you must render (a*r,
+a*g, a*b, a) into the target window.</p>
+<p>More information about Composite can be found at <a href=
+"http://freedesktop.org/Software/CompositeExt" target=
+"_top">http://freedesktop.org/Software/CompositeExt</a></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"powermanagement.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"nvidiasettings.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;21.&nbsp;Configuring Power Management
+Support&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;23.&nbsp;Using the nvidia-settings Utility</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

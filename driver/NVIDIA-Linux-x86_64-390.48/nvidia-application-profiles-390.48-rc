@@ -1,0 +1,148 @@
+# Application profiles for the NVIDIA Linux graphics driver, version 390.48
+# Last modified: Wed Mar 21 23:47:46 PDT 2018
+# These profiles were provided by NVIDIA and should not be modified.  If you
+# wish to change the defaults provided here, you can override them by creating
+# custom rules in /etc/nvidia/nvidia-application-profiles-rc (which will apply
+# system-wide) or, for a given user, $HOME/.nv/nvidia-application-profiles-rc
+# (which will apply to that particular user). See the "APPLICATION PROFILE
+# SEARCH PATH" section of the NVIDIA Linux Graphics Driver README for more
+# information.
+{
+    "profiles" : [
+        {
+          "name" : "NonConformantBlitFramebufferScissor",
+          "settings" : [ "GLConformantBlitFramebufferScissor", false ]
+        },
+        {
+          "name" : "CL1C",
+          "settings" : [ "0x528ab3", 1 ]
+        },
+        {
+          "name" : "FA0",
+          "settings" : [ "10572898", 0 ]
+        },
+        {
+          "name" : "ExactGLESVersion",
+          "settings" : [ "ForceRequestedESVersion", 1 ]
+        },
+        {
+          "name" : "IgnoreGLSLExtensionRequirements",
+          "settings" : [ "GLIgnoreGLSLExtReqs", true ]
+        },
+        {
+          "name" : "No GSYNC",
+          "settings" : [ "GLGSYNCAllowed", false ]
+        },
+        {
+          "name" : "UseThreadedOptimizations",
+          "settings" : [ "GLThreadedOptimizations", true ]
+        },
+        {
+          "name" : "NoThreadedOptimizations",
+          "settings" : [ "GLThreadedOptimizations", false ]
+        },
+        {
+          "name" : "NoAniso",
+          "settings" : [ "GLLogMaxAniso", 0 ]
+        },
+        {
+          "name" : "NamedVertexAttributesApplyDivisor",
+          "settings" : [ "GL23cd0e", 1 ]
+        },
+        {
+        "name" : "NonStrictDrawRangeElements",
+        "settings" : [ "GLStrictDrawRangeElements", false ]
+        },
+        {
+          "name" : "NoEnforceShaderInputOutputMatching",
+          "settings" : [ "GLShaderPortabilityWarnings", false ]
+        }
+    ],
+    "rules" : [
+        {
+          "pattern" : {
+             "feature" : "dso",
+             "matches" : "libcogl.so"
+          },
+          "profile" : "NonConformantBlitFramebufferScissor"
+        },
+        {
+          "pattern" : {
+            "feature" : "dso",
+            "matches" : "libMaya.so"
+          },
+          "profile" : "CL1C"
+        },
+        {
+          "pattern" : {
+            "feature" : "dso",
+            "matches" : "libMaya.so"
+          },
+          "profile" : "NamedVertexAttributesApplyDivisor"
+        },
+        { "pattern" : "SkullGirls.x86_64-pc-linux-gnu", "profile" : "NoAniso" },
+        { "pattern" : "SkullGirls.i686-pc-linux-gnu", "profile" : "NoAniso" },
+        { "pattern" : "Indivisible_Linux.i686-pc-linux-gnu", "profile" : "NoAniso" },
+        { "pattern" : "xsi", "profile" : "CL1C" },
+        { "pattern" : "HoudiniFX", "profile" : "CL1C" },
+        { "pattern" : "katana", "profile" : "CL1C" },
+        { "pattern" : "Autodesk Mudbox 2014 64-bit", "profile" : "CL1C" },
+        { "pattern" : "octane", "profile" : "CL1C" },
+        { "pattern" : "Fusion64_6.4", "profile" : "CL1C" },
+        { "pattern" : "Nuke7.0", "profile" : "CL1C" },
+        { "pattern" : "vray.exe", "profile" : "CL1C" },
+        { "pattern" : "vray.bin", "profile" : "CL1C" },
+        { "pattern" : "kwin_gles", "profile" : "FA0" },
+        { "pattern" : "kwin_gles", "profile" : "ExactGLESVersion" },
+        {
+           "pattern" : [
+            { "feature" : "procname", "matches" : "heaven_x86"},
+            { "op" : "not", "sub" : { "feature" : "findfile", "matches" : "browser_x86" } }
+           ],
+           "profile" : "IgnoreGLSLExtensionRequirements"
+        },
+        {
+           "pattern" : [
+            { "feature" : "procname", "matches" : "heaven_x64"},
+            { "op" : "not", "sub" : { "feature" : "findfile", "matches" : "browser_x64" } }
+           ],
+           "profile" : "IgnoreGLSLExtensionRequirements"
+        },
+        { "pattern" : { "feature" : "procname", "matches" : "cinnamon" },               "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "compiz" },                 "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "compton" },                "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "enlightenment" },          "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "gnome-shell" },            "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "kscreenlocker_greet" },    "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "kwin" },                   "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "kwin_x11" },               "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "muffin" },                 "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "dso",      "matches" : "libmutter" },              "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "steam" },                  "profile" : "No GSYNC" },
+        { "pattern" : { "feature" : "procname", "matches" : "steamcompmgr" },           "profile" : "No GSYNC" },
+        {
+          "pattern" : "Borderlands2",
+          "profile" : "UseThreadedOptimizations"
+        },
+        {
+          "pattern" : "BorderlandsPreSequel",
+          "profile" : "UseThreadedOptimizations"
+        },
+        {
+          "pattern" : "GoatGame",
+          "profile" : "NonStrictDrawRangeElements"
+        },
+        {
+          "pattern" : "ShadowOfMordor",
+          "profile" : "NoEnforceShaderInputOutputMatching"
+        },
+        {
+          "pattern" : "shotcut",
+          "profile" : "NoThreadedOptimizations"
+        },
+        {
+          "pattern" : "MetroLL",
+          "profile" :  "NoThreadedOptimizations"
+        }
+    ]
+}

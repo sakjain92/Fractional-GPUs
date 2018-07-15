@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;32.&nbsp;Offloading Graphics Display with RandR
+1.4</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="depth30.html" title=
+"Chapter&nbsp;31.&nbsp;Configuring Depth 30 Displays">
+<link rel="next" href="kms.html" title=
+"Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel Modesetting (DRM KMS)">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;32.&nbsp;Offloading
+Graphics Display with RandR 1.4</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"depth30.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"kms.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="randr14" id=
+"randr14"></a>Chapter&nbsp;32.&nbsp;Offloading Graphics Display
+with RandR 1.4</h2>
+</div>
+</div>
+</div>
+<p>Version 1.4 of the X Resize, Rotate, and Reflect Extension
+(RandR 1.4 for short) adds a way for drivers to work together so
+that one graphics device can display images rendered by another.
+This can be used on Optimus-based laptops to display a desktop
+rendered by an NVIDIA GPU on a screen connected to another graphics
+device, such as an Intel integrated graphics device or a USB-to-VGA
+adapter.</p>
+<p><a name="requirements" id="requirements"></a></p>
+<h3>System Requirements</h3>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>X.Org X server version 1.13 or higher.</p>
+</li>
+<li>
+<p>A Linux kernel, version 3.13 or higher, with CONFIG_DRM
+enabled.</p>
+</li>
+<li>
+<p>Version 1.4.0 of the xrandr command-line utility.</p>
+</li>
+</ul>
+</div>
+<p><a name="outputsource" id="outputsource"></a></p>
+<h3>Using the NVIDIA Driver as a RandR 1.4 Output Source
+Provider</h3>
+<p>To use the NVIDIA driver as an RandR 1.4 output source provider,
+the X server needs to be configured to use the NVIDIA driver for
+its primary screen and to use the &ldquo;<span class=
+"quote">modesetting</span>&rdquo; driver for the other graphics
+device. This can be achieved by placing the following in
+<code class="computeroutput">/etc/X11/xorg.conf</code>:</p>
+<pre class="screen">
+Section "ServerLayout"
+    Identifier "layout"
+    Screen 0 "nvidia"
+    Inactive "intel"
+EndSection
+
+Section "Device"
+    Identifier "nvidia"
+    Driver "nvidia"
+    BusID "&lt;BusID for NVIDIA device here&gt;"
+EndSection
+
+Section "Screen"
+    Identifier "nvidia"
+    Device "nvidia"
+    Option "AllowEmptyInitialConfiguration"
+EndSection
+
+Section "Device"
+    Identifier "intel"
+    Driver "modesetting"
+EndSection
+
+Section "Screen"
+    Identifier "intel"
+    Device "intel"
+EndSection
+</pre>
+<p>See <a href="faq.html#busid">&ldquo;What is the format of a PCI
+Bus ID?&rdquo;</a> for information on determining the appropriate
+BusID string for your graphics card.</p>
+<p>The X server does not automatically enable displays attached to
+the non-NVIDIA graphics device in this configuration. To do that,
+use the <code class="computeroutput">xrandr</code> command line
+tool:</p>
+<pre class="screen">
+$ xrandr --setprovideroutputsource modesetting NVIDIA-0
+$ xrandr --auto
+</pre>
+<p>This pair of commands can be added to your X session startup
+scripts, for example by putting them in <code class=
+"computeroutput">$HOME/.xinitrc</code> before running <code class=
+"computeroutput">startx</code>.</p>
+<p>Use the</p>
+<pre class="screen">
+$ xrandr --listproviders
+</pre>
+<p>command to query the capabilities of the graphics devices. If
+the system requirements are met and the X server is configured
+correctly, there should be a provider named <code class=
+"computeroutput">NVIDIA-0</code> with the <code class=
+"computeroutput">Source Output</code> capability and one named
+<code class="computeroutput">modesetting</code> with the
+<code class="computeroutput">Sink Output</code> capability. If
+either provider is missing or doesn't have the expected capability,
+check your system configuration.</p>
+<p><a name="randr14sync" id="randr14sync"></a></p>
+<h3>Synchronized RandR 1.4 Outputs</h3>
+<p>When running against X.Org X server with video driver ABI 23 or
+higher, synchronization is supported with compatible drivers. At
+the time of writing, synchronization is compatible with the
+&ldquo;<span class="quote">modesetting</span>&rdquo; driver with
+Intel devices on Linux version 4.5 or newer. If all requirements
+are met, synchronization will be used automatically.</p>
+<p>X.Org X server version 1.19 or newer is required to support
+synchronization. Without synchronization, displays are prone to
+&ldquo;<span class="quote">tearing</span>&rdquo;. See <a href=
+"randr14.html#caveats" title="Caveats">Caveats</a> for details.</p>
+<p>If synchronization is being used but is not desired, it can be
+disabled with:</p>
+<pre class="screen">
+$ xrandr --output &lt;output&gt; --set "PRIME Synchronization" 0
+</pre>
+<p>and re-enabled with:</p>
+<pre class="screen">
+$ xrandr --output &lt;output&gt; --set "PRIME Synchronization" 1
+</pre>
+<p></p>
+<p>See <a href="openglenvvariables.html#vblanksyncing" title=
+"Vblank syncing">Vblank syncing</a> for information on how OpenGL
+applications can synchronize with sink-provided outputs.</p>
+<p><a name="caveats" id="caveats"></a></p>
+<h3>Caveats</h3>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Support for PRIME Synchronization relies on DRM KMS support. See
+<a href="kms.html" title=
+"Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel Modesetting (DRM KMS)">
+Chapter&nbsp;33, <i>Direct Rendering Manager Kernel Modesetting
+(DRM KMS)</i></a> for more information.</p>
+</li>
+<li>
+<p>Some Intel i915 DRM driver versions, such as that included with
+Linux 4.5, have a bug where drmModeMoveCursor() and
+drmModePageFlip() interfere with each other, resulting in only one
+occurring per frame. If choppy performance is observed in
+configurations using PRIME Synchronization and i915, it is
+suggested to add <code class="computeroutput">Option
+"SWCursor"</code> to Intel's device section in xorg.conf. The bug
+appears to be fixed as of Linux 4.6.</p>
+</li>
+<li>
+<p>When running against X.Org X server version 1.18.x or lower,
+there is no synchronization between the images rendered by the
+NVIDIA GPU and the output device. This means that the output device
+can start reading the next frame of video while it is still being
+updated, producing a graphical artifact known as
+&ldquo;<span class="quote">tearing</span>&rdquo;. Tearing is
+expected due to limitations in the design of the X.Org X server
+prior to video driver ABI 23.</p>
+</li>
+<li>
+<p>The NVIDIA driver currently only supports the <code class=
+"computeroutput">Source Output</code> capability. It does not
+support render offload and cannot be used as an output sink.</p>
+</li>
+<li>
+<p>Some versions of the &ldquo;<span class=
+"quote">modesetting</span>&rdquo; driver try to load a sub-module
+called &ldquo;<span class="quote">glamor</span>&rdquo;, which
+conflicts with the NVIDIA GLX implementation. Please ensure that
+the <code class="filename">libglamoregl.so</code> X module is not
+installed.</p>
+</li>
+<li>
+<p>NVIDIA's implementation of PRIME requires support for DRM render
+nodes, a feature first merged in Linux 3.12. However, the feature
+was not enabled by default until Linux 3.17. To enable it on
+earlier supported kernels, specify the <code class=
+"computeroutput">drm.rnodes=1</code> kernel boot parameter.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"depth30.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"kms.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;31.&nbsp;Configuring Depth 30 Displays&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel
+Modesetting (DRM KMS)</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

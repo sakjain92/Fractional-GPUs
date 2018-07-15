@@ -1,0 +1,764 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;J.&nbsp;Application Profiles</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="newusertips.html" title=
+"Appendix&nbsp;I.&nbsp;Tips for New Linux Users">
+<link rel="next" href="gpunames.html" title=
+"Appendix&nbsp;K.&nbsp;GPU Names">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;J.&nbsp;Application
+Profiles</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"newusertips.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"gpunames.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="profiles" id=
+"profiles"></a>Appendix&nbsp;J.&nbsp;Application Profiles</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"profiles.html#Introductionec914">Introduction</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#EnablingApplicaba0fc">Enabling Application Profiles
+in the OpenGL Driver</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#ApplicationProf9ccbe">Application Profile Search
+Path</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#ConfigurationFi1ec50">Configuration File
+Syntax</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#ExtendedBackusn4e5af">Extended Backus-Naur Form
+(EBNF) grammar</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#RulePrecedence6f323">Rule Precedence</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#ConfigurationFie7ae2">Configuration File
+Example</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#SupportedFeatura8d39">Supported
+Features</a></span></dt>
+<dt><span class="section"><a href=
+"profiles.html#ListOfSupportedd38df">List of supported application
+profile settings</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="Introductionec914"
+id="Introductionec914"></a>Introduction</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Linux driver supports configuring various driver
+settings on a per-process basis through the use of "application
+profiles": collections of settings that are only applied if the
+current process matches attributes detected by the driver when it
+is loaded into the process. This mechanism allows users to
+selectively override global driver settings for a particular
+application without the need to set environment variables on the
+command line prior to running the application.</p>
+<p>Application profiles consist of "rules" and "profiles". A
+"profile" defines what settings to use, and a "rule" identifies an
+application and defines what profile should be used with that
+application.</p>
+<p>A rule identifies an application by describing various features
+of the application; for example, the name of the application binary
+(e.g. "glxgears") or a shared library loaded into the application
+(e.g. "libpthread.so.0"). The particular features supported by this
+NVIDIA Linux implementation are listed below in the "Supported
+Features" section.</p>
+<p>Currently, application profiles are only supported by the NVIDIA
+Linux GLX implementation, but other NVIDIA driver components may
+use them in the future.</p>
+<p>Application profiles can be configured using the nvidia-settings
+control panel. To learn more, consult the online help text by
+clicking the "Help" button under the "Application Profiles" page in
+nvidia-settings.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"EnablingApplicaba0fc" id="EnablingApplicaba0fc"></a>Enabling
+Application Profiles in the OpenGL Driver</h2>
+</div>
+</div>
+</div>
+<p>Note: if HOME is unset, then any configuration files listed
+below located under $HOME will not be loaded by the driver.</p>
+<p>To enable application profile support globally on a system, edit
+the file $HOME/.nv/nvidia-application-profile-globals-rc to contain
+a JSON object with a member "enabled" set to true or false. For
+example, if this file contains the following string:</p>
+<pre class="screen">
+{ "enabled" : true }
+</pre>
+<p>application profiles will be enabled globally in the driver. If
+this file does not exist or cannot be read by the parser,
+application profiles will be enabled by default.</p>
+<p>Application profile support in the driver can be toggled for an
+individual application by using the __GL_APPLICATION_PROFILE
+environment variable. Setting this to 1 enables application profile
+support, and setting this to 0 disables application profile
+support. If this environment variable is set, this overrides any
+setting specified in
+$HOME/.nv/nvidia-application-profile-globals-rc.</p>
+<p>Additionally, the application profile parser can log debugging
+information to stderr if the __GL_APPLICATION_PROFILE_LOG
+environment variable is set to 1. Conversely, setting
+__GL_APPLICATION_PROFILE_LOG to 0 disables logging of parse
+information to stderr.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ApplicationProf9ccbe" id="ApplicationProf9ccbe"></a>Application
+Profile Search Path</h2>
+</div>
+</div>
+</div>
+<p>By default, when the driver component ("libGL.so.1" in the case
+of GLX) is loaded by a process, the driver looks for files in the
+following search path:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><code class=
+"filename">$HOME/.nv/nvidia-application-profiles-rc</code></p>
+</li>
+<li>
+<p><code class=
+"filename">$HOME/.nv/nvidia-application-profiles-rc.d</code></p>
+</li>
+<li>
+<p><code class=
+"filename">/etc/nvidia/nvidia-application-profiles-rc</code></p>
+</li>
+<li>
+<p><code class=
+"filename">/etc/nvidia/nvidia-application-profiles-rc.d</code></p>
+</li>
+<li>
+<p><code class=
+"filename">/usr/share/nvidia/nvidia-application-profiles-390.48-rc</code></p>
+</li>
+</ul>
+</div>
+<p>By convention, the <code class="filename">*-rc.d</code> files
+are directories and the <code class="filename">*-rc</code> files
+are regular files, but the driver places no restrictions on file
+type, and any of the above files can be a directory or regular
+file, or a symbolic link which resolves to a directory or regular
+file. Files of other types (e.g. character or block devices,
+sockets, and named pipes) will be ignored.</p>
+<p>If a file in the search path is a directory, the parser will
+examine all regular files (or symbolic links which resolve to
+regular files) in that directory in alphanumeric order, as
+determined by strcoll(3). Files in the directory of other types
+(e.g. other directories, character or block devices, sockets, and
+named pipes) will be ignored.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ConfigurationFi1ec50" id="ConfigurationFi1ec50"></a>Configuration
+File Syntax</h2>
+</div>
+</div>
+</div>
+<p>When application profiles are enabled in the driver, the driver
+configuration is defined by a set of <span class=
+"emphasis"><em>profiles</em></span> and <span class=
+"emphasis"><em>rules</em></span>. Profiles are collections of
+driver settings given as key/value pairs, and rules are mappings
+between one or more <span class="emphasis"><em>patterns</em></span>
+which match against some feature of the process and a profile.</p>
+<p>Configuration files are written in a superset of JSON (<a href=
+"http://www.json.org/" target="_top">http://www.json.org/</a>) with
+the following additional features:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>A hash mark ('#') appearing outside of a JSON string denotes a
+comment, and any text appearing between the hash mark and the end
+of the line inclusively is ignored.</p>
+</li>
+<li>
+<p>Integers can be specified in base 8 or 16, in addition to base
+10. Numbers beginning with '0' and followed by a digit are
+interpreted to be octal, and numbers beginning with '0' and
+followed by 'x' or 'X' are interpreted to be hexadecimal.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Each file consists of a root object with two optional
+members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"rules", which contains an array of rules, and</p>
+</li>
+<li>
+<p>"profiles", which contains an array of profiles.</p>
+</li>
+</ul>
+</div>
+<p>Each rule is an object with the following members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"pattern", which contains either a string, a pattern object, or
+an array of zero or more pattern objects. If a string is given, it
+is interpreted to be a pattern object with the "feature" member set
+to "procname" and the "matches" member set to the value of the
+string. During application detection, the driver determines if each
+pattern in the rule matches the running process, and only applies
+the rule if all patterns in the rule match. If an empty array is
+given, the rule is unconditionally applied.</p>
+</li>
+<li>
+<p>"profile", which contains either a string, array, or profile. If
+a string is given, it is interpreted to be the name of some profile
+in the configuration. If a profile is given, it is implicitly
+defined as part of the rule. If an array is given, the array is
+interpreted to be an inline profile with its "settings" member set
+to the contents of the array.</p>
+</li>
+</ul>
+</div>
+<p>Each profile is an object with the following members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"name", a string which names the profile for use in a rule. This
+member is mandatory if the profile is specified as part of the root
+object's profiles array, but optional if the profile is defined
+inline as part of a rule.</p>
+</li>
+<li>
+<p>"settings", an array of settings which can be given in two
+different formats:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>As an array of keys and values, e.g.</p>
+<pre class="screen">
+[ "key1", "value1", "key2", 3.14159, "key3", 0xF00D ]
+</pre>
+<p>Keys must be specified as strings, while a value may be a
+string, number, or true/false.</p>
+</li>
+<li>
+<p>as an array of JSON setting objects.</p>
+</li>
+</ol>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p>Each setting object contains the following members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"k" (or "key"), the key given as a string</p>
+</li>
+<li>
+<p>"v" (or "value"), the value, given as a string, number, or
+true/false.</p>
+</li>
+</ul>
+</div>
+<p>A pattern object may consist of a pattern primitive, or a
+logical operation on pattern objects. A pattern primitive is an
+object containing the following members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"feature", the feature to match the pattern against. Supported
+features are listed in the "Supported Features" section below.</p>
+</li>
+<li>
+<p>"matches", the string to match.</p>
+</li>
+</ul>
+</div>
+<p>A pattern operation is an object containing the following
+members:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"op", a string describing the logical operation to apply to the
+subpatterns. Valid values are "and", "or", or "not".</p>
+</li>
+<li>
+<p>"sub": a pattern object or array of one or more pattern objects,
+to serve as the operands. Note that the "not" operator expects
+exactly one object; any other number of objects will cause the
+pattern to fail to match.</p>
+</li>
+</ul>
+</div>
+<p>If the pattern is an operation, then the pattern matches if and
+only if the logical operation applied to the subpatterns is true.
+For example,</p>
+<pre class="screen">
+    {
+        "op" : "or",
+        "sub" : [ { "feature" : "procname", "matches" : "foo" },
+                  { "feature" : "procname", "matches" : "bar" } ]
+    }
+</pre>
+<p>matches all processes with the name "foo" *or* "bar".
+Similarly,</p>
+<pre class="screen">
+    {
+        "op" : "and",
+        "sub" : [ { "feature" : "procname", "matches" : "foo" },
+                  { "feature" : "dso", "matches" : "bar.so" } ]
+    }
+</pre>
+<p>matches all processes with the name "foo" that load DSO
+"bar.so", and</p>
+<pre class="screen">
+    {
+        "op" : "not",
+        "sub" : { "feature" : "procname", "matches" : "foo" }
+    }
+</pre>
+<p>matches a process which is *not* named "foo". Nested operations
+are possible; for example:</p>
+<pre class="screen">
+    {
+        "op" : "and",
+        "sub" : [
+            { "feature" : "dso", "matches" : "foo.so" },
+            { "op" : "not", "sub" : { "feature" : "procname", "matches" : "bar" } }
+         ]
+    }
+</pre>
+<p>matches processes that are *not* named "bar" that load DSO
+"foo.so".</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ExtendedBackusn4e5af" id="ExtendedBackusn4e5af"></a>Extended
+Backus-Naur Form (EBNF) grammar</h2>
+</div>
+</div>
+</div>
+<p>Note: this definition omits the presence of whitespace or
+comments, which can be inserted between any pair of symbols.</p>
+<p>This is written in an "EBNF-like" grammar based on ISO/IEC
+14977, using the following (non-EBNF) extensions:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>object(A, B, ...) indicates that each symbol A, B, etc. must
+appear exactly once in any order, delimited by commas and bracketed
+by curly braces, unless the given symbol expands to an empty
+string.</p>
+<p>For example, assuming A and B are nonempty symbols:</p>
+<pre class="screen">
+object(A, B) ;
+</pre>
+<p>is equivalent to:</p>
+<pre class="screen">
+'{',  (A, ',', B) | (B, ',', A), '}' ;
+</pre>
+<p>Also,</p>
+<pre class="screen">
+object([A], [B]);
+</pre>
+<p>is equivalent to:</p>
+<pre class="screen">
+'{', [ A | B | (A, ',', B) | (B, ',', A) ], '}' ;
+</pre>
+<p></p>
+</li>
+<li>
+<p>attr(str, A) is shorthand for:</p>
+<pre class="screen">
+( '"str"' | "'str'" ), ':', A
+</pre>
+<p></p>
+</li>
+<li>
+<p>array(A) is shorthand for:</p>
+<pre class="screen">
+'[', [ array_A ], ']'
+</pre>
+<p>where array_A is defined as:</p>
+<pre class="screen">
+array_A = (array_A, ',' A) | A
+</pre>
+<p></p>
+</li>
+</ul>
+</div>
+<p>The grammar follows.</p>
+<pre class="screen">
+    config_file = object( [ attr(rules, array(rule)) ] ,
+                          [ attr(profiles, array(profile)) ] ) ;
+    rule = object(attr(pattern, pattern_object | array(pattern_object)),
+                  attr(profile, profile_ref)) ;
+    pattern_object = pattern_op | pattern_primitive ;
+    pattern_op = object(attr(op, string),
+                        attr(sub, pattern_object | array(pattern_object))) ;
+    pattern_primitive = object(attr(feature, string),
+                               attr(matches, string)) ;
+    profile_ref = string | settings | rule_profile ;
+    profile = object(attr(name, string),
+                     attr(settings,
+                          (array(setting_kv) | array(setting_obj)))) ;
+    rule_profile = object([ attr(name, string) ],
+                          attr(settings,
+                          (array(setting_kv) | array(setting_obj)))) ;
+    setting_kv = string ',' value ;
+    setting_obj = object(attr(k,string) | attr(key,string),
+                         attr(v,value) | attr(value,value)) ;
+    string = ? any valid json string ? ;
+    value = ? any valid json number ? | 'true' | 'false' |
+            hex_value | oct_value ;
+    hex_value = '0', ('x' | 'x'), hex_digit, { hex_digit } ;
+    oct_value = '0', oct_digit, { oct_digit } ;
+    hex_digit = ? any character in the range [0-9a-fA-F] ? ;
+    oct_digit = ? any character in the range [0-7] ? ;
+            
+</pre>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="RulePrecedence6f323"
+id="RulePrecedence6f323"></a>Rule Precedence</h2>
+</div>
+</div>
+</div>
+<p>Profiles may be specified in any order, and rules defined in
+files earlier in the search path may refer to profiles defined
+later in the search path.</p>
+<p>Rules are prioritized based on the order in which they are
+defined: each rule has precedence over rules defined after it in
+the same file, and rules defined in a file have precedence over
+rules defined in files that come after that file in the search
+path.</p>
+<p>For example, if there are two files A and B, such that A comes
+before B in the search path, with the following contents:</p>
+<pre class="screen">
+    # File A
+    {
+        "rules" : [ { "pattern" : "foo",
+                      "profile" : [ "a", 1 ] },
+                    { "pattern" : "foo",
+                      "profile" : [ "a", 0, "b", 2 ] } ]
+    }
+
+    # File B
+    {
+        "rules" : [ { "pattern" : "foo",
+                      "profile" : [ "a", 0, "b", 0, "c", 3 ] } ]
+    }
+            
+</pre>
+<p>and the driver is loaded into a process with the name "foo", it
+will apply the settings "a" = 1, "b" = 2, and "c" = 3.</p>
+<p>Settings specified via application profiles have higher
+precedence than global settings specified in nvidia-settings, but
+lower precedence than settings specified directly via environment
+variables.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ConfigurationFie7ae2" id="ConfigurationFie7ae2"></a>Configuration
+File Example</h2>
+</div>
+</div>
+</div>
+<p>The following is a sample configuration file which demonstrates
+the various ways one can specify application profiles and rules for
+different processes.</p>
+<pre class="screen">
+    {
+    "rules" : [
+
+        # Define a rule with an inline profile, (implicitly) using
+        # feature "procname".
+        { "pattern" : "glxgears", "profile" : [ "GLSyncToVBlank", "1" ] },
+
+        # Define a rule with a named profile, (implicitly) using feature
+        # "procname".
+        { "pattern" : "gloss", "profile" : "p0" },
+
+        # Define a rule with a named profile, using feature "dso".
+        { "pattern" : { "feature" : "dso", "matches" : "libpthread.so.0" },
+          "profile" : "p1" },
+
+        # Define a rule with a named, inline profile, using feature "true";
+        # patterns using this feature will always match, and can be used
+        # to write catch-all rules.
+        { "pattern" : { "feature" : "true", "matches" : "" },
+          "profile" : { "name" : "p2",
+                        "settings" : [ "GLSyncToVBlank", 1 ] } },
+
+        # Define a rule with multiple patterns. This rule will only be
+        # applied if the current process is named "foo" and has loaded
+        # "bar.so".
+        { "pattern" : [ { "feature" : "procname", "matches" : "foo" },
+                        { "feature" : "dso", "matches" : "bar.so" } ],
+          "profile" : "p1" },
+
+        # Define a rule with no patterns. This rule will always be applied.
+        { "pattern" : [], "profile" : "p1" }
+
+    ],
+    "profiles" : [
+
+        # define a profile with settings defined in a key/value array
+        { "name" : "p0", "settings" : [ "GLSyncToVBlank", 0 ] },
+
+        # define a profile with settings defined in an array of setting
+        # objects
+        { "name" : "p1", "settings" : [ { "k" : "GLDoom3", "v" : false } ] }
+
+    ]
+    }
+        
+</pre>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"SupportedFeatura8d39" id="SupportedFeatura8d39"></a>Supported
+Features</h2>
+</div>
+</div>
+</div>
+<p>This NVIDIA Linux driver supports detection of the following
+features:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"true": patterns using this feature will always match,
+regardless of the contents of the string provided by "matches".</p>
+</li>
+<li>
+<p>"procname": patterns using this feature compare the string
+provided by "matches" against the pathname of the current process
+with the leading directory components removed and match if they are
+equal.</p>
+</li>
+<li>
+<p>"dso": patterns using this feature compare the string provided
+by "matches" against the list of currently loaded libraries in the
+current process and match if the string matches one of the entries
+in the list (with leading directory components removed).</p>
+<p>Please note that application detection occurs when the driver
+component ("libGL.so.1" in the case of GLX) is first loaded by a
+process, so a pattern using this feature may fail to match if the
+library specified by the pattern is loaded after the component is
+loaded. A potential workaround for this on Linux is to set the
+LD_PRELOAD environment variable (see ld-linux(8)) to include the
+component, as in the following example:</p>
+<pre class="screen">
+    LD_PRELOAD="libGL.so.1" glxgears
+</pre>
+<p>Note this defeats one of the objectives of application detection
+(namely the need to set environment variables on the command line
+before running the application), but this may be useful when there
+is a need to frequently change driver settings for a particular
+application: one can write a wrapper script to set LD_PRELOAD once,
+then modify the JSON configuration repeatedly without needing to
+edit the wrapper script later on.</p>
+<p>Also note that the pattern matches against library names as they
+appear in the maps file of that process (see proc(5)), and not the
+names of symbolic links to these libraries.</p>
+</li>
+<li>
+<p>"findfile": patterns using this feature should provide a
+colon-separated list of filenames in the "matches" argument. At
+runtime, the driver scans the directory of the process executable
+and matches the pattern if every file specified in this list is
+present in the same directory. Please note there is currently no
+support for matching against files in other paths than the process
+executable directory.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"ListOfSupportedd38df" id="ListOfSupportedd38df"></a>List of
+supported application profile settings</h2>
+</div>
+</div>
+</div>
+<p>The list of supported application profile settings and their
+equivalent environment variable names (if any) is as follows:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"GLFSAAMode" : see __GL_FSAA_MODE</p>
+</li>
+<li>
+<p>"GLLogMaxAniso" : see __GL_LOG_MAX_ANISO</p>
+</li>
+<li>
+<p>"GLNoDsoFinalizer" : see __GL_NO_DSO_FINALIZER</p>
+</li>
+<li>
+<p>"GLSingleThreaded" : see __GL_SINGLE_THREADED</p>
+</li>
+<li>
+<p>"GLSyncDisplayDevice" : see __GL_SYNC_DISPLAY_DEVICE</p>
+</li>
+<li>
+<p>"GLSyncToVblank" : see __GL_SYNC_TO_VBLANK</p>
+</li>
+<li>
+<p>"GLSortFbconfigs" : see __GL_SORT_FBCONFIGS</p>
+</li>
+<li>
+<p>"GLAllowUnofficialProtocol" : see
+__GL_ALLOW_UNOFFICIAL_PROTOCOL</p>
+</li>
+<li>
+<p>"GLSELinuxBooleans" : see __GL_SELINUX_BOOLEANS</p>
+</li>
+<li>
+<p>"GLShaderDiskCache" : see __GL_SHADER_DISK_CACHE</p>
+</li>
+<li>
+<p>"GLShaderDiskCachePath" : see __GL_SHADER_DISK_CACHE_PATH</p>
+</li>
+<li>
+<p>"GLYield" : see __GL_YIELD</p>
+</li>
+<li>
+<p>"GLThreadedOptimizations" : see __GL_THREADED_OPTIMIZATIONS</p>
+</li>
+<li>
+<p>"GLDoom3" : see __GL_DOOM3</p>
+</li>
+<li>
+<p>"GLExtensionStringVersion" : see __GL_ExtensionStringVersion</p>
+</li>
+<li>
+<p>"GLConformantBlitFramebufferScissor" : see
+__GL_ConformantBlitFramebufferScissor</p>
+</li>
+<li>
+<p>"GLAllowFXAAUsage" : see __GL_ALLOW_FXAA_USAGE</p>
+</li>
+<li>
+<p>"GLGSYNCAllowed" : see __GL_GSYNC_ALLOWED</p>
+</li>
+<li>
+<p>"GLWriteTextSection" : see __GL_WRITE_TEXT_SECTION</p>
+</li>
+<li>
+<p>"GLIgnoreGLSLExtReqs" : see __GL_IGNORE_GLSL_EXT_REQS</p>
+</li>
+<li>
+<p>"EGLVisibleDGPUDevices"</p>
+<p>On a multi-device system, this option can be used to make EGL
+ignore certain devices. This setting takes a 32-bit mask encoding a
+whitelist of visible devices. The bit position matches the minor
+number of the device to make visible.</p>
+<p>For instance, the profile</p>
+<pre class="screen">
+    {
+        "rules" : [
+            { "pattern" : [],
+              "profile" : [ "EGLVisibleDGPUDevices", 0x00000002 ] }
+        ]
+    }
+                
+</pre>
+<p>would only make the device with minor number 1 visible (i.e.
+/dev/nvidia1).</p>
+</li>
+<li>
+<p>"EGLVisibleTegraDevices" : Same semantics as
+EGLVisibleDGPUDevices</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"newusertips.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"gpunames.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Appendix&nbsp;I.&nbsp;Tips for New Linux Users&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;K.&nbsp;GPU Names</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;K.&nbsp;GPU Names</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="profiles.html" title=
+"Appendix&nbsp;J.&nbsp;Application Profiles">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;K.&nbsp;GPU Names</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"profiles.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;</td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="gpunames" id=
+"gpunames"></a>Appendix&nbsp;K.&nbsp;GPU Names</h2>
+</div>
+</div>
+</div>
+<p>Many X configuration options that take a display device name can
+also be qualified with a GPU. This is done by prepending one of the
+GPU's names to the display device name. For example, the
+"MetaModes" X configuration option can be used to enable display
+devices from multiple GPUs in SLI Mosaic or Base Mosaic
+configurations:</p>
+<pre class="screen">
+    Option "MetaModes" "1280x1024 +0+0, 1280x1024 +1280+0"
+</pre>
+<p>You can use a display device name qualifier along with a GPU
+qualifier to configure which display should be picked and from
+which GPU. E.g.,</p>
+<pre class="screen">
+    Option "MetaModes" "GPU-1.DFP-0:1280x1024 +0+0, GPU-0.DFP-0:1280x1024 +1280+0"
+</pre>
+<p></p>
+<p>Other X configuration options that support GPU names
+include:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>ColorRange</p>
+</li>
+<li>
+<p>ColorSpace</p>
+</li>
+<li>
+<p>ConnectedMonitor</p>
+</li>
+<li>
+<p>CustomEDID</p>
+</li>
+<li>
+<p>FlatPanelProperties</p>
+</li>
+<li>
+<p>IgnoreEDIDChecksum</p>
+</li>
+<li>
+<p>ModeValidation</p>
+</li>
+<li>
+<p>nvidiaXineramaInfoOrder</p>
+</li>
+<li>
+<p>UseDisplayDevice</p>
+</li>
+<li>
+<p>UseEdidFreqs</p>
+</li>
+</ul>
+</div>
+<p>The description of each X configuration option in <a href=
+"xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a> provides more detail on the available syntax
+for each option.</p>
+<p>To find all available names for your configuration, start the X
+server with verbose logging enabled (e.g., <strong class=
+"userinput"><code>startx -- -logverbose 5</code></strong>, or
+enable the "ModeDebug" X configuration option with <strong class=
+"userinput"><code>nvidia-xconfig --mode-debug</code></strong> and
+restart the X server).</p>
+<p>The X log (normally /var/log/Xorg.0.log) will contain
+information regarding each GPU. E.g.,</p>
+<pre class="screen">
+(II) NVIDIA(0): NVIDIA GPU NVS 510 (GK107) at PCI:15:0:0 (GPU-0)
+(II) NVIDIA(0): VERBOSE: GPU UUID: GPU-758a4cf7-0761-62c7-9bf7-c7d950b817c6
+</pre>
+<p></p>
+<p>Alternatively, nvidia-xconfig can be used to query the GPU
+names: <strong class="userinput"><code>nvidia-xconfig
+--query-gpu-info</code></strong></p>
+<pre class="screen">
+GPU #0:
+  Name      : NVS 510
+  UUID      : GPU-758a4cf7-0761-62c7-9bf7-c7d950b817c6
+  PCI BusID : PCI:3:0:0
+</pre>
+<p></p>
+<p>Each name has different properties that may affect which name is
+appropriate to use. The possible names are:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>An NV-CONTROL target ID-based name (e.g., "GPU-0"). The NVIDIA X
+driver will assign a unique ID to each GPU on the entire X server.
+These IDs are not guaranteed to be persistent from one run of the X
+server to the next, so is likely not convenient for X configuration
+file use. It is more frequently used in communication with
+NV-CONTROL clients such as nvidia-settings.</p>
+</li>
+<li>
+<p>An UUID-based name (e.g.,
+"GPU-758a4cf7-0761-62c7-9bf7-c7d950b817c6"). This name is a SHA-1
+hash, formatted in canonical UUID 8-4-4-4-12 format. This UUID is
+unique for each physical GPU, and will be the same regardless of
+where the GPU is connected.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"profiles.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;</td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Appendix&nbsp;J.&nbsp;Application Profiles&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">&nbsp;</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

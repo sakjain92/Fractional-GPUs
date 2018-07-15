@@ -1,0 +1,872 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;7.&nbsp;Frequently Asked Questions</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="editxconfig.html" title=
+"Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver">
+<link rel="next" href="commonproblems.html" title=
+"Chapter&nbsp;8.&nbsp;Common Problems">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;7.&nbsp;Frequently
+Asked Questions</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"editxconfig.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"commonproblems.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="faq" id=
+"faq"></a>Chapter&nbsp;7.&nbsp;Frequently Asked Questions</h2>
+</div>
+</div>
+</div>
+<p>This section provides answers to frequently asked questions
+associated with the NVIDIA Linux x86_64 Driver and its
+installation. Common problem diagnoses can be found in <a href=
+"commonproblems.html" title=
+"Chapter&nbsp;8.&nbsp;Common Problems">Chapter&nbsp;8, <i>Common
+Problems</i></a> and tips for new users can be found in <a href=
+"newusertips.html" title=
+"Appendix&nbsp;I.&nbsp;Tips for New Linux Users">Appendix&nbsp;I,
+<i>Tips for New Linux Users</i></a>. Also, detailed information for
+specific setups is provided in the <a href=
+"appendices.html">Appendices</a>.</p>
+<div class="qandaset">
+<table border="0" summary="Q and A Set">
+<col align="left" width="1%">
+<tbody>
+<tr class="qandadiv">
+<td align="left" valign="top" colspan="2"><a name=
+"Nvidiainstaller55f35" id="Nvidiainstaller55f35"></a>
+<h3 class="title">7.1. NVIDIA-INSTALLER</h3>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="HowDoIExtractTh41874" id=
+"HowDoIExtractTh41874"></a></td>
+<td align="left" valign="top">
+<p><b>How do I extract the contents of the</b> <code class=
+"filename">.run</code> <b>without actually installing the
+driver?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Run the installer as follows:</p>
+<pre class="screen">
+    # sh NVIDIA-Linux-x86_64-390.48.run --extract-only
+</pre>
+<p>This will create the directory NVIDIA-Linux-x86_64-390.48,
+containing the uncompressed contents of the <code class=
+"filename">.run</code> file.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="HowCanISeeTheSo057a4" id=
+"HowCanISeeTheSo057a4"></a></td>
+<td align="left" valign="top">
+<p><b>How can I see the source code to the kernel interface
+layer?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>The source files to the kernel interface layer are in the kernel
+directory of the extracted .run file. To get to these sources,
+run:</p>
+<pre class="screen">
+    # sh NVIDIA-Linux-x86_64-390.48.run --extract-only
+    # cd NVIDIA-Linux-x86_64-390.48/kernel/
+</pre>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="devicenodes" id=
+"devicenodes"></a></td>
+<td align="left" valign="top">
+<p><b>How and when are the NVIDIA device files created?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>When a user-space NVIDIA driver component needs to communicate
+with the NVIDIA kernel module, and the NVIDIA character device
+files do not yet exist, the user-space component will first attempt
+to load the kernel module and create the device files itself.</p>
+<p>Device file creation and kernel module loading generally require
+root privileges. The X driver, running within a setuid root X
+server, will have these privileges, but not, e.g., the CUDA driver
+within the environment of a normal user.</p>
+<p>If the user-space NVIDIA driver component cannot load the kernel
+module or create the device files itself, it will attempt to invoke
+the setuid root nvidia-modprobe utility, which will perform these
+operations on behalf of the non-privileged driver.</p>
+<p>See the nvidia-modprobe(1) man page, or its source code,
+available here: <a href=
+"https://download.nvidia.com/XFree86/nvidia-modprobe/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-modprobe/</a></p>
+<p>When possible, it is recommended to use your Linux
+distribution's native mechanisms for managing kernel module loading
+and device file creation. nvidia-modprobe is provided as a fallback
+to work out-of-the-box in a distribution-independent way.</p>
+<p>Whether a user-space NVIDIA driver component does so itself, or
+invokes nvidia-modprobe, it will default to creating the device
+files with the following attributes:</p>
+<pre class="screen">
+      UID:  0     - 'root'
+      GID:  0     - 'root'
+      Mode: 0666  - 'rw-rw-rw-'
+</pre>
+<p>Existing device files are changed if their attributes don't
+match these defaults. If you want the NVIDIA driver to create the
+device files with different attributes, you can specify them with
+the "NVreg_DeviceFileUID" (user), "NVreg_DeviceFileGID" (group) and
+"NVreg_DeviceFileMode" NVIDIA Linux kernel module parameters.</p>
+<p>For example, the NVIDIA driver can be instructed to create
+device files with UID=0 (root), GID=44 (video) and Mode=0660 by
+passing the following module parameters to the NVIDIA Linux kernel
+module:</p>
+<pre class="screen">
+      NVreg_DeviceFileUID=0
+      NVreg_DeviceFileGID=44
+      NVreg_DeviceFileMode=0660
+</pre>
+<p>The "NVreg_ModifyDeviceFiles" NVIDIA kernel module parameter
+will disable dynamic device file management, if set to 0.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyDoesNvidiaNoc13de" id=
+"WhyDoesNvidiaNoc13de"></a></td>
+<td align="left" valign="top">
+<p><b>Why does NVIDIA not provide RPMs?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Not every Linux distribution uses RPM, and NVIDIA provides a
+single solution that works across all Linux distributions. NVIDIA
+encourages Linux distributions to repackage and redistribute the
+NVIDIA Linux driver in their native package management formats.
+These repackaged NVIDIA drivers are likely to inter-operate best
+with the Linux distribution's package management technology. For
+this reason, NVIDIA encourages users to use their distribution's
+repackaged NVIDIA driver, where available.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhatIsTheSignifadd36" id=
+"WhatIsTheSignifadd36"></a></td>
+<td align="left" valign="top">
+<p><b>What is the significance of the</b> <code class=
+"filename">-no-compat32</code> <b>suffix on Linux-x86_64</b>
+<code class="filename">.run</code> <b>files?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>To distinguish between Linux-x86_64 driver package files that do
+or do not also contain 32-bit compatibility libraries,
+"-no-compat32" is be appended to the latter. <code class=
+"filename">NVIDIA-Linux-x86_64-390.48.run</code> contains both
+64-bit and 32-bit driver binaries; but <code class=
+"filename">NVIDIA-Linux-x86_64-390.48-no-compat32.run</code>
+omits the 32-bit compatibility libraries.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="CanIAddMyOwnPre4e8c2" id=
+"CanIAddMyOwnPre4e8c2"></a></td>
+<td align="left" valign="top">
+<p><b>Can I add my own precompiled kernel interfaces to a</b>
+<code class="filename">.run</code> <b>file?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Yes, the <code class="option">--add-this-kernel</code>
+<code class="filename">.run</code> file option will unpack the
+<code class="filename">.run</code> file, build a precompiled kernel
+interface for the currently running kernel, and repackage the
+<code class="filename">.run</code> file, appending <code class=
+"filename">-custom</code> to the filename. This may be useful, for
+example. if you administer multiple Linux computers, each running
+the same kernel.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhereCanIFindThdef43" id=
+"WhereCanIFindThdef43"></a></td>
+<td align="left" valign="top">
+<p><b>Where can I find the source code for the</b> <code class=
+"filename">nvidia-installer</code> <b>utility?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>The <code class="filename">nvidia-installer</code> utility is
+released under the GPL. The source code for the version of
+nvidia-installer built with driver 390.48 is in <code class=
+"filename">nvidia-installer-390.48.tar.bz2</code> available
+here: <a href=
+"https://download.nvidia.com/XFree86/nvidia-installer/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-installer/</a></p>
+</td>
+</tr>
+<tr class="qandadiv">
+<td align="left" valign="top" colspan="2"><a name=
+"NvidiaDriver8f330" id="NvidiaDriver8f330"></a>
+<h3 class="title">7.2. NVIDIA Driver</h3>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhereShouldISta91e27" id=
+"WhereShouldISta91e27"></a></td>
+<td align="left" valign="top">
+<p><b>Where should I start when diagnosing display
+problems?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>One of the most useful tools for diagnosing problems is the X
+log file in <code class="filename">/var/log</code>. Lines that
+begin with <code class="computeroutput">(II)</code> are
+information, <code class="computeroutput">(WW)</code> are warnings,
+and <code class="computeroutput">(EE)</code> are errors. You should
+make sure that the correct config file (i.e. the config file you
+are editing) is being used; look for the line that begins with:</p>
+<pre class="screen">
+    (==) Using config file:
+</pre>
+<p>Also make sure that the NVIDIA driver is being used, rather than
+another driver. Search for</p>
+<pre class="screen">
+    (II) LoadModule: "nvidia"
+</pre>
+<p>Lines from the driver should begin with:</p>
+<pre class="screen">
+    (II) NVIDIA(0)
+</pre>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="xverboselog" id=
+"xverboselog"></a></td>
+<td align="left" valign="top">
+<p><b>How can I increase the amount of data printed in the X log
+file?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>By default, the NVIDIA X driver prints relatively few messages
+to stderr and the X log file. If you need to troubleshoot, then it
+may be helpful to enable more verbose output by using the X command
+line options <code class="option">-verbose</code> and <code class=
+"option">-logverbose</code>, which can be used to set the verbosity
+level for the <code class="filename">stderr</code> and log file
+messages, respectively. The NVIDIA X driver will output more
+messages when the verbosity level is at or above 5 (X defaults to
+verbosity level 1 for <code class="filename">stderr</code> and
+level 3 for the log file). So, to enable verbose messaging from the
+NVIDIA X driver to both the log file and <code class=
+"filename">stderr</code>, you could start X with the verbosity
+level set to 5, by doing the following</p>
+<pre class="screen">
+    % startx -- -verbose 5 -logverbose 5
+</pre>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhatIsNvidiasPo6882d" id=
+"WhatIsNvidiasPo6882d"></a></td>
+<td align="left" valign="top">
+<p><b>What is NVIDIA's policy towards development series Linux
+kernels?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>NVIDIA does not officially support development series kernels.
+However, all the kernel module source code that interfaces with the
+Linux kernel is available in the <code class=
+"filename">kernel/</code> directory of the <code class=
+"filename">.run</code> file. NVIDIA encourages members of the Linux
+community to develop patches to these source files to support
+development series kernels. A web search will most likely yield
+several community supported patches.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhereCanIFindTh2e635" id=
+"WhereCanIFindTh2e635"></a></td>
+<td align="left" valign="top">
+<p><b>Where can I find the tarballs?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Plain tarballs are not available. The <code class=
+"filename">.run</code> file is a tarball with a shell script
+prepended. You can execute the <code class="filename">.run</code>
+file with the <code class="option">--extract-only</code> option to
+unpack the tarball.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="HowDoITellIfIHa96f1f" id=
+"HowDoITellIfIHa96f1f"></a></td>
+<td align="left" valign="top">
+<p><b>How do I tell if I have my kernel sources installed?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>If you are running on a distro that uses RPM (Red Hat, Mandriva,
+SuSE, etc), then you can use <span><strong class=
+"command">rpm</strong></span> to tell you. At a shell prompt,
+type:</p>
+<pre class="screen">
+    % rpm -qa | grep kernel
+</pre>
+<p>and look at the output. You should see a package that
+corresponds to your kernel (often named something like
+kernel-2.6.15-7) and a kernel source package with the same version
+(often named something like kernel-devel-2.6.15-7). If none of the
+lines seem to correspond to a source package, then you will
+probably need to install it. If the versions listed mismatch (e.g.,
+kernel-2.6.15-7 vs. kernel-devel-2.6.15-10), then you will need to
+update the kernel-devel package to match the installed kernel. If
+you have multiple kernels installed, you need to install the
+kernel-devel package that corresponds to your <span class=
+"emphasis"><em>running</em></span> kernel (or make sure your
+installed source package matches the running kernel). You can do
+this by looking at the output of <span><strong class=
+"command">uname -r</strong></span> and matching versions.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhatIsSelinuxAn7bd2f" id=
+"WhatIsSelinuxAn7bd2f"></a></td>
+<td align="left" valign="top">
+<p><b>What is SELinux and how does it interact with the NVIDIA
+driver ?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Security-Enhanced Linux (SELinux) is a set of modifications
+applied to the Linux kernel and utilities that implement a security
+policy architecture. When in use it requires that the security type
+on all shared libraries be set to 'shlib_t'. The installer detects
+when to set the security type, and sets it on all shared libraries
+it installs. The option <code class="option">--force-selinux</code>
+passed to the <code class="filename">.run</code> file overrides the
+detection of when to set the security type.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyDoesXUseSoMu6a4ed" id=
+"WhyDoesXUseSoMu6a4ed"></a></td>
+<td align="left" valign="top">
+<p><b>Why does X use so much memory?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>When measuring any application's memory usage, you must be
+careful to distinguish between physical system RAM used and virtual
+mappings of shared resources. For example, most shared libraries
+exist only once in physical memory but are mapped into multiple
+processes. This memory should only be counted once when computing
+total memory usage. In the same way, the video memory on a graphics
+card or register memory on any device can be mapped into multiple
+processes. These mappings do not consume normal system RAM.</p>
+<p>This has been a frequently discussed topic on XFree86 mailing
+lists; see, for example:</p>
+<p><a href=
+"http://marc.theaimsgroup.com/?l=xfree-xpert&amp;m=96835767116567&amp;w=2"
+target=
+"_top">http://marc.theaimsgroup.com/?l=xfree-xpert&amp;m=96835767116567&amp;w=2</a></p>
+<p>The <span><strong class="command">pmap</strong></span> utility
+described in the above thread is available in the "procps" package
+shipped with most recent Linux distributions, and is a useful tool
+in distinguishing between types of memory mappings. For example,
+while <span><strong class="command">top</strong></span> may
+indicate that X is using several hundred MB of memory, the last
+line of output from the output of pmap (note that pmap may need to
+be run as root):</p>
+<pre class="screen">
+    # pmap -d `pidof X` | tail -n 1
+    mapped: 161404K    writeable/private: 7260K    shared: 118056K
+</pre>
+<p>reveals that X is really only using roughly 7MB of system RAM
+(the "writeable/private" value).</p>
+<p>Note, also, that X must allocate resources on behalf of X
+clients (the window manager, your web browser, etc); the X server's
+memory usage will increase as more clients request resources such
+as pixmaps, and decrease as you close X applications.</p>
+<p>The <a href=
+"xconfigoptions.html#IndirectMemoryAccess">IndirectMemoryAccess</a>
+X configuration option may cause additional virtual address space
+to be reserved.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyDoApplicatio54851" id=
+"WhyDoApplicatio54851"></a></td>
+<td align="left" valign="top">
+<p><b>Why do applications that use DGA graphics fail?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>The NVIDIA driver does not support the graphics component of the
+XFree86-DGA (Direct Graphics Access) extension. Applications can
+use the XDGASelectInput() function to acquire relative pointer
+motion, but graphics-related functions such as XDGASetMode() and
+XDGAOpenFramebuffer() will fail.</p>
+<p>The graphics component of XFree86-DGA is not supported because
+it requires a CPU mapping of framebuffer memory. As graphics cards
+ship with increasing quantities of video memory, the NVIDIA X
+driver has had to switch to a more dynamic memory mapping scheme
+that is incompatible with DGA. Furthermore, DGA does not cooperate
+with other graphics rendering libraries such as Xlib and OpenGL
+because it accesses GPU resources directly.</p>
+<p>NVIDIA recommends that applications use OpenGL or Xlib, rather
+than DGA, for graphics rendering. Using rendering libraries other
+than DGA will yield better performance and improve interoperability
+with other X applications.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="MyKernelLogCont895da" id=
+"MyKernelLogCont895da"></a></td>
+<td align="left" valign="top">
+<p><b>My kernel log contains messages that are prefixed with "Xid";
+what do these messages mean?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>"Xid" messages indicate that a general GPU error occurred, most
+often due to the driver misprogramming the GPU or to corruption of
+the commands sent to the GPU. These messages provide diagnostic
+information that can be used by NVIDIA to aid in debugging reported
+problems.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="IUseTheCoolbits0ea09" id=
+"IUseTheCoolbits0ea09"></a></td>
+<td align="left" valign="top">
+<p><b>I use the Coolbits overclocking interface to adjust my
+graphics card's clock frequencies, but the defaults are reset
+whenever X is restarted. How do I make my changes
+persistent?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Clock frequency settings are not saved/restored automatically by
+default to avoid potential stability and other problems that may be
+encountered if the chosen frequency settings differ from the
+defaults qualified by the manufacturer. You can add an <code class=
+"filename">nvidia-settings</code> command to <code class=
+"filename">~/.xinitrc</code> to automatically apply custom clock
+frequency settings when the X server is started. See the
+<code class="filename">nvidia-settings(1)</code> manual page for
+more information on setting clock frequency settings on the command
+line.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyIsTheRefresh924ee" id=
+"WhyIsTheRefresh924ee"></a></td>
+<td align="left" valign="top">
+<p><b>Why is the refresh rate not reported correctly by utilities
+that use the XF86VidMode X extension and/or RandR X extension
+versions prior to 1.2 (e.g., `xrandr --q1`)?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>These extensions are not aware of multiple display devices on a
+single X screen; they only see the MetaMode bounding box, which may
+contain one or more actual modes. This means that if multiple
+MetaModes have the same bounding box, these extensions will not be
+able to distinguish between them. In order to support dynamic
+display configuration, the NVIDIA X driver must make each MetaMode
+appear to be unique and accomplishes this by using the refresh rate
+as a unique identifier.</p>
+<p>You can use `nvidia-settings -q RefreshRate` to query the actual
+refresh rate on each display device.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyDoesStarting61617" id=
+"WhyDoesStarting61617"></a></td>
+<td align="left" valign="top">
+<p><b>Why does starting certain applications result in Xlib error
+messages indicating extensions like "XFree86-VidModeExtension" or
+"SHAPE" are missing?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>If your X config file has a <code class=
+"computeroutput">Module</code> section that does not list the
+"extmod" module, some X server extensions may be missing, resulting
+in error messages of the form:</p>
+<pre class="screen">
+Xlib: extension "SHAPE" missing on display ":0.0"
+Xlib: extension "XFree86-VidModeExtension" missing on display ":0.0"
+Xlib: extension "XFree86-DGA" missing on display ":0.0"
+</pre>
+<p>You can solve this problem by adding the line below to your X
+config file's <code class="computeroutput">Module</code>
+section:</p>
+<pre class="screen">
+    Load "extmod"
+</pre>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhereCanIFindOl8f618" id=
+"WhereCanIFindOl8f618"></a></td>
+<td align="left" valign="top">
+<p><b>Where can I find older driver versions?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Please visit <a href=
+"https://download.nvidia.com/XFree86/Linux-x86_64/" target=
+"_top">https://download.nvidia.com/XFree86/Linux-x86_64/</a></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="busid" id="busid"></a></td>
+<td align="left" valign="top">
+<p><b>What is the format of a PCI Bus ID?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Different tools have different formats for the PCI Bus ID of a
+PCI device.</p>
+<p>The X server's "BusID" X configuration file option interprets
+the BusID string in the format "bus@domain:device:function" (the
+"@domain" portion is only needed if the PCI domain is non-zero), in
+decimal. More specifically,</p>
+<pre class="screen">
+"%d@%d:%d:%d", bus, domain, device, function
+</pre>
+<p>in printf(3) syntax. NVIDIA X driver logging, nvidia-xconfig,
+and nvidia-settings match the X configuration file BusID
+convention.</p>
+<p>The lspci(8) utility, in contrast, reports the PCI BusID of a
+PCI device in the format "domain:bus:device.function", printing the
+values in hexadecimal. More specifically,</p>
+<pre class="screen">
+"%04x:%02x:%02x.%x", domain, bus, device, function
+</pre>
+<p>in printf(3) syntax. The "Bus Location" reported in the
+information file matches the lspci format. Also, the name of
+per-GPU directory in /proc/driver/nvidia/gpus is the same as the
+corresponding GPU's PCI BusID in lspci format.</p>
+<p>On systems where both an integrated GPU and a PCI slot are
+present, setting the "BusID" option to "AXI" selects the integrated
+GPU. By default, not specifying this option or setting it to an
+empty string selects a discrete GPU if available, the integrated
+GPU otherwise.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="xversions" id=
+"xversions"></a></td>
+<td align="left" valign="top">
+<p><b>How do I interpret X server version numbers?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>X server version numbers can be difficult to interpret because
+some X.Org X servers report the versions of different things.</p>
+<p>In 2003, X.Org created a fork of the XFree86 project's code
+base, which used a monolithic build system to build the X server,
+libraries, and applications together in one source code repository.
+It resumed the release version numbering where it left off in 2001,
+continuing with 6.7, 6.8, etc., for the releases of this large
+bundle of code. These version numbers are sometimes written
+X11R6.7, X11R6.8, etc. to include the version of the X
+protocol.</p>
+<p>In 2005, an effort was made to split the monolithic code base
+into separate modules with their own version numbers to make them
+easier to maintain and so that they could be released
+independently. X.Org still occasionally releases these modules
+together, with a single version number. These releases are simply
+referred to as &ldquo;<span class="quote">X.Org
+releases</span>&rdquo;, or sometimes &ldquo;<span class=
+"quote">katamari</span>&rdquo; releases. For example, X.Org 7.6 was
+released on December 20, 2010 and contains version 1.9.3 of the
+xorg-server package, which contains the core X server itself.</p>
+<p>The release management changes from XFree86, to X.Org monolithic
+releases, to X.Org modular releases impacted the behavior of the X
+server's <code class="computeroutput">-version</code> command line
+option. For example, XFree86 X servers always report the version of
+the XFree86 monolithic package:</p>
+<pre class="screen">
+XFree86 Version 4.3.0 (Red Hat Linux release: 4.3.0-2)
+Release Date: 27 February 2003
+X Protocol Version 11, Revision 0, Release 6.6
+</pre>
+<p>X servers in X.Org monolithic and early &ldquo;<span class=
+"quote">katamari</span>&rdquo; releases did something similar:</p>
+<pre class="screen">
+X Window System Version 7.1.1
+Release Date: 12 May 2006
+X Protocol Version 11, Revision 0, Release 7.1.1
+</pre>
+<p>However, X.Org later modified the X server to start printing its
+individual module version number instead:</p>
+<pre class="screen">
+X.Org X Server 1.9.3
+Release Date: 2010-12-13
+X Protocol Version 11, Revision 0
+</pre>
+<p>Please keep this in mind when comparing X server versions: what
+looks like &ldquo;<span class="quote">version 7.x</span>&rdquo; is
+<span class="emphasis"><em>older</em></span> than version 1.x.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="randrmodelist" id=
+"randrmodelist"></a></td>
+<td align="left" valign="top">
+<p><b>Why doesn't the NVIDIA X driver make more display resolutions
+and refresh rates available via RandR?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Prior to the 302.* driver series, the list of modes reported to
+applications by the NVIDIA X driver was not limited to the list of
+modes natively supported by a display device. In order to expose
+the largest possible set of modes on digital flat panel displays,
+which typically do not accept arbitrary mode timings, the driver
+maintained separate sets of "front-end" and "back-end" mode
+timings, and scaled between them to simulate the availability of
+more modes than would otherwise be supported.</p>
+<p>Front-end timings were the values reported to applications, and
+back-end timings were what was actually sent to the display. Both
+sets of timings went through the full mode validation process, with
+the back-end timings having the additional constraint that they
+must be provided by the display's EDID, as only EDID-provided modes
+can be safely assumed to be supported by the display hardware.
+Applications could request any available front-end timings, which
+the driver would implicitly scale to either the "best fit" or
+"native" mode timings. For example, an application might request an
+800x600 @ 60 Hz mode and the driver would provide it, but the real
+mode sent to the display would be 1920x1080 @ 30 Hz. While the
+availability of modes beyond those natively supported by a display
+was convenient for some uses, it created several problems. For
+example:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The complete front-end timings were reported to applications,
+but only the width and height were actually used. This could cause
+confusion because in many cases, changing the front-end timings did
+not change the back-end timings. This was especially confusing when
+trying to change the refresh rate, because the refresh rate in the
+front-end timings was ignored, but was still reported to
+applications.</p>
+</li>
+<li>
+<p>The front-end timings reported to the user could be different
+from the backend timings reported in the display device's on screen
+display, leading to user confusion. Finding out the back-end
+timings (e.g. to find the real refresh rate) required using the
+NVIDIA-specific NV-CONTROL X extension.</p>
+</li>
+<li>
+<p>The process by which back-end timings were selected for use with
+any given front-end timings was not transparent to users, and this
+process could only be explicitly configured with NVIDIA-specific
+xorg.conf options or the NV-CONTROL X extension. Confusion over how
+changing front-end timings could affect the back-end timings was
+especially problematic in use cases that were sensitive to the
+timings the display device receives, such as NVIDIA 3D Vision.</p>
+</li>
+<li>
+<p>User-specified modes underwent normal mode validation, even
+though the timings in those modes were not used. For example, a
+1920x1080 @ 100 Hz mode might fail the VertRefresh check, even
+though the back-end timings might actually be 1920x1080 @ 30
+Hz.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Version 1.2 of the X Resize and Rotate extension (henceforth
+referred to as "RandR 1.2") allows configuration of display scaling
+in a much more flexible and standardized way. The protocol allows
+applications to choose exactly which (back-end) mode timing is
+used, and exactly how the screen is scaled to fill that mode. It
+also allows explicit control over which displays are enabled, and
+which portions of the screen they display. This also provides
+much-needed transparency: the mode timings reported by RandR 1.2
+are the actual mode timings being sent to the display. However,
+this means that only modes actually supported by the display are
+reported in the RandR 1.2 mode list. Scaling configurations, such
+as the 800x600 to 1920x1080 example above, need to be configured
+via the RandR 1.2 transform feature. Adding implicitly scaled modes
+to the mode list would conflict with the transform configuration
+options and reintroduce the same problems that the previous
+front-end/back-end timing system had.</p>
+<p>With the introduction of RandR 1.2 support to the 302.* driver
+series, the front-end/back-end timing system was abandoned, and the
+list of mode timings exposed by the NVIDIA X driver was simplified
+to include only those modes which would actually be driven by the
+hardware. Although it remained possible to manually configure all
+of the scaling configurations that were previously possible, and
+many scaling configurations which were previously impossible, this
+change resulted in some inconvenient losses of functionality:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Applications which used RandR 1.1 or earlier or XF86VidMode to
+set modes no longer had the implicitly scaled front-end timings
+available to them. Many displays have EDIDs which advertise only
+the display's native resolution, or a list of resolutions that is
+otherwise small, compared to the list that would previously have
+been exposed as front-end timings, preventing these applications
+from setting modes that were possible with previous versions of the
+NVIDIA driver.</p>
+</li>
+<li>
+<p>The <span><strong class=
+"command">nvidia-settings</strong></span> control panel, which
+formerly listed all available front-end modes for displays in its X
+Server Display Configuration page, only listed the actual back-end
+modes.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Subsequent driver releases restored some of this functionality
+without reverting to the front-end/back-end system:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The NVIDIA X driver now builds a list of "Implicit MetaModes",
+which implicitly scale many common resolutions to a mode that is
+supported by the display. These modes are exposed to applications
+which use RandR 1.1 and XF86VidMode, as neither supports the
+scaling or other transform capabilities of RandR 1.2.</p>
+</li>
+<li>
+<p>The resolution list in the <span><strong class=
+"command">nvidia-settings</strong></span> X Server Display
+Configuration page now includes explicitly scaled modes for many
+common resolutions which are not directly supported by the display.
+To reduce confusion, the scaled modes are identified as being
+scaled, and it is not possible to set a refresh rate for any of the
+scaled modes.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>As mentioned previously, the RandR 1.2 mode list contains only
+modes which are supported by the display. Modern applications that
+wish to set modes other than those available in the RandR 1.2 mode
+list are encouraged to use RandR 1.2 transformations to program any
+required scaling operations. For example, the <span><strong class=
+"command">xrandr</strong></span> utility can program RandR scaling
+transformations, and the following command can scale a 1280x720
+mode to a display connected to output DVI-I-0 that does not support
+the desired mode, but does support 1920x1080:</p>
+<pre class="screen">
+xrandr --output DVI-I-0 --mode 1920x1080 --scale-from 1280x720
+</pre>
+<p></p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"editxconfig.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"commonproblems.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;8.&nbsp;Common Problems</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;E.&nbsp;Dots Per Inch</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="glxsupport.html" title=
+"Appendix&nbsp;D.&nbsp;GLX Support">
+<link rel="next" href="i2c.html" title=
+"Appendix&nbsp;F.&nbsp;i2c Bus Support">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;E.&nbsp;Dots Per
+Inch</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"glxsupport.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"i2c.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="dpi" id=
+"dpi"></a>Appendix&nbsp;E.&nbsp;Dots Per Inch</h2>
+</div>
+</div>
+</div>
+<p>DPI (Dots Per Inch), also known as PPI (Pixels Per Inch), is a
+property of an X screen that describes the physical size of pixels.
+Some X applications, such as xterm, can use the DPI of an X screen
+to determine how large (in pixels) to draw an object in order for
+that object to be displayed at the desired physical size on the
+display device.</p>
+<p>The DPI of an X screen is computed by dividing the size of the X
+screen in pixels by the size of the X screen in inches:</p>
+<pre class="screen">
+    DPI = SizeInPixels / SizeInInches
+</pre>
+<p>Since the X screen stores its physical size in millimeters
+rather than inches (1 inch = 25.4 millimeters):</p>
+<pre class="screen">
+    DPI = (SizeInPixels * 25.4) / SizeInMillimeters
+</pre>
+<p>The NVIDIA X driver reports the size of the X screen in pixels
+and in millimeters. On X.Org 6.9 or newer, when the XRandR
+extension resizes the X screen in pixels, the NVIDIA X driver
+computes a new size in millimeters for the X screen, to maintain a
+constant DPI (see the "Physical Size" column of the `xrandr -q`
+output as an example). This is done because a changing DPI can
+cause interaction problems for some applications. To disable this
+behavior, and instead keep the same millimeter size for the X
+screen (and therefore have a changing DPI), set the <a href=
+"xconfigoptions.html#ConstantDPI">ConstantDPI</a> option to
+FALSE.</p>
+<p>You can query the DPI of your X screen by running:</p>
+<pre class="screen">
+    % xdpyinfo | grep -B1 dot
+</pre>
+<p>which should generate output like this:</p>
+<pre class="screen">
+    dimensions:    1280x1024 pixels (382x302 millimeters)
+    resolution:    85x86 dots per inch
+</pre>
+<p></p>
+<p>The NVIDIA X driver performs several steps during X screen
+initialization to determine the DPI of each X screen:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>If the display device provides an EDID, and the EDID contains
+information about the physical size of the display device, that is
+used to compute the DPI, along with the size in pixels of the first
+mode to be used on the display device.</p>
+<p>Note that in some cases, the physical size information stored in
+a display device's EDID may be unreliable. This could result in a
+display device's DPI being computed incorrectly, potentially
+leading to undesired consequences such as fonts that are scaled
+larger or smaller than expected. These issues can be worked around
+by manually setting a DPI using the "DPI" X configuration option,
+or by disabling the use of the EDID's physical size information for
+computing DPI by setting the <a href=
+"xconfigoptions.html#UseEdidDpi">UseEdidDpi</a> X configuration
+option to "FALSE"'.</p>
+<p>If multiple display devices are used by this X screen, then the
+NVIDIA X screen will choose which display device to use. You can
+override this with the "UseEdidDpi" X configuration option: you can
+specify a particular display device to use; e.g.:</p>
+<pre class="screen">
+    Option "UseEdidDpi" "DFP-1"
+</pre>
+<p>or disable EDID-computed DPI by setting this option to
+false:</p>
+<pre class="screen">
+    Option "UseEdidDpi" "FALSE"
+</pre>
+<p>EDID-based DPI computation is enabled by default when an EDID is
+available.</p>
+</li>
+<li>
+<p>If the "-dpi" commandline option to the X server is specified,
+that is used to set the DPI (see `X -h` for details). This will
+override the "UseEdidDpi" option.</p>
+</li>
+<li>
+<p>If the <a href="xconfigoptions.html#DPI">DPI</a> X configuration
+option is specified, that will be used to set the DPI. This will
+override the "UseEdidDpi" option.</p>
+</li>
+<li>
+<p>If none of the above are available, then the "DisplaySize" X
+config file Monitor section information will be used to determine
+the DPI, if provided; see the xorg.conf or XF86Config man pages for
+details.</p>
+</li>
+<li>
+<p>If none of the above are available, the DPI defaults to
+75x75.</p>
+</li>
+</ul>
+</div>
+<p>You can find how the NVIDIA X driver determined the DPI by
+looking in your X log file. There will be a line that looks
+something like the following:</p>
+<pre class="screen">
+    (--) NVIDIA(0): DPI set to (101, 101); computed from "UseEdidDpi" X config option
+</pre>
+<p></p>
+<p>Note that the physical size of the X screen, as reported through
+`xdpyinfo` is computed based on the DPI and the size of the X
+screen in pixels.</p>
+<p>The DPI of an X screen can be poorly defined when multiple
+display devices are enabled on the X screen: those display devices
+might have different actual DPIs, yet DPI is advertised from the X
+server to the X application with X screen granularity. Solutions
+for this include:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Use separate X screens, with one display device on each X
+screen; see <a href="configmultxscreens.html" title=
+"Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One Card">Chapter&nbsp;14,
+<i>Configuring Multiple X Screens on One Card</i></a> for
+details.</p>
+</li>
+<li>
+<p>The RandR X extension version 1.2 and later reports the physical
+size of each RandR Output, so applications could possibly choose to
+render content at different sizes, depending on which portion of
+the X screen is displayed on which display devices. Client
+applications can also configure the reported per-RandR Output
+physical size. See, e.g., the xrandr(1) '--fbmm' command line
+option.</p>
+</li>
+<li>
+<p>Experiment with different DPI settings to find a DPI that is
+suitable for all display devices on the X screen.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"glxsupport.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"i2c.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">Appendix&nbsp;D.&nbsp;GLX
+Support&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;F.&nbsp;i2c Bus Support</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

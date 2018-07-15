@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;19.&nbsp;Configuring Flipping and UBB</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">
+<link rel="next" href="procinterface.html" title=
+"Chapter&nbsp;20.&nbsp;Using the Proc Filesystem Interface">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;19.&nbsp;Configuring
+Flipping and UBB</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"programmingmodes.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"procinterface.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="flippingubb" id=
+"flippingubb"></a>Chapter&nbsp;19.&nbsp;Configuring Flipping and
+UBB</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Accelerated Linux Graphics Driver supports Unified
+Back Buffer (UBB) and OpenGL Flipping. These features can provide
+performance gains in certain situations.</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Unified Back Buffer (UBB): UBB is available only on Quadro GPUs
+(Quadro NVS GPUs excluded) and is enabled by default when there is
+sufficient video memory available. This can be disabled with the
+<a href="xconfigoptions.html#UBB">UBB</a> X config option. When UBB
+is enabled, all windows share the same back, stencil and depth
+buffers. When there are many windows, the back, stencil and depth
+usage will never exceed the size of that used by a full screen
+window. However, even for a single small window, the back, stencil,
+and depth video memory usage is that of a full screen window. In
+that case video memory may be used less efficiently than in the
+non-UBB case.</p>
+</li>
+<li>
+<p>Flipping: When OpenGL flipping is enabled, OpenGL can perform
+buffer swaps by changing which buffer is scanned out rather than
+copying the back buffer contents to the front buffer; this is
+generally a higher performance mechanism and allows tearless
+swapping during the vertical retrace (when __GL_SYNC_TO_VBLANK is
+set).</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"programmingmodes.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"procinterface.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;18.&nbsp;Programming Modes&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;20.&nbsp;Using the Proc Filesystem
+Interface</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

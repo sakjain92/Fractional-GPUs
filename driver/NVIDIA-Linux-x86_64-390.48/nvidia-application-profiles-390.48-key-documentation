@@ -1,0 +1,102 @@
+# Application profiles for the NVIDIA Linux graphics driver, version 390.48
+# Last modified: Wed Mar 21 23:47:46 PDT 2018
+# These settings keys were provided by NVIDIA and should not be modified. 
+{
+    "registry_keys": [
+        {
+            "key": "GLFSAAMode",
+            "description": "This setting enables full-scene antialiasing in a process using OpenGL. This expects the same integer value that can be used to configure FSAA through nvidia-settings and the NV-CONTROL X extension. To see available FSAA values, run:\n\n\tnvidia-settings --query=fsaa --verbose",
+            "type": "integer"
+        },
+        {
+            "key": "GLLogMaxAniso",
+            "description": "This enables anisotropic texture filtering. The possible values are:\n\n\t0\tNo anisotropic filtering\n\t1\t2x anisotropic filtering\n\t2\t4x anisotropic filtering\n\t3\t8x anisotropic filtering\n\t4\t16x anisotropic filtering",
+            "type": "integer"
+        },
+        {
+            "key": "GLNoDsoFinalizer",
+            "description": "This works around problems with certain multithreaded applications in which one thread exits while others are executing OpenGL code. This may be set to true or false.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLSingleThreaded",
+            "description": "This works around some legacy dynamic loaders which can cause applications linked against pthreads which dlopen() libGL multiple times to crash. This may be set to true or false. ",
+            "type": "boolean"
+        },
+        {
+            "key": "GLSyncDisplayDevice",
+            "description": "This allows an application to specify target a display device to sync with if sync to vblank is enabled. This should be set to a string containing a valid display device name (for example, \"CRT-1\").",
+            "type": "string"
+        },
+        {
+            "key": "GLSyncToVblank",
+            "description": "This enables sync to vblank for an application. This may be set to true or false. ",
+            "type": "boolean"
+        },
+        {
+            "key": "GLSortFbconfigs",
+            "description": "By default the NVIDIA GLX implementation will sort FBConfigs as described by the specification. This may be set to false to disable this behavior.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLAllowUnofficialProtocol",
+            "description": "Setting this to true will allow the client-side NVIDIA GLX implementation to send \"incomplete\" GLX protocol.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLSELinuxBooleans",
+            "description": "This allows the user to override driver detection of specific SELinux policy booleans, which may work around problems when running the driver under SELinux in permissive mode. This should be set to a string value; see __GL_SELINUX_BOOLEANS in the README for a description of legal string formats.",
+            "type": "string"
+        },
+        {
+            "key": "GLShaderDiskCache",
+            "description": "This enables the shader disk cache for direct rendering. This value may be set to true or false.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLShaderDiskCachePath",
+            "description": "This setting affects where shader caches are stored on disk for a given application. This value should be set to a string containing a valid pathname.",
+            "type": "string"
+        },
+        {
+            "key": "GLYield",
+            "description": "This controls how the NVIDIA graphics driver will perform a yield. This may be set to one of the following strings:\n\n\t\"USLEEP\"\tOpenGL will call usleep(0) to yield\n\t\"NOTHING\"\tOpenGL will never yield\n\t<any other value>\tOpenGL will call sched_yield() to yield (default)",
+            "type": "string"
+        },
+        {
+            "key": "GLThreadedOptimizations",
+            "description": "This setting enables multi-threaded optimizations in the OpenGL driver which may improve application performance. This may be set to true or false.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLDoom3",
+            "description": "This enables optimal SLI and Multi-GPU settings for games such as Doom 3 and Quake 4. This may be set to true or false.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLExtensionStringVersion",
+            "description": "This forces the extension string returned by glXQueryExtensionsString() to one that appeared in an earlier version of the NVIDIA graphics driver. This may work around bugs in certain applications which expect an extension string to be smaller than a certain size. This value should be set to a string value or integer containing the desired version number (e.g. \"17700\" to force the extension string in the 177.* driver series).",
+            "type": "string"
+        },
+        {
+            "key": "GLAllowFXAAUsage",
+            "description": "If FXAA is globally enabled, setting this to false disables FXAA for an individual application. This has no effect if FXAA is globally disabled.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLGSYNCAllowed",
+            "description": "When set to false, this key prevents G-SYNC from being used. Otherwise, G-SYNC is used whenever it is available.",
+            "type": "boolean"
+        },
+        {
+            "key": "GLWriteTextSection",
+            "description": "This determines whether the NVIDIA driver will attempt to use optimizations which rely on being able to write to executable memory.  This may be set to true or false",
+            "type": "boolean"
+        },
+        {
+            "key": "GLIgnoreGLSLExtReqs",
+            "description": "Setting this key to true causes the NVIDIA OpenGL driver to ignore GLSL compilation errors due to referencing globals defined in an extension without a corresponding #extension directive",
+            "type": "boolean"
+        }
+    ]
+}

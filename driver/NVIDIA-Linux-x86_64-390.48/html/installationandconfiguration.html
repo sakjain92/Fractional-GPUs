@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Part&nbsp;I.&nbsp;Installation and Configuration
+Instructions</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="prev" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="next" href="introduction.html" title=
+"Chapter&nbsp;1.&nbsp;Introduction">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"index.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">&nbsp;</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"introduction.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="part" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h1 class="title"><a name="installationandconfiguration" id=
+"installationandconfiguration"></a>Installation and Configuration
+Instructions</h1>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="chapter"><a href="introduction.html">1.
+Introduction</a></span></dt>
+<dt><span class="chapter"><a href="minimumrequirements.html">2.
+Minimum Requirements</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"minimumrequirements.html#MinimumSoftware2486a">Minimum Software
+Requirements</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="selectdriver.html">3. Selecting
+and Downloading the NVIDIA Packages for Your System</a></span></dt>
+<dt><span class="chapter"><a href="installdriver.html">4.
+Installing the NVIDIA Driver</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"installdriver.html#BeforeYouBegin89f39">Before you
+Begin</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#StartingTheInst6624e">Starting the
+Installer</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#InstallingTheKe997db">Installing the Kernel
+Interface</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#RegisteringTheNda02d">Registering the NVIDIA
+Kernel Module with DKMS</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#modulesigning">Signing the NVIDIA Kernel
+Module</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#AddingPrecompil0c783">Adding Precompiled Kernel
+Interfaces to the Installer Package</a></span></dt>
+<dt><span class="section"><a href=
+"installdriver.html#OtherFeaturesOfd7638">Other Features of the
+Installer</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="installedcomponents.html">5.
+Listing of Installed Components</a></span></dt>
+<dt><span class="chapter"><a href="editxconfig.html">6. Configuring
+X for the NVIDIA Driver</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"editxconfig.html#UsingNvidiaxcon2beec">Using nvidia-xconfig to
+configure the X server</a></span></dt>
+<dt><span class="section"><a href=
+"editxconfig.html#ManuallyEditing1ae61">Manually Editing the
+Configuration File</a></span></dt>
+<dt><span class="section"><a href=
+"editxconfig.html#RestoringTheXCof7145">Restoring the X
+Configuration after Uninstalling the Driver</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="faq.html">7. Frequently Asked
+Questions</a></span></dt>
+<dt><span class="chapter"><a href="commonproblems.html">8. Common
+Problems</a></span></dt>
+<dt><span class="chapter"><a href="knownissues.html">9. Known
+Issues</a></span></dt>
+<dt><span class="chapter"><a href="dma_issues.html">10. Allocating
+DMA Buffers on 64-bit Platforms</a></span></dt>
+<dt><span class="chapter"><a href="openglenvvariables.html">11.
+Specifying OpenGL Environment Variable Settings</a></span></dt>
+<dt><span class="chapter"><a href="configtwinview.html">12.
+Configuring Multiple Display Devices on One X
+Screen</a></span></dt>
+<dt><span class="chapter"><a href="xineramaglx.html">13.
+Configuring GLX in Xinerama</a></span></dt>
+<dt><span class="chapter"><a href="configmultxscreens.html">14.
+Configuring Multiple X Screens on One Card</a></span></dt>
+<dt><span class="chapter"><a href="xrandrextension.html">15.
+Support for the X Resize and Rotate Extension</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-support">RandR Support</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-1.1-rotation-behavior">RandR 1.1
+Rotation Behavior</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-properties">Output
+Properties</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-dp12">DisplayPort 1.2</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-monitor-options">Monitor Configuration
+Options</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-known-issues">Known
+Issues</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="configlaptop.html">16.
+Configuring a Notebook</a></span></dt>
+<dt><span class="chapter"><a href="optimus.html">17. Using the
+NVIDIA Driver with Optimus Laptops</a></span></dt>
+<dt><span class="chapter"><a href="programmingmodes.html">18.
+Programming Modes</a></span></dt>
+<dt><span class="chapter"><a href="flippingubb.html">19.
+Configuring Flipping and UBB</a></span></dt>
+<dt><span class="chapter"><a href="procinterface.html">20. Using
+the Proc Filesystem Interface</a></span></dt>
+<dt><span class="chapter"><a href="powermanagement.html">21.
+Configuring Power Management Support</a></span></dt>
+<dt><span class="chapter"><a href="xcompositeextension.html">22.
+Using the X Composite Extension</a></span></dt>
+<dt><span class="chapter"><a href="nvidiasettings.html">23. Using
+the nvidia-settings Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-smi.html">24. Using the
+nvidia-smi Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-ml.html">25. The NVIDIA
+Management Library</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-debugdump.html">26. Using
+the nvidia-debugdump Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-persistenced.html">27.
+Using the nvidia-persistenced Utility</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Background46f43">Background</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Usage01b5d">Usage</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Troubleshootingc8305">Troubleshooting</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#NotesForPackage3f7a9">Notes for Package
+Maintainers</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="sli.html">28. Configuring SLI
+and Multi-GPU FrameRendering</a></span></dt>
+<dt><span class="chapter"><a href="framelock.html">29. Configuring
+Frame Lock and Genlock</a></span></dt>
+<dt><span class="chapter"><a href="sdi.html">30. Configuring SDI
+Video Output</a></span></dt>
+<dt><span class="chapter"><a href="depth30.html">31. Configuring
+Depth 30 Displays</a></span></dt>
+<dt><span class="chapter"><a href="randr14.html">32. Offloading
+Graphics Display with RandR 1.4</a></span></dt>
+<dt><span class="chapter"><a href="kms.html">33. Direct Rendering
+Manager Kernel Modesetting (DRM KMS)</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"kms.html#drm-kms-known-issues">Known Issues</a></span></dt>
+</dl>
+</dd>
+<dt><span class="chapter"><a href="addressingcapabilities.html">34.
+Addressing Capabilities</a></span></dt>
+<dt><span class="chapter"><a href="addtlresources.html">35. NVIDIA
+Contact Info and Additional Resources</a></span></dt>
+<dt><span class="chapter"><a href="acknowledgements.html">36.
+Acknowledgements</a></span></dt>
+</dl>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"index.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center">&nbsp;</td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"introduction.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">NVIDIA Accelerated Linux
+Graphics Driver README and Installation Guide&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;1.&nbsp;Introduction</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

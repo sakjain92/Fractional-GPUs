@@ -1,0 +1,2366 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;B.&nbsp;X Config Options</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="supportedchips.html" title=
+"Appendix&nbsp;A.&nbsp;Supported NVIDIA GPU Products">
+<link rel="next" href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;B.&nbsp;X Config
+Options</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"supportedchips.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"displaydevicenames.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="xconfigoptions" id=
+"xconfigoptions"></a>Appendix&nbsp;B.&nbsp;X Config Options</h2>
+</div>
+</div>
+</div>
+<p>The following driver options are supported by the NVIDIA X
+driver. They may be specified either in the Screen or Device
+sections of the X config file.</p>
+<div class="variablelist">
+<p class="title"><b>X Config Options</b></p>
+<dl>
+<dt><a name="Accel" id="Accel"></a><span class="term"><code class=
+"computeroutput">Option "Accel" "boolean"</code></span></dt>
+<dd>
+<p>Controls whether the X driver uses the GPU for graphics
+processing. Disabling acceleration is useful when another
+component, such as CUDA, requires exclusive use of the GPU's
+processing cores. Performance of the X server will be reduced when
+acceleration is disabled, and some features may not be
+available.</p>
+<p>OpenGL and VDPAU are not supported when Accel is disabled.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: acceleration is enabled.</p>
+</dd>
+<dt><a name="RenderAccel" id="RenderAccel"></a><span class=
+"term"><code class="computeroutput">Option "RenderAccel"
+"boolean"</code></span></dt>
+<dd>
+<p>Enable or disable hardware acceleration of the RENDER extension.
+Default: hardware acceleration of the RENDER extension is
+enabled.</p>
+</dd>
+<dt><a name="NoRenderExtension" id=
+"NoRenderExtension"></a><span class="term"><code class=
+"computeroutput">Option "NoRenderExtension"
+"boolean"</code></span></dt>
+<dd>
+<p>Disable the RENDER extension. Other than recompiling it, the X
+server does not seem to have another way of disabling this.
+Fortunately, we can control this from the driver so we export this
+option. This is useful in depth 8 where RENDER would normally steal
+most of the default colormap. Default: RENDER is offered when
+possible.</p>
+</dd>
+<dt><a name="UBB" id="UBB"></a><span class="term"><code class=
+"computeroutput">Option "UBB" "boolean"</code></span></dt>
+<dd>
+<p>Enable or disable the Unified Back Buffer on Quadro-based GPUs
+(Quadro NVS excluded); see <a href="flippingubb.html" title=
+"Chapter&nbsp;19.&nbsp;Configuring Flipping and UBB">Chapter&nbsp;19,
+<i>Configuring Flipping and UBB</i></a> for a description of UBB.
+This option has no effect on non-Quadro GPU products. Default: UBB
+is on for Quadro GPUs.</p>
+</dd>
+<dt><a name="NoFlip" id="NoFlip"></a><span class=
+"term"><code class="computeroutput">Option "NoFlip"
+"boolean"</code></span></dt>
+<dd>
+<p>Disable OpenGL flipping; see <a href="flippingubb.html" title=
+"Chapter&nbsp;19.&nbsp;Configuring Flipping and UBB">Chapter&nbsp;19,
+<i>Configuring Flipping and UBB</i></a> for a description. Default:
+OpenGL will swap by flipping when possible.</p>
+</dd>
+<dt><a name="GLShaderDiskCache" id=
+"GLShaderDiskCache"></a><span class="term"><code class=
+"computeroutput">Option "GLShaderDiskCache"
+"boolean"</code></span></dt>
+<dd>
+<p>This option controls whether the OpenGL driver will utilize a
+disk cache to save and reuse compiled shaders. See the description
+of the __GL_SHADER_DISK_CACHE and __GL_SHADER_DISK_CACHE_PATH
+environment variables in <a href="openglenvvariables.html" title=
+"Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable Settings">
+Chapter&nbsp;11, <i>Specifying OpenGL Environment Variable
+Settings</i></a> for more details.</p>
+</dd>
+<dt><a name="Dac8Bit" id="Dac8Bit"></a><span class=
+"term"><code class="computeroutput">Option "Dac8Bit"
+"boolean"</code></span></dt>
+<dd>
+<p>By default, the GPU uses a color look-up table (LUT) with 11
+bits of precision. This provides more accurate color on analog and
+high-depth DisplayPort outputs, or when dithering is enabled.
+Setting this option to TRUE forces the GPU to use an 8-bit LUT.
+Default: a high precision LUT is used, when available.</p>
+</dd>
+<dt><a name="Overlay" id="Overlay"></a><span class=
+"term"><code class="computeroutput">Option "Overlay"
+"boolean"</code></span></dt>
+<dd>
+<p>Enables RGB workstation overlay visuals. This is only supported
+on Quadro GPUs (Quadro NVS GPUs excluded) in depth 24. This option
+causes the server to advertise the SERVER_OVERLAY_VISUALS root
+window property and GLX will report single- and double-buffered,
+Z-buffered 16-bit overlay visuals. The transparency key is pixel
+0x0000 (hex). There is no gamma correction support in the overlay
+plane. This feature requires XFree86 version 4.2.0 or newer, or the
+X.Org X server. RGB workstation overlays are not supported when the
+Composite extension is enabled.</p>
+<p>UBB must be enabled when overlays are enabled (this is the
+default behavior).</p>
+</dd>
+<dt><a name="CIOverlay" id="CIOverlay"></a><span class=
+"term"><code class="computeroutput">Option "CIOverlay"
+"boolean"</code></span></dt>
+<dd>
+<p>Enables Color Index workstation overlay visuals with identical
+restrictions to Option "Overlay" above. This option causes the
+server to advertise the SERVER_OVERLAY_VISUALS root window
+property. Some of the visuals advertised that way may be listed in
+the main plane (layer 0) for compatibility purposes. They however
+belong to the overlay (layer 1). The server will offer visuals both
+with and without a transparency key. These are depth 8 PseudoColor
+visuals. Enabling Color Index overlays on X servers older than
+XFree86 4.3 will force the RENDER extension to be disabled due to
+bugs in the RENDER extension in older X servers. Color Index
+workstation overlays are not supported when the Composite extension
+is enabled. Default: off.</p>
+<p>UBB must be enabled when overlays are enabled (this is the
+default behavior).</p>
+</dd>
+<dt><a name="TransparentIndex" id=
+"TransparentIndex"></a><span class="term"><code class=
+"computeroutput">Option "TransparentIndex"
+"integer"</code></span></dt>
+<dd>
+<p>When color index overlays are enabled, use this option to choose
+which pixel is used for the transparent pixel in visuals featuring
+transparent pixels. This value is clamped between 0 and 255 (Note:
+some applications such as Alias's Maya require this to be zero in
+order to work correctly). Default: 0.</p>
+</dd>
+<dt><a name="OverlayDefaultVisual" id=
+"OverlayDefaultVisual"></a><span class="term"><code class=
+"computeroutput">Option "OverlayDefaultVisual"
+"boolean"</code></span></dt>
+<dd>
+<p>When overlays are used, this option sets the default visual to
+an overlay visual thereby putting the root window in the overlay.
+This option is not recommended for RGB overlays. Default: off.</p>
+</dd>
+<dt><a name="EmulatedOverlaysTimerMs" id=
+"EmulatedOverlaysTimerMs"></a><span class="term"><code class=
+"computeroutput">Option "EmulatedOverlaysTimerMs"
+"integer"</code></span></dt>
+<dd>
+<p>Enables the use of a timer within the X server to perform the
+updates to the emulated overlay or CI overlay. This option can be
+used to improve the performance of the emulated or CI overlays by
+reducing the frequency of the updates. The value specified
+indicates the desired number of milliseconds between overlay
+updates. To disable the use of the timer either leave the option
+unset or set it to 0. Default: off.</p>
+</dd>
+<dt><a name="EmulatedOverlaysThreshold" id=
+"EmulatedOverlaysThreshold"></a><span class="term"><code class=
+"computeroutput">Option "EmulatedOverlaysThreshold"
+"boolean"</code></span></dt>
+<dd>
+<p>Enables the use of a threshold within the X server to perform
+the updates to the emulated overlay or CI overlay. The emulated or
+CI overlay updates can be deferred but this threshold will limit
+the number of deferred OpenGL updates allowed before the overlay is
+updated. This option can be used to trade off performance and
+animation quality. Default: on.</p>
+</dd>
+<dt><a name="EmulatedOverlaysThresholdValue" id=
+"EmulatedOverlaysThresholdValue"></a><span class=
+"term"><code class="computeroutput">Option
+"EmulatedOverlaysThresholdValue" "integer"</code></span></dt>
+<dd>
+<p>Controls the threshold used in updating the emulated or CI
+overlays. This is used in conjunction with the
+EmulatedOverlaysThreshold option to trade off performance and
+animation quality. Higher values for this option favor performance
+over quality. Setting low values of this option will not cause the
+overlay to be updated more often than the frequence specified by
+the EmulatedOverlaysTimerMs option. Default: 5.</p>
+</dd>
+<dt><a name="SWCursor" id="SWCursor"></a><span class=
+"term"><code class="computeroutput">Option "SWCursor"
+"boolean"</code></span></dt>
+<dd>
+<p>Enable or disable software rendering of the X cursor. Default:
+off.</p>
+</dd>
+<dt><a name="HWCursor" id="HWCursor"></a><span class=
+"term"><code class="computeroutput">Option "HWCursor"
+"boolean"</code></span></dt>
+<dd>
+<p>Enable or disable hardware rendering of the X cursor. Default:
+on.</p>
+</dd>
+<dt><a name="ConnectedMonitor" id=
+"ConnectedMonitor"></a><span class="term"><code class=
+"computeroutput">Option "ConnectedMonitor"
+"string"</code></span></dt>
+<dd>
+<p>Allows you to override what the NVIDIA kernel module detects is
+connected to your graphics card. This may be useful, for example,
+if you use a KVM (keyboard, video, mouse) switch and you are
+switched away when X is started. In such a situation, the NVIDIA
+kernel module cannot detect which display devices are connected,
+and the NVIDIA X driver assumes you have a single CRT.</p>
+<p>Valid values for this option are "CRT" (cathode ray tube) or
+"DFP" (digital flat panel); if using multiple display devices, this
+option may be a comma-separated list of display devices; e.g.:
+"CRT, CRT" or "CRT, DFP".</p>
+<p>It is generally recommended to not use this option, but instead
+use the "UseDisplayDevice" option.</p>
+<p>NOTE: anything attached to a 15 pin VGA connector is regarded by
+the driver as a CRT. "DFP" should only be used to refer to digital
+flat panels connected via DVI, HDMI, or DisplayPort.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: string is NULL (the NVIDIA driver will detect the
+connected display devices).</p>
+</dd>
+<dt><a name="UseDisplayDevice" id=
+"UseDisplayDevice"></a><span class="term"><code class=
+"computeroutput">Option "UseDisplayDevice"
+"string"</code></span></dt>
+<dd>
+<p>The "UseDisplayDevice" X configuration option is a list of one
+or more display devices, which limits the display devices the
+NVIDIA X driver will consider for an X screen. The display device
+names used in the option may be either specific (with a numeric
+suffix; e.g., "DFP-1") or general (without a numeric suffix; e.g.,
+"DFP").</p>
+<p>When assigning display devices to X screens, the NVIDIA X driver
+walks through the list of all (not already assigned) display
+devices detected as connected. When the "UseDisplayDevice" X
+configuration option is specified, the X driver will only consider
+connected display devices which are also included in the
+"UseDisplayDevice" list. This can be thought of as a "mask" against
+the connected (and not already assigned) display devices.</p>
+<p>Note the subtle difference between this option and the
+"ConnectedMonitor" option: the "ConnectedMonitor" option overrides
+which display devices are actually detected, while the
+"UseDisplayDevice" option controls which of the detected display
+devices will be used on this X screen.</p>
+<p>Of the list of display devices considered for this X screen
+(either all connected display devices, or a subset limited by the
+"UseDisplayDevice" option), the NVIDIA X driver first looks at
+CRTs, then at DFPs. For example, if both a CRT and a DFP are
+connected, by default the X driver would assign the CRT to this X
+screen. However, by specifying:</p>
+<pre class="screen">
+    Option "UseDisplayDevice" "DFP"
+</pre>
+<p>the X screen would use the DFP instead. Or, if CRT-0, DFP-0, and
+DFP-1 are connected, the X driver would assign CRT-0 and DFP-0 to
+the X screen. However, by specifying:</p>
+<pre class="screen">
+    Option "UseDisplayDevice" "CRT-0, DFP-1"
+</pre>
+<p>the X screen would use CRT-0 and DFP-1 instead.</p>
+<p>Additionally, the special value "none" can be specified for the
+"UseDisplayDevice" option. When this value is given, any
+programming of the display hardware is disabled. The NVIDIA driver
+will not perform any mode validation or mode setting for this X
+screen. This is intended for use in conjunction with CUDA or in
+remote graphics solutions such as VNC or Hewlett Packard's Remote
+Graphics Software (RGS).</p>
+<p>"UseDisplayDevice" defaults to "none" on GPUs that have no
+display capabilities, such as some Tesla GPUs and some mobile GPUs
+used in Optimus notebook configurations.</p>
+<p>Note the following restrictions for setting the
+"UseDisplayDevice" to "none":</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>OpenGL SyncToVBlank will have no effect.</p>
+</li>
+<li>
+<p>None of Stereo, Overlay, CIOverlay, or SLI are allowed when
+"UseDisplayDevice" is set to "none".</p>
+</li>
+</ul>
+</div>
+<p></p>
+</dd>
+<dt><a name="UseEdidFreqs" id="UseEdidFreqs"></a><span class=
+"term"><code class="computeroutput">Option "UseEdidFreqs"
+"boolean"</code></span></dt>
+<dd>
+<p>This option controls whether the NVIDIA X driver will use the
+HorizSync and VertRefresh ranges given in a display device's EDID,
+if any. When UseEdidFreqs is set to True, EDID-provided range
+information will override the HorizSync and VertRefresh ranges
+specified in the Monitor section. If a display device does not
+provide an EDID, or the EDID does not specify an hsync or vrefresh
+range, then the X server will default to the HorizSync and
+VertRefresh ranges specified in the Monitor section of your X
+config file. These frequency ranges are used when validating modes
+for your display device.</p>
+<p>Default: True (EDID frequencies will be used)</p>
+</dd>
+<dt><a name="UseEDID" id="UseEDID"></a><span class=
+"term"><code class="computeroutput">Option "UseEDID"
+"boolean"</code></span></dt>
+<dd>
+<p>By default, the NVIDIA X driver makes use of a display device's
+EDID, when available, during construction of its mode pool. The
+EDID is used as a source for possible modes, for valid frequency
+ranges, and for collecting data on the physical dimensions of the
+display device for computing the DPI (see <a href="dpi.html" title=
+"Appendix&nbsp;E.&nbsp;Dots Per Inch">Appendix&nbsp;E, <i>Dots Per
+Inch</i></a>). However, if you wish to disable the driver's use of
+the EDID, you can set this option to False:</p>
+<pre class="screen">
+    Option "UseEDID" "FALSE"
+</pre>
+<p>Note that, rather than globally disable all uses of the EDID,
+you can individually disable each particular use of the EDID;
+e.g.,</p>
+<pre class="screen">
+    Option "UseEDIDFreqs" "FALSE"
+    Option "UseEDIDDpi" "FALSE"
+    Option "ModeValidation" "NoEdidModes"
+</pre>
+<p></p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: True (use EDID).</p>
+</dd>
+<dt><a name="MetaModeOrientation" id=
+"MetaModeOrientation"></a><span class="term"><code class=
+"computeroutput">Option "MetaModeOrientation"
+"string"</code></span></dt>
+<dd>
+<p>Controls the default relationship between display devices when
+using multiple display devices on a single X screen. Takes one of
+the following values: "RightOf" "LeftOf" "Above" "Below"
+"SamePositionAs". For backwards compatibility,
+"TwinViewOrientation" is a synonym for "MetaModeOrientation", and
+"Clone" is a synonym for "SamePositionAs". See <a href=
+"configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+Chapter&nbsp;12, <i>Configuring Multiple Display Devices on One X
+Screen</i></a> for details. Default: string is NULL.</p>
+</dd>
+<dt><a name="MetaModes" id="MetaModes"></a><span class=
+"term"><code class="computeroutput">Option "MetaModes"
+"string"</code></span></dt>
+<dd>
+<p>This option describes the combination of modes to use on each
+monitor when using TwinView or SLI Mosaic Mode. See <a href=
+"configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+Chapter&nbsp;12, <i>Configuring Multiple Display Devices on One X
+Screen</i></a> and <a href="sli.html" title=
+"Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU FrameRendering">
+Chapter&nbsp;28, <i>Configuring SLI and Multi-GPU
+FrameRendering</i></a> for details. Default: string is NULL.</p>
+</dd>
+<dt><a name="nvidiaXineramaInfo" id=
+"nvidiaXineramaInfo"></a><span class="term"><code class=
+"computeroutput">Option "nvidiaXineramaInfo"
+"boolean"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver normally provides a Xinerama extension that
+X clients (such as window managers) can use to discover the current
+layout of display devices within an X screen. Some window mangers
+get confused by this information, so this option is provided to
+disable this behavior. Default: true (NVIDIA Xinerama information
+is provided).</p>
+<p>On X servers with RandR 1.2 support, the X server's RandR
+implementation may provide its own Xinerama implementation if
+NVIDIA Xinerama information is not provided. So, on X servers with
+RandR 1.2, disabling "nvidiaXineramaInfo" causes the NVIDIA X
+driver to still register its Xinerama implementation but report a
+single screen-sized region. On X servers without RandR 1.2 support,
+disabling "nvidiaXineramaInfo" causes the NVIDIA X driver to not
+register its Xinerama implementation.</p>
+<p>Due to bugs in some older software, NVIDIA Xinerama information
+is not provided by default on X.Org 7.1 and older when the X server
+is started with only one display device enabled.</p>
+<p>For backwards compatibility, "NoTwinViewXineramaInfo" is a
+synonym for disabling "nvidiaXineramaInfo".</p>
+</dd>
+<dt><a name="nvidiaXineramaInfoOrder" id=
+"nvidiaXineramaInfoOrder"></a><span class="term"><code class=
+"computeroutput">Option "nvidiaXineramaInfoOrder"
+"string"</code></span></dt>
+<dd>
+<p>When the NVIDIA X driver provides nvidiaXineramaInfo (see the
+nvidiaXineramaInfo X config option), it by default reports the
+currently enabled display devices in the order "CRT, DFP". The
+nvidiaXineramaInfoOrder X config option can be used to override
+this order.</p>
+<p>The option string is a comma-separated list of display device
+names. The display device names can either be general (e.g, "CRT",
+which identifies all CRTs), or specific (e.g., "CRT-1", which
+identifies a particular CRT). Not all display devices need to be
+identified in the option string; display devices that are not
+listed will be implicitly appended to the end of the list, in their
+default order.</p>
+<p>Note that nvidiaXineramaInfoOrder tracks all display devices
+that could possibly be connected to the GPU, not just the ones that
+are currently enabled. When reporting the Xinerama information, the
+NVIDIA X driver walks through the display devices in the order
+specified, only reporting enabled display devices.</p>
+<p>Some high-resolution "tiled" monitors are represented internally
+as multiple display devices. These will be combined by default into
+a single Xinerama screen. The position of the device in
+nvidiaXineramaInfoOrder corresponding to the top-left tile will
+determine when the screen will be reported.</p>
+<p>Examples:</p>
+<pre class="screen">
+        "DFP"
+        "DFP-1, DFP-0, CRT"
+</pre>
+<p>In the first example, any enabled DFPs would be reported first
+(any enabled CRTs would be reported afterwards). In the second
+example, if DFP-1 were enabled, it would be reported first, then
+DFP-0, and then any enabled CRTs; finally, any other enabled DFPs
+would be reported.</p>
+<p>For backwards compatibility, "TwinViewXineramaInfoOrder" is a
+synonym for "nvidiaXineramaInfoOrder".</p>
+<p>Default: "CRT, DFP"</p>
+</dd>
+<dt><a name="nvidiaXineramaInfoOverride" id=
+"nvidiaXineramaInfoOverride"></a><span class="term"><code class=
+"computeroutput">Option "nvidiaXineramaInfoOverride"
+"string"</code></span></dt>
+<dd>
+<p>This option overrides the values reported by the NVIDIA X
+driver's nvidiaXineramaInfo implementation. This disregards the
+actual display devices used by the X screen and any order specified
+in nvidiaXineramaInfoOrder.</p>
+<p>The option string is interpreted as a comma-separated list of
+regions, specified as '[width]x[height]+[x-offset]+[y-offset]'. The
+regions' sizes and offsets are not validated against the X screen
+size, but are directly reported to any Xinerama client.</p>
+<p>Examples:</p>
+<pre class="screen">
+        "1600x1200+0+0, 1600x1200+1600+0"
+        "1024x768+0+0, 1024x768+1024+0, 1024x768+0+768, 1024x768+1024+768"
+</pre>
+<p></p>
+<p>For backwards compatibility, "TwinViewXineramaInfoOverride" is a
+synonym for "nvidiaXineramaInfoOverride".</p>
+</dd>
+<dt><a name="Stereo" id="Stereo"></a><span class=
+"term"><code class="computeroutput">Option "Stereo"
+"integer"</code></span></dt>
+<dd>
+<p>Enable offering of quad-buffered stereo visuals on Quadro.
+Integer indicates the type of stereo equipment being used:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Equipment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Onboard stereo support. This is usually only found on
+professional cards. The glasses connect via a DIN connector on the
+back of the graphics card.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>One-eye-per-display passive stereo. This mode allows each
+display to be configured to statically display either left or right
+eye content. This can be especially useful with multi-display
+configurations (TwinView or SLI Mosaic). For example, this is
+commonly used in conjunction with special projectors to produce 2
+polarized images which are then viewed with polarized glasses. To
+use this stereo mode, it is recommended that you configure TwinView
+(or pairs of displays in SLI Mosaic) in clone mode with the same
+resolution, panning offset, and panning domains on each display.
+See <a href="configtwinview.html#metamodes">MetaModes</a> for more
+information about configuring multiple displays.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Vertical interlaced stereo mode, for use with SeeReal Stereo
+Digital Flat Panels.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Color interleaved stereo mode, for use with Sharp3D Stereo
+Digital Flat Panels.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Horizontal interlaced stereo mode, for use with Arisawa,
+Hyundai, Zalman, Pavione, and Miracube Digital Flat Panels.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Checkerboard pattern stereo mode, for use with 3D DLP Display
+Devices.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Inverse checkerboard pattern stereo mode, for use with 3D DLP
+Display Devices.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>NVIDIA 3D Vision mode for use with NVIDIA 3D Vision glasses.
+The NVIDIA 3D Vision infrared emitter must be connected to a USB
+port of your computer, and to the 3-pin DIN connector of a Quadro
+graphics board before starting the X server. Hot-plugging the USB
+infrared stereo emitter is not yet supported. Also, 3D Vision
+Stereo Linux support requires a Linux kernel built with USB device
+filesystem (usbfs) and USB 2.0 support. Not presently supported on
+FreeBSD or Solaris.</td>
+</tr>
+<tr>
+<td>11</td>
+<td>NVIDIA 3D VisionPro mode for use with NVIDIA 3D VisionPro
+glasses. The NVIDIA 3D VisionPro RF hub must be connected to a USB
+port of your computer, and to the 3-pin DIN connector of a Quadro
+graphics board before starting the X server. Hot-plugging the USB
+RF hub is not yet supported. Also, 3D VisionPro Stereo Linux
+support requires a Linux kernel built with USB device filesystem
+(usbfs) and USB 2.0 support. When RF hub is connected and X is
+started in NVIDIA 3D VisionPro stereo mode, a new page will be
+available in nvidia-settings for various configuration settings.
+Some of these settings can also be done via nvidia-settings command
+line interface. Refer to the corresponding Help section in
+nvidia-settings for further details. Not presently supported on
+FreeBSD or Solaris.</td>
+</tr>
+<tr>
+<td>12</td>
+<td>HDMI 3D mode for use with HDMI 3D compatible display devices
+with their own stereo emitters. This mode is only available on
+NVIDIA Kepler and later GPUs.</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Tridelity SL stereo mode, for use with Tridelity SL display
+devices.</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Generic active stereo with in-band DisplayPort stereo
+signaling, for use with DisplayPort display devices with their own
+stereo emitters. See the documentation for the
+"InbandStereoSignaling" X config option for more details.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Default: 0 (Stereo is not enabled).</p>
+<p>Stereo options 3, 10, 11, 12, and 14 are known as "active"
+stereo. Other options are known as "passive" stereo.</p>
+<p>When active stereo is used with multiple display devices, it is
+recommended that modes within each MetaMode have identical timing
+values (modelines). See <a href="programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">Chapter&nbsp;18,
+<i>Programming Modes</i></a> for suggestions on making sure the
+modes within your MetaModes are identical.</p>
+<p>The following table summarizes the available stereo modes, their
+supported GPUs, and their intended display devices:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Stereo mode (value)</th>
+<th>Graphics card supported [1]</th>
+<th>Display supported</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Onboard DIN (3)</td>
+<td>Quadro graphics cards</td>
+<td>Displays with high refresh rate</td>
+</tr>
+<tr>
+<td>One-eye-per-display (4)</td>
+<td>Quadro graphics cards</td>
+<td>Any</td>
+</tr>
+<tr>
+<td>Vertical Interlaced (5)</td>
+<td>Quadro graphics cards</td>
+<td>SeeReal Stereo DFP</td>
+</tr>
+<tr>
+<td>Color Interleaved (6)</td>
+<td>Quadro graphics cards</td>
+<td>Sharp3D stereo DFP</td>
+</tr>
+<tr>
+<td>Horizontal Interlaced (7)</td>
+<td>Quadro graphics cards</td>
+<td>Arisawa, Hyundai, Zalman, Pavione, and Miracube</td>
+</tr>
+<tr>
+<td>Checkerboard Pattern (8)</td>
+<td>Quadro graphics cards</td>
+<td>3D DLP display devices</td>
+</tr>
+<tr>
+<td>Inverse Checkerboard (9)</td>
+<td>Quadro graphics cards</td>
+<td>3D DLP display devices</td>
+</tr>
+<tr>
+<td>NVIDIA 3D Vision (10)</td>
+<td>Quadro graphics cards [2]</td>
+<td>Supported 3D Vision ready displays [3]</td>
+</tr>
+<tr>
+<td>NVIDIA 3D VisionPro (11)</td>
+<td>Quadro graphics cards [2]</td>
+<td>Supported 3D Vision ready displays [3]</td>
+</tr>
+<tr>
+<td>HDMI 3D (12)</td>
+<td>Quadro graphics cards with NVIDIA Kepler or higher GPUs
+[2]</td>
+<td>Supported HDMI 3D displays [4]</td>
+</tr>
+<tr>
+<td>Tridelity SL (13)</td>
+<td>Quadro graphics cards</td>
+<td>Tridelity SL DFP</td>
+</tr>
+<tr>
+<td>Generic active stereo (in-band DP) (14)</td>
+<td>Quadro graphics cards</td>
+<td>DisplayPort displays with in-band stereo support</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td class="auto-generated">&nbsp;</td>
+<td class="auto-generated">&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col></colgroup>
+<tbody>
+<tr>
+<td>[1] Quadro graphics cards excluding Quadro NVS cards.</td>
+</tr>
+<tr>
+<td>[2] <a href=
+"http://www.nvidia.com/object/quadro_pro_graphics_boards_linux.html"
+target=
+"_top">http://www.nvidia.com/object/quadro_pro_graphics_boards_linux.html</a></td>
+</tr>
+<tr>
+<td>[3] <a href=
+"http://www.nvidia.com/object/3D_Vision_Requirements.html" target=
+"_top">http://www.nvidia.com/object/3D_Vision_Requirements.html</a></td>
+</tr>
+<tr>
+<td>[4] Supported 3D TVs, Projectors, and Home Theater Receivers
+listed on <a href=
+"http://www.nvidia.com/object/3dtv-play-system-requirements.html"
+target=
+"_top">http://www.nvidia.com/object/3dtv-play-system-requirements.html</a>
+and Desktop LCD Monitors with 3D Vision HDMI support listed on
+<a href="http://www.nvidia.com/object/3D_Vision_Requirements.html"
+target=
+"_top">http://www.nvidia.com/object/3D_Vision_Requirements.html</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>UBB must be enabled when stereo is enabled (this is the default
+behavior).</p>
+<p>Active stereo can be enabled on digital display devices
+(connected via DVI, HDMI, or DisplayPort). However, some digital
+display devices might not behave as desired with active stereo:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Some digital display devices may not be able to toggle pixel
+colors quickly enough when flipping between eyes on every
+vblank.</p>
+</li>
+<li>
+<p>Some digital display devices may have an optical polarization
+that interferes with stereo goggles.</p>
+</li>
+<li>
+<p>Active stereo requires high refresh rates, because a vertical
+refresh is needed to display each eye. Some digital display devices
+have a low refresh rate, which will result in flickering when used
+for active stereo.</p>
+</li>
+<li>
+<p>Some digital display devices might internally convert from other
+refresh rates to their native refresh rate (e.g., 60Hz), resulting
+in incompatible rates between the stereo glasses and stereo
+displayed on screen.</p>
+</li>
+</ul>
+</div>
+<p>These limitations do not apply to any display devices suitable
+for stereo options 10, 11, or 12.</p>
+<p>Stereo option 12 (HDMI 3D) is also known as HDMI Frame Packed
+Stereo mode, where the left and right eye images are stacked into a
+single frame with a doubled pixel clock and refresh rate. This
+doubled refresh rate is used for Frame Lock and in refresh rate
+queries through NV-CONTROL clients, and the doubled pixel clock and
+refresh rate are used in mode validation. Interlaced modes are not
+supported with this stereo mode. The following nvidia-settings
+command line can be used to determine whether a display's current
+mode is an HDMI 3D mode with a doubled refresh rate:</p>
+<pre class="screen">
+    nvidia-settings --query=Hdmi3D
+</pre>
+<p></p>
+<p>On GPUs before Kepler, if an active stereo mode is enabled,
+OpenGL applications that make use of Quad-Buffered Stereo and the
+GLX_NV_swap_group extension are limited to a max frame rate of half
+the monitor's refresh rate.</p>
+<p>Stereo applies to an entire X screen, so it will apply to all
+display devices on that X screen, whether or not they all support
+the selected Stereo mode.</p>
+</dd>
+<dt><a name="ForceStereoFlipping" id=
+"ForceStereoFlipping"></a><span class="term"><code class=
+"computeroutput">Option "ForceStereoFlipping"
+"boolean"</code></span></dt>
+<dd>
+<p>Stereo flipping is the process by which left and right eyes are
+displayed on alternating vertical refreshes. Normally, stereo
+flipping is only performed when a stereo drawable is visible. This
+option forces stereo flipping even when no stereo drawables are
+visible.</p>
+<p>This is to be used in conjunction with the "Stereo" option. If
+"Stereo" is 0, the "ForceStereoFlipping" option has no effect. If
+otherwise, the "ForceStereoFlipping" option will force the behavior
+indicated by the "Stereo" option, even if no stereo drawables are
+visible. This option is useful in a multiple-screen environment in
+which a stereo application is run on a different screen than the
+stereo master.</p>
+<p>Possible values:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Stereo flipping is not forced. The default behavior as
+indicated by the "Stereo" option is used.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Stereo flipping is forced. Stereo is running even if no stereo
+drawables are visible. The stereo mode depends on the value of the
+"Stereo" option.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Default: 0 (Stereo flipping is not forced).</p>
+</dd>
+<dt><a name="XineramaStereoFlipping" id=
+"XineramaStereoFlipping"></a><span class="term"><code class=
+"computeroutput">Option "XineramaStereoFlipping"
+"boolean"</code></span></dt>
+<dd>
+<p>By default, when using Stereo with Xinerama, all physical X
+screens having a visible stereo drawable will stereo flip. Use this
+option to allow only one physical X screen to stereo flip at a
+time.</p>
+<p>This is to be used in conjunction with the "Stereo" and
+"Xinerama" options. If "Stereo" is 0 or "Xinerama" is 0, the
+"XineramaStereoFlipping" option has no effect.</p>
+<p>If you wish to have all X screens stereo flip all the time, see
+the "ForceStereoFlipping" option.</p>
+<p>Possible values:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Stereo flipping is enabled on one X screen at a time. Stereo is
+enabled on the first X screen having the stereo drawable.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Stereo flipping in enabled on all X screens.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Default: 1 (Stereo flipping is enabled on all X screens).</p>
+</dd>
+<dt><a name="IgnoreDisplayDevices" id=
+"IgnoreDisplayDevices"></a><span class="term"><code class=
+"computeroutput">Option "IgnoreDisplayDevices"
+"string"</code></span></dt>
+<dd>
+<p>This option tells the NVIDIA kernel module to completely ignore
+the indicated classes of display devices when checking which
+display devices are connected. You may specify a comma-separated
+list containing any of "CRT", "DFP", and "TV". For example:</p>
+<pre class="screen">
+Option "IgnoreDisplayDevices" "DFP, TV"
+</pre>
+<p>will cause the NVIDIA driver to not attempt to detect if any
+digital flat panels or TVs are connected. This option is not
+normally necessary; however, some video BIOSes contain incorrect
+information about which display devices may be connected, or which
+i2c port should be used for detection. These errors can cause long
+delays in starting X. If you are experiencing such delays, you may
+be able to avoid this by telling the NVIDIA driver to ignore
+display devices which you know are not connected. NOTE: anything
+attached to a 15 pin VGA connector is regarded by the driver as a
+CRT. "DFP" should only be used to refer to digital flat panels
+connected via a DVI port.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+</dd>
+<dt><a name="MultisampleCompatibility" id=
+"MultisampleCompatibility"></a><span class="term"><code class=
+"computeroutput">Option "MultisampleCompatibility"
+"boolean"</code></span></dt>
+<dd>
+<p>Enable or disable the use of separate front and back multisample
+buffers. Enabling this will consume more memory but is necessary
+for correct output when rendering to both the front and back
+buffers of a multisample or FSAA drawable. This option is necessary
+for correct operation of SoftImage XSI. Default: false (a single
+multisample buffer is shared between the front and back
+buffers).</p>
+</dd>
+<dt><a name="NoPowerConnectorCheck" id=
+"NoPowerConnectorCheck"></a><span class="term"><code class=
+"computeroutput">Option "NoPowerConnectorCheck"
+"boolean"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver will fail initialization on a GPU if it
+detects that the GPU that requires an external power connector does
+not have an external power connector plugged in. This option can be
+used to bypass this test.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: false (the power connector test is performed).</p>
+</dd>
+<dt><a name="ThermalConfigurationCheck" id=
+"ThermalConfigurationCheck"></a><span class="term"><code class=
+"computeroutput">Option "ThermalConfigurationCheck"
+"boolean"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver will fail initialization on a GPU if it
+detects that the GPU has a bad thermal configuration. This may
+indicate a problem with how your graphics board was built, or
+simply a driver bug. It is recommended that you contact your
+graphics board vendor if you encounter this problem.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>This option can be set to False to bypass this test. Default:
+true (the thermal configuration test is performed).</p>
+</dd>
+<dt><a name="AllowGLXWithComposite" id=
+"AllowGLXWithComposite"></a><span class="term"><code class=
+"computeroutput">Option "AllowGLXWithComposite"
+"boolean"</code></span></dt>
+<dd>
+<p>Enables GLX even when the Composite X extension is loaded.
+ENABLE AT YOUR OWN RISK. OpenGL applications will not display
+correctly in many circumstances with this setting enabled.</p>
+<p>This option is intended for use on versions of X.Org older than
+X11R6.9.0. On X11R6.9.0 or newer, the NVIDIA OpenGL implementation
+interacts properly by default with the Composite X extension and
+this option should not be needed. However, on X11R6.9.0 or newer,
+support for GLX with Composite can be disabled by setting this
+option to False.</p>
+<p>Default: false (GLX is disabled when Composite is enabled on X
+releases older than X11R6.9.0).</p>
+</dd>
+<dt><a name="AddARGBGLXVisuals" id=
+"AddARGBGLXVisuals"></a><span class="term"><code class=
+"computeroutput">Option "AddARGBGLXVisuals"
+"boolean"</code></span></dt>
+<dd>
+<p>Adds a 32-bit ARGB visual for each supported OpenGL
+configuration. This allows applications to use OpenGL to render
+with alpha transparency into 32-bit windows and pixmaps. This
+option requires the Composite extension. Default: ARGB GLX visuals
+are enabled on X servers new enough to support them when the
+Composite extension is also enabled and the screen depth is 24 or
+30.</p>
+</dd>
+<dt><a name="DisableGLXRootClipping" id=
+"DisableGLXRootClipping"></a><span class="term"><code class=
+"computeroutput">Option "DisableGLXRootClipping"
+"boolean"</code></span></dt>
+<dd>
+<p>If enabled, no clipping will be performed on rendering done by
+OpenGL in the root window. This option is deprecated. It is needed
+by older versions of OpenGL-based composite managers that draw the
+contents of redirected windows directly into the root window using
+OpenGL. Most OpenGL-based composite managers have been updated to
+support the Composite Overlay Window, a feature introduced in Xorg
+release 7.1. Using the Composite Overlay Window is the preferred
+method for performing OpenGL-based compositing.</p>
+</dd>
+<dt><a name="DamageEvents" id="DamageEvents"></a><span class=
+"term"><code class="computeroutput">Option "DamageEvents"
+"boolean"</code></span></dt>
+<dd>
+<p>Use OS-level events to efficiently notify X when a client has
+performed direct rendering to a window that needs to be composited.
+This will significantly improve performance and interactivity when
+using GLX applications with a composite manager running. It will
+also affect applications using GLX when rotation is enabled.
+Enabled by default.</p>
+</dd>
+<dt><a name="ExactModeTimingsDVI" id=
+"ExactModeTimingsDVI"></a><span class="term"><code class=
+"computeroutput">Option "ExactModeTimingsDVI"
+"boolean"</code></span></dt>
+<dd>
+<p>Forces the initialization of the X server with the exact timings
+specified in the ModeLine. Default: false (for DVI devices, the X
+server initializes with the closest mode in the EDID list).</p>
+<p>The "AllowNonEdidModes" token in the "ModeValidation" X
+configuration option has the same effect as "ExactModeTimingsDVI",
+but "AllowNonEdidModes" has per-display device granularity.</p>
+</dd>
+<dt><a name="Coolbits" id="Coolbits"></a><span class=
+"term"><code class="computeroutput">Option "Coolbits"
+"integer"</code></span></dt>
+<dd>
+<p>Enables various unsupported features, such as support for GPU
+clock manipulation in the NV-CONTROL X extension. This option
+accepts a bit mask of features to enable.</p>
+<p>WARNING: this may cause system damage and void warranties. This
+utility can run your computer system out of the manufacturer's
+design specifications, including, but not limited to: higher system
+voltages, above normal temperatures, excessive frequencies, and
+changes to BIOS that may corrupt the BIOS. Your computer's
+operating system may hang and result in data loss or corrupted
+images. Depending on the manufacturer of your computer system, the
+computer system, hardware and software warranties may be voided,
+and you may not receive any further manufacturer support. NVIDIA
+does not provide customer service support for the Coolbits option.
+It is for these reasons that absolutely no warranty or guarantee is
+either express or implied. Before enabling and using, you should
+determine the suitability of the utility for your intended use, and
+you shall assume all responsibility in connection therewith.</p>
+<p>When "2" (Bit 1) is set in the "Coolbits" option value, the
+NVIDIA driver will attempt to initialize SLI when using GPUs with
+different amounts of video memory.</p>
+<p>When "4" (Bit 2) is set in the "Coolbits" option value, the
+nvidia-settings Thermal Monitor page will allow configuration of
+GPU fan speed, on graphics boards with programmable fan
+capability.</p>
+<p>When "8" (Bit 3) is set in the "Coolbits" option value, the
+PowerMizer page in the nvidia-settings control panel will display a
+table that allows setting per-clock domain and per-performance
+level offsets to apply to clock values. This is allowed on certain
+GeForce GPUs. Not all clock domains or performance levels may be
+modified. On GPUs based on the Pascal architecture the offset is
+applied to all performance levels.</p>
+<p>When "16" (Bit 4) is set in the "Coolbits" option value, the
+nvidia-settings command line interface allows setting GPU
+overvoltage. This is allowed on certain GeForce GPUs.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>The default for this option is 0 (unsupported features are
+disabled).</p>
+</dd>
+<dt><a name="MultiGPU" id="MultiGPU"></a><span class=
+"term"><code class="computeroutput">Option "MultiGPU"
+"string"</code></span></dt>
+<dd>
+<p>This option controls the configuration of Multi-GPU rendering in
+supported configurations.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0, no, off, false, Single</td>
+<td>Use only a single GPU when rendering</td>
+</tr>
+<tr>
+<td>1, yes, on, true, Auto</td>
+<td>Enable Multi-GPU and allow the driver to automatically select
+the appropriate rendering mode.</td>
+</tr>
+<tr>
+<td>AFR</td>
+<td>Enable Multi-GPU and use the Alternate Frame Rendering
+mode.</td>
+</tr>
+<tr>
+<td>SFR</td>
+<td>Enable Multi-GPU and use the Split Frame Rendering mode.</td>
+</tr>
+<tr>
+<td>AA</td>
+<td>Enable Multi-GPU and use antialiasing. Use this in conjunction
+with full scene antialiasing to improve visual quality.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+</dd>
+<dt><a name="SLI" id="SLI"></a><span class="term"><code class=
+"computeroutput">Option "SLI" "string"</code></span></dt>
+<dd>
+<p>This option controls the configuration of SLI rendering in
+supported configurations.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0, no, off, false, Single</td>
+<td>Use only a single GPU when rendering</td>
+</tr>
+<tr>
+<td>1, yes, on, true, Auto</td>
+<td>Enable SLI and allow the driver to automatically select the
+appropriate rendering mode.</td>
+</tr>
+<tr>
+<td>AFR</td>
+<td>Enable SLI and use the Alternate Frame Rendering mode.</td>
+</tr>
+<tr>
+<td>SFR</td>
+<td>Enable SLI and use the Split Frame Rendering mode.</td>
+</tr>
+<tr>
+<td>AA</td>
+<td>Enable SLI and use SLI Antialiasing. Use this in conjunction
+with full scene antialiasing to improve visual quality.</td>
+</tr>
+<tr>
+<td>AFRofAA</td>
+<td>Enable SLI and use SLI Alternate Frame Rendering of
+Antialiasing mode. Use this in conjunction with full scene
+antialiasing to improve visual quality. This option is only valid
+for SLI configurations with 4 GPUs.</td>
+</tr>
+<tr>
+<td>Mosaic</td>
+<td>Enable SLI and use SLI Mosaic Mode. Use this in conjunction
+with the MetaModes X configuration option to specify the
+combination of mode(s) used on each display.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+</dd>
+<dt><a name="TripleBuffer" id="TripleBuffer"></a><span class=
+"term"><code class="computeroutput">Option "TripleBuffer"
+"boolean"</code></span></dt>
+<dd>
+<p>Enable or disable the use of triple buffering. If this option is
+enabled, OpenGL windows that sync to vblank and are double-buffered
+will be given a third buffer. This decreases the time an
+application stalls while waiting for vblank events, but increases
+latency slightly (delay between user input and displayed
+result).</p>
+</dd>
+<dt><a name="DPI" id="DPI"></a><span class="term"><code class=
+"computeroutput">Option "DPI" "string"</code></span></dt>
+<dd>
+<p>This option specifies the Dots Per Inch for the X screen; for
+example:</p>
+<pre class="screen">
+    Option "DPI" "75 x 85"
+</pre>
+<p>will set the horizontal DPI to 75 and the vertical DPI to 85. By
+default, the X driver will compute the DPI of the X screen from the
+EDID of any connected display devices. See <a href="dpi.html"
+title="Appendix&nbsp;E.&nbsp;Dots Per Inch">Appendix&nbsp;E,
+<i>Dots Per Inch</i></a> for details. Default: string is NULL
+(disabled).</p>
+</dd>
+<dt><a name="UseEdidDpi" id="UseEdidDpi"></a><span class=
+"term"><code class="computeroutput">Option "UseEdidDpi"
+"string"</code></span></dt>
+<dd>
+<p>By default, the NVIDIA X driver computes the DPI of an X screen
+based on the physical size of the display device, as reported in
+the EDID, and the size in pixels of the first mode to be used on
+the display device. If multiple display devices are used by the X
+screen, then the NVIDIA X screen will choose which display device
+to use. This option can be used to specify which display device to
+use. The string argument can be a display device name, such as:</p>
+<pre class="screen">
+    Option "UseEdidDpi" "DFP-0"
+</pre>
+<p>or the argument can be "FALSE" to disable use of EDID-based DPI
+calculations:</p>
+<pre class="screen">
+    Option "UseEdidDpi" "FALSE"
+</pre>
+<p>See <a href="dpi.html" title=
+"Appendix&nbsp;E.&nbsp;Dots Per Inch">Appendix&nbsp;E, <i>Dots Per
+Inch</i></a> for details. Default: string is NULL (the driver
+computes the DPI from the EDID of a display device and selects the
+display device).</p>
+</dd>
+<dt><a name="ConstantDPI" id="ConstantDPI"></a><span class=
+"term"><code class="computeroutput">Option "ConstantDPI"
+"boolean"</code></span></dt>
+<dd>
+<p>By default on X.Org 6.9 or newer, the NVIDIA X driver recomputes
+the size in millimeters of the X screen whenever the size in pixels
+of the X screen is changed using XRandR, such that the DPI remains
+constant.</p>
+<p>This behavior can be disabled (which means that the size in
+millimeters will not change when the size in pixels of the X screen
+changes) by setting the "ConstantDPI" option to "FALSE"; e.g.,</p>
+<pre class="screen">
+    Option "ConstantDPI" "FALSE"
+</pre>
+<p>ConstantDPI defaults to True.</p>
+<p>On X releases older than X.Org 6.9, the NVIDIA X driver cannot
+change the size in millimeters of the X screen. Therefore the DPI
+of the X screen will change when XRandR changes the size in pixels
+of the X screen. The driver will behave as if ConstantDPI was
+forced to FALSE.</p>
+</dd>
+<dt><a name="CustomEDID" id="CustomEDID"></a><span class=
+"term"><code class="computeroutput">Option "CustomEDID"
+"string"</code></span></dt>
+<dd>
+<p>This option forces the X driver to use the EDID specified in a
+file rather than the display's EDID. You may specify a semicolon
+separated list of display names and filename pairs. Valid display
+device names include "CRT-0", "CRT-1", "DFP-0", "DFP-1", "TV-0",
+"TV-1", or one of the generic names "CRT", "DFP", "TV", which apply
+the EDID to all devices of the specified type. Additionally, if SLI
+Mosaic is enabled, this name can be prefixed by a GPU name (e.g.,
+"GPU-0.CRT-0"). The file contains a raw EDID (e.g., a file
+generated by nvidia-settings).</p>
+<p>For example:</p>
+<pre class="screen">
+    Option "CustomEDID" "CRT-0:/tmp/edid1.bin; DFP-0:/tmp/edid2.bin"
+</pre>
+<p>will assign the EDID from the file /tmp/edid1.bin to the display
+device CRT-0, and the EDID from the file /tmp/edid2.bin to the
+display device DFP-0. Note that a display device name must always
+be specified even if only one EDID is specified.</p>
+<p>Caution: Specifying an EDID that doesn't exactly match your
+display may damage your hardware, as it allows the driver to
+specify timings beyond the capabilities of your display. Use with
+care.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+</dd>
+<dt><a name="IgnoreEDIDChecksum" id=
+"IgnoreEDIDChecksum"></a><span class="term"><code class=
+"computeroutput">Option "IgnoreEDIDChecksum"
+"string"</code></span></dt>
+<dd>
+<p>This option forces the X driver to accept an EDID even if the
+checksum is invalid. You may specify a comma separated list of
+display names. Valid display device names include "CRT-0", "CRT-1",
+"DFP-0", "DFP-1", "TV-0", "TV-1", or one of the generic names
+"CRT", "DFP", "TV", which ignore the EDID checksum on all devices
+of the specified type. Additionally, if SLI Mosaic is enabled, this
+name can be prefixed by a GPU name (e.g., "GPU-0.CRT-0").</p>
+<p>For example:</p>
+<pre class="screen">
+    Option "IgnoreEDIDChecksum" "CRT, DFP-0"
+</pre>
+<p>will cause the nvidia driver to ignore the EDID checksum for all
+CRT monitors and the displays DFP-0 and TV-0.</p>
+<p>Caution: An invalid EDID checksum may indicate a corrupt EDID. A
+corrupt EDID may have mode timings beyond the capabilities of your
+display, and using it could damage your hardware. Use with
+care.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+</dd>
+<dt><a name="ModeValidation" id="ModeValidation"></a><span class=
+"term"><code class="computeroutput">Option "ModeValidation"
+"string"</code></span></dt>
+<dd>
+<p>This option provides fine-grained control over each stage of the
+mode validation pipeline, disabling individual mode validation
+checks. This option should only very rarely be used.</p>
+<p>The option string is a semicolon-separated list of
+comma-separated lists of mode validation arguments. Each list of
+mode validation arguments can optionally be prepended with a
+display device name and GPU specifier.</p>
+<pre class="screen">
+    "&lt;dpy-0&gt;: &lt;tok&gt;, &lt;tok&gt;; &lt;dpy-1&gt;: &lt;tok&gt;, &lt;tok&gt;, &lt;tok&gt;; ..."
+</pre>
+<p></p>
+<p>Possible arguments:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"NoMaxPClkCheck": each mode has a pixel clock; this pixel clock
+is validated against the maximum pixel clock of the hardware (for a
+DFP, this is the maximum pixel clock of the TMDS encoder, for a
+CRT, this is the maximum pixel clock of the DAC). This argument
+disables the maximum pixel clock checking stage of the mode
+validation pipeline.</p>
+</li>
+<li>
+<p>"NoEdidMaxPClkCheck": a display device's EDID can specify the
+maximum pixel clock that the display device supports; a mode's
+pixel clock is validated against this pixel clock maximum. This
+argument disables this stage of the mode validation pipeline.</p>
+</li>
+<li>
+<p>"NoMaxSizeCheck": each NVIDIA GPU has a maximum resolution that
+it can drive; this argument disables this stage of the mode
+validation pipeline.</p>
+</li>
+<li>
+<p>"NoHorizSyncCheck": a mode's horizontal sync is validated
+against the range of valid horizontal sync values; this argument
+disables this stage of the mode validation pipeline.</p>
+</li>
+<li>
+<p>"NoVertRefreshCheck": a mode's vertical refresh rate is
+validated against the range of valid vertical refresh rate values;
+this argument disables this stage of the mode validation
+pipeline.</p>
+</li>
+<li>
+<p>"NoVirtualSizeCheck": if the X configuration file requests a
+specific virtual screen size, a mode cannot be larger than that
+virtual size; this argument disables this stage of the mode
+validation pipeline.</p>
+</li>
+<li>
+<p>"NoVesaModes": when constructing the mode pool for a display
+device, the X driver uses a built-in list of VESA modes as one of
+the mode sources; this argument disables use of these built-in VESA
+modes.</p>
+</li>
+<li>
+<p>"NoEdidModes": when constructing the mode pool for a display
+device, the X driver uses any modes listed in the display device's
+EDID as one of the mode sources; this argument disables use of
+EDID-specified modes.</p>
+</li>
+<li>
+<p>"NoXServerModes": when constructing the mode pool for a display
+device, the X driver uses the built-in modes provided by the core
+XFree86/Xorg X server as one of the mode sources; this argument
+disables use of these modes. Note that this argument does not
+disable custom ModeLines specified in the X config file; see the
+"NoCustomModes" argument for that.</p>
+</li>
+<li>
+<p>"NoCustomModes": when constructing the mode pool for a display
+device, the X driver uses custom ModeLines specified in the X
+config file (through the "Mode" or "ModeLine" entries in the
+Monitor Section) as one of the mode sources; this argument disables
+use of these modes.</p>
+</li>
+<li>
+<p>"NoPredefinedModes": when constructing the mode pool for a
+display device, the X driver uses additional modes predefined by
+the NVIDIA X driver; this argument disables use of these modes.</p>
+</li>
+<li>
+<p>"NoUserModes": additional modes can be added to the mode pool
+dynamically, using the NV-CONTROL X extension; this argument
+prohibits user-specified modes via the NV-CONTROL X extension.</p>
+</li>
+<li>
+<p>"NoExtendedGpuCapabilitiesCheck": allow mode timings that may
+exceed the GPU's extended capability checks.</p>
+</li>
+<li>
+<p>"ObeyEdidContradictions": an EDID may contradict itself by
+listing a mode as supported, but the mode may exceed an
+EDID-specified valid frequency range (HorizSync, VertRefresh, or
+maximum pixel clock). Normally, the NVIDIA X driver prints a
+warning in this scenario, but does not invalidate an EDID-specified
+mode just because it exceeds an EDID-specified valid frequency
+range. However, the "ObeyEdidContradictions" argument instructs the
+NVIDIA X driver to invalidate these modes.</p>
+</li>
+<li>
+<p>"NoTotalSizeCheck": allow modes in which the individual visible
+or sync pulse timings exceed the total raster size.</p>
+</li>
+<li>
+<p>"NoDualLinkDVICheck": for mode timings used on dual link DVI
+DFPs, the driver must perform additional checks to ensure that the
+correct pixels are sent on the correct link. For some of these
+checks, the driver will invalidate the mode timings; for other
+checks, the driver will implicitly modify the mode timings to meet
+the GPU's dual link DVI requirements. This token disables this dual
+link DVI checking.</p>
+</li>
+<li>
+<p>"NoDisplayPortBandwidthCheck": for mode timings used on
+DisplayPort devices, the driver must verify that the DisplayPort
+link can be configured to carry enough bandwidth to support a given
+mode's pixel clock. For example, some DisplayPort-to-VGA adapters
+only support 2 DisplayPort lanes, limiting the resolutions they can
+display. This token disables this DisplayPort bandwidth check.</p>
+</li>
+<li>
+<p>"AllowNon3DVisionModes": modes that are not optimized for NVIDIA
+3D Vision are invalidated, by default, when 3D Vision (stereo mode
+10) or 3D Vision Pro (stereo mode 11) is enabled. This token allows
+the use of non-3D Vision modes on a 3D Vision monitor. (Stereo
+behavior of non-3D Vision modes on 3D Vision monitors is
+undefined.)</p>
+</li>
+<li>
+<p>"AllowNonHDMI3DModes": modes that are incompatible with HDMI 3D
+are invalidated, by default, when HDMI 3D (stereo mode 12) is
+enabled. This token allows the use of non-HDMI 3D modes when HDMI
+3D is selected. HDMI 3D will be disabled when a non-HDMI 3D mode is
+in use.</p>
+</li>
+<li>
+<p>"AllowNonEdidModes": if a mode is not listed in a display
+device's EDID mode list, then the NVIDIA X driver will discard the
+mode if the EDID 1.3 "GTF Supported" flag is unset, if the EDID 1.4
+"Continuous Frequency" flag is unset, or if the display device is
+connected to the GPU by a digital protocol (e.g., DVI, DP, etc).
+This token disables these checks for non-EDID modes.</p>
+</li>
+<li>
+<p>"NoEdidHDMI2Check": HDMI 2.0 adds support for 4K@60Hz modes with
+either full RGB 4:4:4 pixel encoding or YUV (also known as YCbCr)
+4:2:0 pixel encoding. Using these modes with RGB 4:4:4 pixel
+encoding requires GPU support as well as display support indicated
+in the display device's EDID. This token allows the use of these
+modes at RGB 4:4:4 as long as the GPU supports them, even if the
+display device's EDID does not indicate support. Otherwise, these
+modes will be displayed in the YUV 4:2:0 color space.</p>
+</li>
+<li>
+<p>"AllowDpInterlaced": When driving interlaced modes over
+DisplayPort protocol, NVIDIA GPUs do not provide all the
+spec-mandated metadata. Some DisplayPort monitors are tolerant of
+this missing metadata. But, in the interest of DisplayPort
+specification compliance, the NVIDIA driver prohibits interlaced
+modes over DisplayPort protocol by default. Use this mode
+validation token to allow interlaced modes over DisplayPort
+protocol anyway.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Examples:</p>
+<pre class="screen">
+    Option "ModeValidation" "NoMaxPClkCheck"
+</pre>
+<p>disable the maximum pixel clock check when validating modes on
+all display devices.</p>
+<pre class="screen">
+    Option "ModeValidation" "CRT-0: NoEdidModes, NoMaxPClkCheck; GPU-0.DFP-0: NoVesaModes"
+</pre>
+<p>do not use EDID modes and do not perform the maximum pixel clock
+check on CRT-0, and do not use VESA modes on DFP-0 of GPU-0.</p>
+</dd>
+<dt><a name="ColorSpace" id="ColorSpace"></a><span class=
+"term"><code class="computeroutput">Option "ColorSpace"
+"string"</code></span></dt>
+<dd>
+<p>This option sets the preferred color space for all or a subset
+of the connected flat panels.</p>
+<p>The option string is a semicolon-separated list of device
+specific options. Each option can optionally be prepended with a
+display device name and a GPU specifier.</p>
+<pre class="screen">
+    "&lt;dpy-0&gt;: &lt;tok&gt;; &lt;dpy-1&gt;: &lt;tok&gt;; ..."
+</pre>
+<p></p>
+<p>Possible arguments:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"RGB": sets color space to RGB. RGB color space supports two
+valid color ranges; full and limited. By default, full color range
+is set when the color space is RGB.</p>
+</li>
+<li>
+<p>"YCbCr444": sets color space to YCbCr 4:4:4. YCbCr supports only
+limited color range. It is not possible to set this color space if
+the GPU or display is not capable of limited range.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>If the ColorSpace option is not specified, or is incorrectly
+specified, then the color space is set to RGB by default. If
+driving the current mode in the RGB 4:4:4 color space would require
+a pixel clock that exceeds the display's or GPU's capabilities, and
+the display and GPU are capable of driving that mode in the YCbCr
+4:2:0 color space, then the color space will be overridden to YCbCr
+4:2:0. Full color range is still supported in YCbCr 4:2:0 mode. The
+current actual color space in use on the display can be queried
+with the following nvidia-settings command line:</p>
+<pre class="screen">
+    nvidia-settings --query=CurrentColorSpace
+</pre>
+<p></p>
+<p>Examples:</p>
+<pre class="screen">
+    Option "ColorSpace" "YCbCr444"
+</pre>
+<p>set the color space to YCbCr 4:4:4 on all flat panels.</p>
+<pre class="screen">
+    Option "ColorSpace" "GPU-0.DFP-0: YCbCr444"
+</pre>
+<p>set the color space to YCbCr 4:4:4 on DFP-0 of GPU-0.</p>
+</dd>
+<dt><a name="ColorRange" id="ColorRange"></a><span class=
+"term"><code class="computeroutput">Option "ColorRange"
+"string"</code></span></dt>
+<dd>
+<p>This option sets the preferred color range for all or a subset
+of the connected flat panels.</p>
+<p>The option string is a semicolon-separated list of device
+specific options. Each option can optionally be prepended with a
+display device name and a GPU specifier.</p>
+<pre class="screen">
+    "&lt;dpy-0&gt;: &lt;tok&gt;; &lt;dpy-1&gt;: &lt;tok&gt;; ..."
+</pre>
+<p></p>
+<p>Either full or limited color range may be selected as the
+preferred color range. The actual color range depends on the
+current color space, and will be overridden to limited color range
+if the current color space requires it. The current actual color
+range in use on the display can be queried with the following
+nvidia-settings command line:</p>
+<pre class="screen">
+    nvidia-settings --query=CurrentColorRange
+</pre>
+<p></p>
+<p>Possible arguments:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"Full": sets color range to full range. By default, full color
+range is set when the color space is RGB.</p>
+</li>
+<li>
+<p>"Limited": sets color range to limited range. YCbCr444 supports
+only limited color range. Consequently, limited range is selected
+by the driver when color space is set to YCbCr444, and can not be
+changed.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>If the ColorRange option is not specified, or is incorrectly
+specified, then an appropriate default value is selected based on
+the selected color space.</p>
+<p>Examples:</p>
+<pre class="screen">
+    Option "ColorRange" "Limited"
+</pre>
+<p>set the color range to limited on all flat panels.</p>
+<pre class="screen">
+    Option "ColorRange" "GPU-0.DFP-0: Limited"
+</pre>
+<p>set the color range to limited on DFP-0 of GPU-0.</p>
+</dd>
+<dt><a name="ModeDebug" id="ModeDebug"></a><span class=
+"term"><code class="computeroutput">Option "ModeDebug"
+"boolean"</code></span></dt>
+<dd>
+<p>This option causes the X driver to print verbose details about
+mode validation to the X log file. Note that this option is applied
+globally: setting this option to TRUE will enable verbose mode
+validation logging for all NVIDIA X screens in the X server.</p>
+</dd>
+<dt><a name="FlatPanelProperties" id=
+"FlatPanelProperties"></a><span class="term"><code class=
+"computeroutput">Option "FlatPanelProperties"
+"string"</code></span></dt>
+<dd>
+<p>This option requests particular properties for all or a subset
+of the connected flat panels.</p>
+<p>The option string is a semicolon-separated list of
+comma-separated property=value pairs. Each list of property=value
+pairs can optionally be prepended with a flat panel name and GPU
+specifier.</p>
+<pre class="screen">
+    "&lt;DFP-0&gt;: &lt;property=value&gt;, &lt;property=value&gt;; &lt;DFP-1&gt;: &lt;property=value&gt;; ..."
+</pre>
+<p></p>
+<p>Recognized properties:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"Dithering": controls the flat panel dithering configuration;
+possible values are: 'Auto' (the driver will decide when to
+dither), 'Enabled' (the driver will always dither, if possible),
+and 'Disabled' (the driver will never dither).</p>
+</li>
+<li>
+<p>"DitheringMode": controls the flat panel dithering mode;
+possible values are: 'Auto' (the driver will choose possible
+default mode), 'Dynamic-2x2' (a 2x2 dithering pattern is updated
+for every frame), 'Static-2x2' (a 2x2 dithering pattern remains
+constant throughout the frames), and 'Temporal' (a pseudo-random
+dithering algorithm is used).</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Examples:</p>
+<pre class="screen">
+    Option "FlatPanelProperties" "DitheringMode = Static-2x2"
+</pre>
+<p>set the flat panel dithering mode to Static-2x2 on all flat
+panels.</p>
+<pre class="screen">
+    Option "FlatPanelProperties" "GPU-0.DFP-0: Dithering = Disabled; DFP-1: Dithering = Enabled, DitheringMode = Static-2x2"
+</pre>
+<p>set dithering to disabled on DFP-0 on GPU-0, set DFP-1's
+dithering to enabled and dithering mode to static 2x2.</p>
+</dd>
+<dt><a name="ProbeAllGpus" id="ProbeAllGpus"></a><span class=
+"term"><code class="computeroutput">Option "ProbeAllGpus"
+"boolean"</code></span></dt>
+<dd>
+<p>When the NVIDIA X driver initializes, it probes all GPUs in the
+system, even if no X screens are configured on them. This is done
+so that the X driver can report information about all the system's
+GPUs through the NV-CONTROL X extension. This option can be set to
+FALSE to disable this behavior, such that only GPUs with X screens
+configured on them will be probed.</p>
+<p>Note that disabling this option may affect configurability
+through nvidia-settings, since the X driver will not know about
+GPUs that aren't currently being used or the display devices
+attached to them.</p>
+<p>Default: all GPUs in the system are probed.</p>
+</dd>
+<dt><a name="IncludeImplicitMetaModes" id=
+"IncludeImplicitMetaModes"></a><span class="term"><code class=
+"computeroutput">Option "IncludeImplicitMetaModes"
+"boolean"</code></span></dt>
+<dd>
+<p>When the X server starts, a mode pool is created per display
+device, containing all the mode timings that the NVIDIA X driver
+determined to be valid for the display device. However, the only
+MetaModes that are made available to the X server are the ones
+explicitly requested in the X configuration file.</p>
+<p>It is convenient for fullscreen applications to be able to
+change between the modes in the mode pool, even if a given target
+mode was not explicitly requested in the X configuration file.</p>
+<p>To facilitate this, the NVIDIA X driver will implicitly add
+MetaModes for all modes in the primary display device's mode pool.
+This makes all the modes in the mode pool available to full screen
+applications that use the XF86VidMode extension or RandR 1.0/1.1
+requests.</p>
+<p>Further, to make sure that fullscreen applications have a
+reasonable set of MetaModes available to them, the NVIDIA X driver
+will also add implicit MetaModes for common resolutions: 1920x1200,
+1920x1080, 1600x1200, 1280x1024, 1280x720, 1024x768, 800x600,
+640x480. For these common resolution implicit MetaModes, the common
+resolution will be the ViewPortIn, and nvidia-auto-select will be
+the mode. The ViewPortOut will be configured such that the
+ViewPortIn is aspect scaled within the mode. Each common resolution
+implicit MetaMode will be added if there is not already a MetaMode
+with that resolution, and if the resolution is not larger than the
+nvidia-auto-select mode of the display device. See <a href=
+"configtwinview.html#metamodes">MetaModes</a> for details of the
+relationship between ViewPortIn, ViewPortOut, and the mode within a
+MetaMode.</p>
+<p>The IncludeImplicitMetaModes X configuration option can be used
+to disable the addition of implicit MetaModes. Or, it can be used
+to alter how implicit MetaModes are added. The option can have
+either a boolean value or a comma-separated list of token=value
+pairs, where the possible tokens are:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"DisplayDevice": specifies the display device for which the
+implicit MetaModes should be created. Any name that can be used to
+identify a display device can be used here; see <a href=
+"displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">Appendix&nbsp;C,
+<i>Display Device Names</i></a> for details.</p>
+</li>
+<li>
+<p>"Mode": specifies the name of the mode to use with the common
+resolution-based implicit MetaModes. The default is
+"nvidia-auto-select". Any mode in the display device's mode pool
+can be used here.</p>
+</li>
+<li>
+<p>"Scaling": specifies how the ViewPortOut should be configured
+between the ViewPortIn and the mode for the common resolution-based
+implicit MetaModes. Possible values are "Scaled", "Aspect-Scaled",
+or "Centered". The default is "Aspect-Scaled".</p>
+</li>
+<li>
+<p>"UseModePool": specifies whether modes from the display device's
+mode pool should be used to create implicit MetaModes. The default
+is "true".</p>
+</li>
+<li>
+<p>"UseCommonResolutions": specifies whether the common resolution
+list should be used to create implicit MetaModes. The default is
+"true".</p>
+</li>
+<li>
+<p>"Derive16x9Mode": specifies whether to create an implicit
+MetaMode with a resolution whose aspect ratio is 16:9, using the
+width of nvidia-auto-select. E.g., using a 2560x1600 monitor, this
+would create an implicit MetaMode of 2560x1440. The default is
+"true".</p>
+</li>
+<li>
+<p>"ExtraResolutions": a comma-separated list of additional
+resolutions to use for creating implicit MetaModes. These will be
+created in the same way as the common resolution implicit
+MetaModes: the resolution will be used as the ViewPortIn, the
+nvidia-auto-select mode will be used as the mode, and the
+ViewPortOut will be computed to aspect scale the resolution within
+the mode. Note that the list of resolutions must be enclosed in
+parentheses, so that the commas are not interpreted as token=value
+pair separators.</p>
+</li>
+</ul>
+</div>
+<p>Some examples:</p>
+<pre class="screen">
+Option "IncludeImplicitMetaModes" "off"
+Option "IncludeImplicitMetaModes" "on" (the default)
+Option "IncludeImplicitMetaModes" "DisplayDevice = DVI-I-2, Scaling=Aspect-Scaled, UseModePool = false"
+Option "IncludeImplicitMetaModes" "ExtraResolutions = ( 2560x1440, 320x200 ), DisplayDevice = DVI-I-0"
+</pre>
+<p></p>
+</dd>
+<dt><a name="IndirectMemoryAccess" id=
+"IndirectMemoryAccess"></a><span class="term"><code class=
+"computeroutput">Option "IndirectMemoryAccess"
+"boolean"</code></span></dt>
+<dd>
+<p>Some graphics cards have more video memory than can be mapped at
+once by the CPU (generally at most 256 MB of video memory can be
+CPU-mapped). This option allows the driver to:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>place more pixmaps in video memory, which will improve hardware
+rendering performance but may slow down software rendering;</p>
+</li>
+<li>
+<p>allocate buffers larger than 256 MB, which is necessary to reach
+the maximum buffer size on newer GPUs.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>On some systems, up to 3 gigabytes of virtual address space may
+be reserved in the X server for indirect memory access. This
+virtual memory does not consume any physical resources. Note that
+the amount of reserved memory may be limited on 32-bit platforms,
+so some problems with large buffer allocations can be resolved by
+switching to a 64-bit operating system.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: on (indirect memory access will be used, when
+available).</p>
+</dd>
+<dt><a name="AllowSHMPixmaps" id="AllowSHMPixmaps"></a><span class=
+"term"><code class="computeroutput">Option "AllowSHMPixmaps"
+"boolean"</code></span></dt>
+<dd>
+<p>This option controls whether applications can use the MIT-SHM X
+extension to create pixmaps whose contents are shared between the X
+server and the client. These pixmaps prevent the NVIDIA driver from
+performing a number of optimizations and degrade performance in
+many circumstances.</p>
+<p>Disabling this option disables only shared memory pixmaps.
+Applications can still use the MIT-SHM extension to transfer data
+to the X server through shared memory using XShmPutImage.</p>
+<p>Default: off (shared memory pixmaps are not allowed).</p>
+</dd>
+<dt><a name="SoftwareRenderCacheSize" id=
+"SoftwareRenderCacheSize"></a><span class="term"><code class=
+"computeroutput">Option "SoftwareRenderCacheSize"
+"boolean"</code></span></dt>
+<dd>
+<p>This option controls the size of a cache in system memory used
+to accelerate software rendering. The size is specified in bytes,
+but may be rounded or capped based on inherent limits of the
+cache.</p>
+<p>Default: 0x800000 (8 Megabytes).</p>
+</dd>
+<dt><a name="AllowIndirectGLXProtocol" id=
+"AllowIndirectGLXProtocol"></a><span class="term"><code class=
+"computeroutput">Option "AllowIndirectGLXProtocol"
+"boolean"</code></span></dt>
+<dd>
+<p>There are two ways that GLX applications can render on an X
+screen: direct and indirect. Direct rendering is generally faster
+and more featureful, but indirect rendering may be used in more
+configurations. Direct rendering requires that the application be
+running on the same machine as the X server, and that the OpenGL
+library have sufficient permissions to access the kernel driver.
+Indirect rendering works with remote X11 connections as well as
+unprivileged clients like those in a chroot with no access to
+device nodes.</p>
+<p>For those who wish to disable the use of indirect GLX protocol
+on a given X screen, setting the "AllowIndirectGLXProtocol" to a
+true value will cause GLX CreateContext requests with the
+<code class="computeroutput">direct</code> parameter set to
+<code class="computeroutput">False</code> to fail with a BadValue
+error.</p>
+<p>Starting with X.Org server 1.16, there are also command-line
+switches to enable or disable use of indirect GLX contexts.
+<code class="computeroutput">-iglx</code> disables use of indirect
+GLX protocol, and <code class="computeroutput">+iglx</code> enables
+use of indirect GLX protocol. +iglx is the default in server 1.16.
+-iglx is the default in server 1.17 and newer.</p>
+<p>The NVIDIA GLX implementation will prohibit creation of indirect
+GLX contexts if the AllowIndirectGLXProtocol option is set to
+False, or the -iglx switch was passed to the X server (X.Org server
+1.16 or higher), or the X server defaulted to '-iglx'.</p>
+<p>Default: enabled (indirect protocol is allowed, unless disabled
+by the server).</p>
+</dd>
+<dt><a name="AllowUnofficialGLXProtocol" id=
+"AllowUnofficialGLXProtocol"></a><span class="term"><code class=
+"computeroutput">Option "AllowUnofficialGLXProtocol"
+"boolean"</code></span></dt>
+<dd>
+<p>By default, the NVIDIA GLX implementation will not expose GLX
+protocol for GL commands if the protocol is not considered
+complete. Protocol could be considered incomplete for a number of
+reasons. The implementation could still be under development and
+contain known bugs, or the protocol specification itself could be
+under development or going through review. If users would like to
+test the server-side portion of such protocol when using indirect
+rendering, they can enable this option. If any X screen enables
+this option, it will enable protocol on all screens in the
+server.</p>
+<p>When an NVIDIA GLX client is used, the related environment
+variable <a href=
+"openglenvvariables.html#unofficialprotoenv">__GL_ALLOW_UNOFFICIAL_PROTOCOL</a>
+will need to be set as well to enable support in the client.</p>
+</dd>
+<dt><a name="PanAllDisplays" id="PanAllDisplays"></a><span class=
+"term"><code class="computeroutput">Option "PanAllDisplays"
+"boolean"</code></span></dt>
+<dd>
+<p>When this option is enabled, all displays in the current
+MetaMode will pan as the pointer is moved. If disabled, only the
+displays whose panning domain contains the pointer (at its new
+location) are panned.</p>
+<p>Default: enabled (all displays are panned when the pointer is
+moved).</p>
+</dd>
+<dt><a name="GvoDataFormat" id="GvoDataFormat"></a><span class=
+"term"><code class="computeroutput">Option "GvoDataFormat"
+"string"</code></span></dt>
+<dd>
+<p>This option controls the initial configuration of SDI (GVO)
+device's output data format.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col></colgroup>
+<thead>
+<tr>
+<th>Valid Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R8G8B8_To_YCrCb444</td>
+</tr>
+<tr>
+<td>R8G8B8_To_YCrCb422</td>
+</tr>
+<tr>
+<td>X8X8X8_To_PassThru444</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: R8G8B8_To_YCrCb444.</p>
+</dd>
+<dt><a name="GvoSyncMode" id="GvoSyncMode"></a><span class=
+"term"><code class="computeroutput">Option "GvoSyncMode"
+"string"</code></span></dt>
+<dd>
+<p>This option controls the initial synchronization mode of the SDI
+(GVO) device.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FreeRunning</td>
+<td>The SDI output will be synchronized with the timing chosen from
+the SDI signal format list.</td>
+</tr>
+<tr>
+<td>GenLock</td>
+<td>SDI output will be synchronized with the external sync signal
+(if present/detected) with pixel accuracy.</td>
+</tr>
+<tr>
+<td>FrameLock</td>
+<td>SDI output will be synchronized with the external sync signal
+(if present/detected) with frame accuracy.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: FreeRunning (Will not lock to an input signal).</p>
+</dd>
+<dt><a name="GvoSyncSource" id="GvoSyncSource"></a><span class=
+"term"><code class="computeroutput">Option "GvoSyncSource"
+"string"</code></span></dt>
+<dd>
+<p>This option controls the initial synchronization source (type)
+of the SDI (GVO) device. Note that the GvoSyncMode should be set to
+either GenLock or FrameLock for this option to take effect.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Composite</td>
+<td>Interpret sync source as composite.</td>
+</tr>
+<tr>
+<td>SDI</td>
+<td>Interpret sync source as SDI.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: SDI.</p>
+</dd>
+<dt><a name="Interactive" id="Interactive"></a><span class=
+"term"><code class="computeroutput">Option "Interactive"
+"boolean"</code></span></dt>
+<dd>
+<p>This option controls the behavior of the driver's watchdog,
+which attempts to detect and terminate GPU programs that get stuck,
+in order to ensure that the GPU remains available for other
+processes. GPU compute applications, however, often have
+long-running GPU programs, and killing them would be undesirable.
+If you are using GPU compute applications and they are getting
+prematurely terminated, try turning this option off.</p>
+<p>When this option is set for an X screen, it will be applied to
+all X screens running on the same GPU.</p>
+<p>Default: on. The driver will attempt to detect and terminate GPU
+programs that cause excessive delays for other processes using the
+GPU.</p>
+</dd>
+<dt><a name="BaseMosaic" id="BaseMosaic"></a><span class=
+"term"><code class="computeroutput">Option "BaseMosaic"
+"boolean"</code></span></dt>
+<dd>
+<p>This option can be used to extend a single X screen
+transparently across display outputs on each GPU. This is like SLI
+Mosaic mode except that it does not require a video bridge
+connected to the graphics cards. Due to this Base Mosaic does not
+guarantee there will be no tearing between the display boundaries.
+Base Mosaic is supported on SLI configurations up to three display
+devices. It is also supported on Quadro FX 380, Quadro FX 580 and
+all non-mobile NVS cards on all available display devices.</p>
+<p>Use this in conjunction with the MetaModes X configuration
+option to specify the combination of mode(s) used on each display.
+nvidia-xconfig can be used to configure Base Mosaic via a command
+like <span><strong class="command">nvidia-xconfig --base-mosaic
+--metamodes=METAMODES</strong></span> where the METAMODES string
+specifies the desired grid configuration. For example, to configure
+four DFPs in a 2x2 configuration, each running at 1920x1024, with
+two DFPs connected to two cards, the command would be:</p>
+<pre class="screen">
+    nvidia-xconfig --base-mosaic --metamodes="GPU-0.DFP-0: 1920x1024+0+0, GPU-0.DFP-1: 1920x1024+1920+0, GPU-1.DFP-0: 1920x1024+0+1024, GPU-1.DFP-1: 1920x1024+1920+1024"
+</pre>
+<p></p>
+</dd>
+<dt><a name="ConstrainCursor" id="ConstrainCursor"></a><span class=
+"term"><code class="computeroutput">Option "ConstrainCursor"
+"boolean"</code></span></dt>
+<dd>
+<p>When this option is enabled, the mouse cursor will be
+constrained to the region of the desktop that is visible within the
+union of all displays' panning domains in the current MetaMode.
+When it is disabled, it may be possible to move the cursor to
+regions of the X screen that are not visible on any display.</p>
+<p>Note that if this would make a display's panning domain
+inaccessible (in other words, if the union of all panning domains
+is disjoint), then the cursor will not be constrained.</p>
+<p>This option has no effect if the X server doesn't support cursor
+constraint. This support was added in X.Org server version 1.10
+(see <a href="faq.html#xversions">&ldquo;How do I interpret X
+server version numbers?&rdquo;</a>).</p>
+<p>Default: on, if the X server supports it. The cursor will be
+constrained to the panning domain of each monitor, when
+possible.</p>
+</dd>
+<dt><a name="UseHotplugEvents" id=
+"UseHotplugEvents"></a><span class="term"><code class=
+"computeroutput">Option "UseHotplugEvents"
+"boolean"</code></span></dt>
+<dd>
+<p>When this option is enabled, the NVIDIA X driver will generate
+RandR display changed events when displays are plugged into or
+unplugged from an NVIDIA GPU. Some desktop environments will listen
+for these events and dynamically reconfigure the desktop when
+displays are added or removed.</p>
+<p>Disabling this option suppresses the generation of these RandR
+events for non-DisplayPort displays, i.e., ones connected via VGA,
+DVI, or HDMI. Hotplug events cannot be suppressed for displays
+connected via DisplayPort.</p>
+<p>Note that probing the display configuration (e.g. with xrandr or
+nvidia-settings) may cause RandR display changed events to be
+generated, regardless of whether this option is enabled or
+disabled. Additionally, some VGA ports are incapable of hotplug
+detection: on such ports, the addition or removal of displays can
+only be detected by re-probing the display configuration.</p>
+<p>Default: on. The driver will generate RandR events when displays
+are added or removed.</p>
+</dd>
+<dt><a name="AllowEmptyInitialConfiguration" id=
+"AllowEmptyInitialConfiguration"></a><span class=
+"term"><code class="computeroutput">Option
+"AllowEmptyInitialConfiguration" "boolean"</code></span></dt>
+<dd>
+<p>Normally, the NVIDIA X driver will fail to start if it cannot
+find any display devices connected to the NVIDIA GPU.
+AllowEmptyInitialConfiguration overrides that behavior so that the
+X server will start anyway, even if no display devices are
+connected.</p>
+<p>Enabling this option makes sense in configurations when starting
+the X server with no display devices connected to the NVIDIA GPU is
+expected, but one might be connected later. For example, some
+monitors do not show up as connected when they are powered off,
+even if they are physically connected to the GPU.</p>
+<p>Another scenario where this is useful is in Optimus-based
+laptops, where RandR 1.4 display offload (see <a href=
+"randr14.html" title=
+"Chapter&nbsp;32.&nbsp;Offloading Graphics Display with RandR 1.4">Chapter&nbsp;32,
+<i>Offloading Graphics Display with RandR 1.4</i></a>) is used to
+display the screen on the non-NVIDIA internal display panel, but an
+external display might be connected later.</p>
+<p>Default: off. The driver will refuse to start if it can't find
+at least one connected display device.</p>
+</dd>
+<dt><a name="InbandStereoSignaling" id=
+"InbandStereoSignaling"></a><span class="term"><code class=
+"computeroutput">Option "InbandStereoSignaling"
+"boolean"</code></span></dt>
+<dd>
+<p>This option can be used to enable the DisplayPort in-band stereo
+signaling done via the MISC1 field in the main stream attribute
+(MSA) data that's sent once per frame during the vertical blanking
+period of the main video stream. DisplayPort in-band stereo
+signaling is only available on certain Quadro boards. This option
+is implied by stereo mode 14 (Generic active stereo with in-band
+DP), and selecting that stereo mode will override this option.</p>
+<p>Default: off. DisplayPort in-band stereo signaling will be
+disabled.</p>
+</dd>
+<dt><a name="UseSysmemPixmapAccel" id=
+"UseSysmemPixmapAccel"></a><span class="term"><code class=
+"computeroutput">Option "UseSysmemPixmapAccel"
+"boolean"</code></span></dt>
+<dd>
+<p>Enables the GPU to accelerate X drawing operations using system
+memory in addition to memory on the GPU. Disabling this option is
+generally not recommended, but it may reduce X driver memory usage
+in some situations at the cost of some performance.</p>
+<p>This option does not affect the usage of GPU acceleration for
+pixmaps bound to GLX drawables, EGL surfaces, or EGL images. GPU
+acceleration of such pixmaps is critical for interactive
+performance.</p>
+<p>Default: on. When video memory is unavailable, the GPU will
+still attempt to accelerate X drawing operations on pixmaps
+allocated in system memory.</p>
+</dd>
+<dt><a name="ForceCompositionPipeline" id=
+"ForceCompositionPipeline"></a><span class="term"><code class=
+"computeroutput">Option "ForceCompositionPipeline"
+"string"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver can use a composition pipeline to apply X
+screen transformations and rotations. Normally, this composition
+pipeline is enabled implicitly when necessary, or when the MetaMode
+token "ForceCompositionPipeline" is specified. This X configuration
+option can be used to explicitly enable the composition pipeline,
+even if the corresponding MetaMode token is not specified.</p>
+<p>The option value is a comma-separated list of display device
+names. The composition pipeline will be forced on for all display
+devices in the comma-separated list.</p>
+<p>Alternatively, the option value can be any boolean true string
+("1", "on", "true", "yes"), in which case all display devices will
+have their composition pipeline enabled.</p>
+<p>By default, the option value is NULL.</p>
+</dd>
+<dt><a name="ForceFullCompositionPipeline" id=
+"ForceFullCompositionPipeline"></a><span class="term"><code class=
+"computeroutput">Option "ForceFullCompositionPipeline"
+"string"</code></span></dt>
+<dd>
+<p>This option has the same possible values and semantics as
+"ForceCompositionPipeline", but it additionally makes use of the
+composition pipeline to apply ViewPortOut scaling.</p>
+</dd>
+<dt><a name="AllowHMD" id="AllowHMD"></a><span class=
+"term"><code class="computeroutput">Option "AllowHMD"
+"string"</code></span></dt>
+<dd>
+<p>Most Virtual Reality Head Mounted Displays (HMDs), such as the
+HTC VIVE, require special image processing. This means it is
+usually undesirable to display the X11 desktop on an HMD. By
+default, the NVIDIA X driver will treat any detected HMDs as
+disconnected. To override this behavior, set the X configuration
+option "AllowHMD" to "yes", or explicitly list the HMDs to allow
+(any other HMDs will continue to be ignored).</p>
+<p>Examples:</p>
+<pre class="screen">
+    Option "AllowHMD" "yes"
+</pre>
+<p></p>
+<pre class="screen">
+    Option "AllowHMD" "HDMI-0, HDMI-1"
+</pre>
+<p></p>
+</dd>
+<dt><a name="TegraReserveDisplayBandwidth" id=
+"TegraReserveDisplayBandwidth"></a><span class="term"><code class=
+"computeroutput">Option "TegraReserveDisplayBandwidth"
+"boolean"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver on Tegra dynamically calculates the amount
+of display bandwidth required for the current configuration of
+monitors, resolutions, and refresh rates. It uses this calculation
+to reserve only as much display bandwidth as is necessary for the
+current configuration, potentially allowing the system to run at
+lower clocks and conserve power.</p>
+<p>However, in rare cases where other programs also use display
+without the X driver's knowledge, the calculated display bandwidth
+may be insufficient, resulting in underflow.</p>
+<p>This option can be used to disable the X driver's dynamic
+display bandwidth reservation, causing the system to assume worst
+case display usage. This may result in higher power usage, but will
+avoid the risk of underflow.</p>
+<p>Default: true (the X driver will only reserve as much display
+bandwidth as it calculates is necessary).</p>
+</dd>
+<dt><a name="ConnectToAcpid" id="ConnectToAcpid"></a><span class=
+"term"><code class="computeroutput">Option "ConnectToAcpid"
+"boolean"</code></span></dt>
+<dd>
+<p>The ACPI daemon (acpid) receives information about ACPI events
+like AC/Battery power, docking, etc. acpid will deliver these
+events to the NVIDIA X driver via a UNIX domain socket connection.
+By default, the NVIDIA X driver will attempt to connect to acpid to
+receive these events. Set this option to "off" to prevent the
+NVIDIA X driver from connecting to acpid. Default: on (the NVIDIA X
+driver will attempt to connect to acpid).</p>
+</dd>
+<dt><a name="AcpidSocketPath" id="AcpidSocketPath"></a><span class=
+"term"><code class="computeroutput">Option "AcpidSocketPath"
+"string"</code></span></dt>
+<dd>
+<p>The NVIDIA X driver attempts to connect to the ACPI daemon
+(acpid) via a UNIX domain socket. The default path to this socket
+is "/var/run/acpid.socket". Set this option to specify an alternate
+path to acpid's socket. Default: "/var/run/acpid.socket".</p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"EnableACPIBrightnessHotkeys" "boolean"</code></span></dt>
+<dd>
+<p>Enable or disable handling of ACPI brightness change hotkey
+events. Default: enabled</p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionUSBPath" "string"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision is enabled, the X driver searches through
+the usbfs to find the connected USB dongle. Set this option to
+specify the sysfs path of the dongle, from which the X driver will
+infer the usbfs path.</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionUSBPath" "/sys/bus/usb/devices/1-1"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionProConfigFile" "string"</code></span></dt>
+<dd>
+<p>NVIDIA 3D VisionPro provides various configuration options and
+pairs various glasses to sync to the hub. It is convenient to store
+this configuration information to re-use when X restarts. Filename
+provided in this option is used by NVIDIA X driver to store this
+information. Ensure that X server has read and write access
+permissions to the filename provided. Default: No configuration is
+stored.</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionProConfigFile" "/etc/nvidia_3d_vision_pro_config_filename"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionDisplayType" "integer"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision is enabled with a non 3D Vision ready
+display, use this option to specify the display type.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behavior</th>
+<td class="auto-generated">&nbsp;</td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Assume it is a CRT.</td>
+<td class="auto-generated">&nbsp;</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Assume it is a DLP.</td>
+<td class="auto-generated">&nbsp;</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Assume it is a DLP TV and enable the checkerboard output.</td>
+<td class="auto-generated">&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>Default: 1</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionDisplayType" "1"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionProHwButtonPairing" "boolean"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision Pro is enabled, use this option to disable
+hardware button based pairing. Single click button on the hub to
+enter into pairing mode which pairs single pair of glasses at a
+time. Double click button on the hub to enter into a pairing mode
+which pairs multiple pairs of glasses at a time.</p>
+<p>Default: True</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionProHwButtonPairing" "False"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionProHwSinglePairingTimeout" "integer"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision Pro and hardware button based pairing are
+enabled, use this option to set timeout in seconds for pairing
+single pair of glasses.</p>
+<p>Default: 6</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionProHwSinglePairingTimeout" "10"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionProHwMultiPairingTimeout" "integer"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision Pro and hardware button based pairing is
+enabled, use this option to set timeout in seconds for pairing
+multiple pairs of glasses.</p>
+<p>Default: 10</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionProHwMultiPairingTimeout" "10"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"3DVisionProHwDoubleClickThreshold" "integer"</code></span></dt>
+<dd>
+<p>When NVIDIA 3D Vision Pro and hardware button based pairing is
+enabled, use this option to set the threshold for detecting double
+click event of the button. Threshold is time in ms. within which
+user has to click the button twice to generate double click
+event.</p>
+<p>Default: 1000 ms</p>
+<p>Example:</p>
+<pre class="screen">
+Option "3DVisionProHwDoubleClickThreshold" "1500"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term"><code class="computeroutput">Option
+"DisableBuiltin3DVisionEmitter" "boolean"</code></span></dt>
+<dd>
+<p>This option can be used to disable the NVIDIA 3D Vision infrared
+emitter that is built into some 3D Vision ready display panels.
+This can be useful when an external NVIDIA 3D Vision emitter needs
+to be used with such a panel.</p>
+<p>Default: False</p>
+<p>Example:</p>
+<pre class="screen">
+Option "DisableBuiltin3DVisionEmitter" "True"
+</pre>
+<p></p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"supportedchips.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"displaydevicenames.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Appendix&nbsp;A.&nbsp;Supported NVIDIA GPU Products&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;C.&nbsp;Display Device Names</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

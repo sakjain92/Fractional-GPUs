@@ -1,0 +1,414 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;18.&nbsp;Programming Modes</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="optimus.html" title=
+"Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with Optimus Laptops">
+<link rel="next" href="flippingubb.html" title=
+"Chapter&nbsp;19.&nbsp;Configuring Flipping and UBB">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;18.&nbsp;Programming
+Modes</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"optimus.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"flippingubb.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="programmingmodes" id=
+"programmingmodes"></a>Chapter&nbsp;18.&nbsp;Programming Modes</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Accelerated Linux Graphics Driver supports all
+standard VGA and VESA modes, as well as most user-written custom
+mode lines; double-scan and interlaced modes are supported on all
+GPUs supported by the NVIDIA driver.</p>
+<p>To request one or more standard modes for use in X, you can
+simply add a "Modes" line such as:</p>
+<pre class="screen">
+    Modes "1600x1200" "1024x768" "640x480"
+</pre>
+<p>in the appropriate Display subsection of your X config file (see
+the XF86Config(5x) or xorg.conf(5x) man pages for details). Or, the
+nvidia-xconfig(1) utility can be used to request additional modes;
+for example:</p>
+<pre class="screen">
+    nvidia-xconfig --mode 1600x1200
+</pre>
+<p>See the nvidia-xconfig(1) man page for details.</p>
+<h3>Depth, Bits per Pixel, and Pitch</h3>
+<p>While not directly a concern when programming modes, the bits
+used per pixel is an issue when considering the maximum
+programmable resolution; for this reason, it is worthwhile to
+address the confusion surrounding the terms "depth" and "bits per
+pixel". Depth is how many bits of data are stored per pixel.
+Supported depths are 8, 15, 16, 24, and 30. Most video hardware,
+however, stores pixel data in sizes of 8, 16, or 32 bits; this is
+the amount of memory allocated per pixel. When you specify your
+depth, X selects the bits per pixel (bpp) size in which to store
+the data. Below is a table of what bpp is used for each possible
+depth:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Depth</th>
+<th>BPP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>8</td>
+</tr>
+<tr>
+<td>15</td>
+<td>16</td>
+</tr>
+<tr>
+<td>16</td>
+<td>16</td>
+</tr>
+<tr>
+<td>24</td>
+<td>32</td>
+</tr>
+<tr>
+<td>30</td>
+<td>32</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Lastly, the "pitch" is how many bytes in the linear frame buffer
+there are between one pixel's data, and the data of the pixel
+immediately below. You can think of this as the horizontal
+resolution multiplied by the bytes per pixel (bits per pixel
+divided by 8). In practice, the pitch may be more than this product
+due to alignment constraints.</p>
+<h3>Maximum Resolutions</h3>
+<p>The NVIDIA Accelerated Linux Graphics Driver and NVIDIA
+GPU-based graphics cards support resolutions up to 16384x16384
+pixels for Fermi and newer GPUs, and up to 32767x32767 pixels for
+Pascal and newer GPUs, though the maximum resolution your system
+can support is also limited by the amount of video memory (see
+<a href="programmingmodes.html#UsefulFormulas" title=
+"Useful Formulas">Useful Formulas</a> for details) and the maximum
+supported resolution of your display device (monitor/flat
+panel/television). Also note that while use of a video overlay does
+not limit the maximum resolution or refresh rate, video memory
+bandwidth used by a programmed mode does affect the overlay
+quality.</p>
+<p>Using 4K resolutions over HDMI requires a high single-link pixel
+clock that is only available on Kepler or later GPUs.</p>
+<p>Using HDMI 2.0 4K@60Hz modes in the RGB 4:4:4 color space
+requires a high single-link pixel clock that is only available on
+GM20x or later GPUs. In addition, using a mode requiring the YCbCr
+4:2:0 color space over a DisplayPort connection requires a GP10x or
+later GPU. If driving the current mode in the RGB 4:4:4 color space
+would require a pixel clock that exceeds the display's or GPU's
+capabilities, and the display and GPU are capable of driving that
+mode in the YCbCr 4:2:0 color space, then the color space will be
+overridden to YCbCr 4:2:0. YCbCr 4:2:0 mode is not supported on
+depth 8 X screens, and is not currently supported with stereo or
+the GLX_NV_swap_group OpenGL extension.</p>
+<p><a name="UsefulFormulas" id="UsefulFormulas"></a></p>
+<h3>Useful Formulas</h3>
+<p>The maximum resolution is a function both of the amount of video
+memory and the bits per pixel you elect to use:</p>
+<div class="informalequation">
+<div class="mediaobject"><span>HR * VR * (bpp/8) = Video Memory
+Used</span></div>
+</div>
+<p>In other words, the amount of video memory used is equal to the
+horizontal resolution (HR) multiplied by the vertical resolution
+(VR) multiplied by the bytes per pixel (bits per pixel divided by
+eight). Technically, the video memory used is actually the pitch
+times the vertical resolution, and the pitch may be slightly
+greater than <span class="inlinemediaobject"><span>(HR *
+(bpp/8))</span></span> to accommodate the hardware requirement that
+the pitch be a multiple of some value.</p>
+<p>Note that this is just memory usage for the frame buffer; video
+memory is also used by other things, such as OpenGL and pixmap
+caching.</p>
+<p>Another important relationship is that between the resolution,
+the pixel clock (also known as the dot clock) and the vertical
+refresh rate:</p>
+<div class="informalequation">
+<div class="mediaobject"><span>RR = PCLK / (HFL * VFL)</span></div>
+</div>
+<p>In other words, the refresh rate (RR) is equal to the pixel
+clock (PCLK) divided by the total number of pixels: the horizontal
+frame length (HFL) multiplied by the vertical frame length (VFL)
+(note that these are the frame lengths, and not just the visible
+resolutions). As described in the XFree86 Video Timings HOWTO, the
+above formula can be rewritten as:</p>
+<div class="informalequation">
+<div class="mediaobject"><span>PCLK = RR * HFL * VFL</span></div>
+</div>
+<p>Given a maximum pixel clock, you can adjust the RR, HFL and VFL
+as desired, as long as the product of the three is consistent. The
+pixel clock is reported in the log file. Your X log should contain
+a line like this:</p>
+<pre class="screen">
+    (--) NVIDIA(0): ViewSonic VPD150 (DFP-1): 165 MHz maximum pixel clock
+</pre>
+<p>which indicates the maximum pixel clock for that display
+device.</p>
+<h3>How Modes Are Validated</h3>
+<p>In traditional XFree86/X.Org mode validation, the X server takes
+as a starting point the X server's internal list of VESA standard
+modes, plus any modes specified with special ModeLines in the X
+configuration file's Monitor section. These modes are validated
+against criteria such as the valid HorizSync/VertRefresh frequency
+ranges for the user's monitor (as specified in the Monitor section
+of the X configuration file), as well as the maximum pixel clock of
+the GPU.</p>
+<p>Once the X server has determined the set of valid modes, it
+takes the list of user requested modes (i.e., the set of modes
+named in the "Modes" line in the Display subsection of the Screen
+section of X configuration file), and finds the "best" validated
+mode with the requested name.</p>
+<p>The NVIDIA X driver uses a variation on the above approach to
+perform mode validation. During X server initialization, the NVIDIA
+X driver builds a pool of valid modes for each display device. It
+gathers all possible modes from several sources:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The display device's EDID</p>
+</li>
+<li>
+<p>The X server's built-in list</p>
+</li>
+<li>
+<p>Any user-specified ModeLines in the X configuration file</p>
+</li>
+<li>
+<p>The VESA standard modes</p>
+</li>
+</ul>
+</div>
+<p>For every possible mode, the mode is run through mode
+validation. The core of mode validation is still performed
+similarly to traditional XFree86/X.Org mode validation: the mode
+timings are checked against things such as the valid HorizSync and
+VertRefresh ranges and the maximum pixelclock. Note that each
+individual stage of mode validation can be independently controlled
+through the "ModeValidation" X configuration option.</p>
+<p>Note that when validating interlaced mode timings, VertRefresh
+specifies the field rate, rather than the frame rate. For example,
+the following modeline has a vertical refresh rate of 87 Hz:</p>
+<pre class="screen">
+ # 1024x768i @ 87Hz (industry standard)
+ ModeLine "1024x768"  44.9  1024 1032 1208 1264  768 768 776 817 +hsync +vsync Interlace
+</pre>
+<p></p>
+<p>Invalid modes are discarded; valid modes are inserted into the
+mode pool. See MODE VALIDATION REPORTING for how to get more
+details on mode validation results for each considered mode.</p>
+<p>Valid modes are given a unique name that is guaranteed to be
+unique across the whole mode pool for this display device. This
+mode name is constructed approximately like this:</p>
+<pre class="screen">
+    &lt;width&gt;x&lt;height&gt;_&lt;refreshrate&gt;
+</pre>
+<p>(e.g., "1600x1200_85")</p>
+<p>The name may also be prepended with another number to ensure the
+mode is unique; e.g., "1600x1200_85_0".</p>
+<p>As validated modes are inserted into the mode pool, duplicate
+modes are removed, and the mode pool is sorted, such that the
+"best" modes are at the beginning of the mode pool. The sorting is
+based roughly on:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Resolution</p>
+</li>
+<li>
+<p>Source (EDID-provided modes are prioritized higher than
+VESA-provided modes, which are prioritized higher than modes that
+were in the X server's built-in list)</p>
+</li>
+<li>
+<p>Refresh rate</p>
+</li>
+</ul>
+</div>
+<p>Once modes from all mode sources are validated and the mode pool
+is constructed, all modes with the same resolution are compared;
+the best mode with that resolution is added to the mode pool a
+second time, using just the resolution as its unique modename
+(e.g., "1600x1200"). In this way, when you request a mode using the
+traditional names (e.g., "1600x1200"), you still get what you got
+before (the 'best' 1600x1200 mode); the added benefit is that all
+modes in the mode pool can be addressed by a unique name.</p>
+<p>When verbose logging is enabled (see <a href=
+"faq.html#xverboselog">&ldquo;How can I increase the amount of data
+printed in the X log file?&rdquo;</a>), the mode pool for each
+display device is printed to the X log file.</p>
+<p>After the mode pool is built for all display devices, the
+requested modes (as specified in the X configuration file), are
+looked up from the mode pool. Each requested mode that can be
+matched against a mode in the mode pool is then advertised to the X
+server and is available to the user through the X server's mode
+switching hotkeys (ctrl-alt-plus/minus) and the XRandR and
+XF86VidMode X extensions.</p>
+<p>Additionally, all modes in the mode pool of the primary display
+device are implicitly made available to the X server. See the
+<a href=
+"xconfigoptions.html#IncludeImplicitMetaModes">IncludeImplicitMetaModes</a>
+X configuration option for details.</p>
+<h3>The NVIDIA-Auto-Select Mode</h3>
+<p>You can request a special mode by name in the X config file,
+named "nvidia-auto-select". When the X driver builds the mode pool
+for a display device, it selects one of the modes as the
+"nvidia-auto-select" mode; a new entry is made in the mode pool,
+and "nvidia-auto-select" is used as the unique name for the
+mode.</p>
+<p>The "nvidia-auto-select" mode is intended to be a reasonable
+mode for the display device in question. For example, the
+"nvidia-auto-select" mode is normally the native resolution for
+flat panels, as reported by the flat panel's EDID, or one of the
+detailed timings from the EDID. The "nvidia-auto-select" mode is
+guaranteed to always be present, and to always be defined as
+something considered valid by the X driver for this display
+device.</p>
+<p>Note that the "nvidia-auto-select" mode is not necessarily the
+largest possible resolution, nor is it necessarily the mode with
+the highest refresh rate. Rather, the "nvidia-auto-select" mode is
+selected such that it is a reasonable default. The selection
+process is roughly:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>If the EDID for the display device reported a preferred mode
+timing, and that mode timing is considered a valid mode, then that
+mode is used as the "nvidia-auto-select" mode. You can check if the
+EDID reported a preferred timing by starting X with logverbosity
+greater than or equal to 5 (see <a href=
+"faq.html#xverboselog">&ldquo;How can I increase the amount of data
+printed in the X log file?&rdquo;</a>), and looking at the EDID
+printout; if the EDID contains a line:</p>
+<pre class="screen">
+    Prefer first detailed timing : Yes
+</pre>
+<p>Then the first mode listed under the "Detailed Timings" in the
+EDID will be used.</p>
+</li>
+<li>
+<p>If the EDID did not provide a preferred timing, the best
+detailed timing from the EDID is used as the "nvidia-auto-select"
+mode.</p>
+</li>
+<li>
+<p>If the EDID did not provide any detailed timings (or there was
+no EDID at all), the best valid mode not larger than 1024x768 is
+used as the "nvidia-auto-select" mode. The 1024x768 limit is
+imposed here to restrict use of modes that may have been validated,
+but may be too large to be considered a reasonable default, such as
+2048x1536.</p>
+</li>
+<li>
+<p>If all else fails, the X driver will use a built-in 800 x 600
+60Hz mode as the "nvidia-auto-select" mode.</p>
+</li>
+</ul>
+</div>
+<p>If no modes are requested in the X configuration file, or none
+of the requested modes can be found in the mode pool, then the X
+driver falls back to the "nvidia-auto-select" mode, so that X can
+always start. Appropriate warning messages will be printed to the X
+log file in these fallback scenarios.</p>
+<p>You can add the "nvidia-auto-select" mode to your X
+configuration file by running the command</p>
+<pre class="screen">
+    nvidia-xconfig --mode nvidia-auto-select
+</pre>
+<p>and restarting your X server.</p>
+<p>The X driver can generally do a much better job of selecting the
+"nvidia-auto-select" mode if the display device's EDID is
+available. This is one reason why it is recommended to only use the
+"UseEDID" X configuration option sparingly. Note that, rather than
+globally disable all uses of the EDID with the "UseEDID" option,
+you can individually disable each particular use of the EDID using
+the "UseEDIDFreqs", "UseEDIDDpi", and/or the "NoEDIDModes" argument
+in the "ModeValidation" X configuration option.</p>
+<h3>Mode Validation Reporting</h3>
+<p>When log verbosity is set to 6 or higher (see <a href=
+"faq.html#xverboselog">&ldquo;How can I increase the amount of data
+printed in the X log file?&rdquo;</a>), the X log will record every
+mode that is considered for each display device's mode pool, and
+report whether the mode passed or failed. For modes that were
+considered invalid, the log will report why the mode was considered
+invalid.</p>
+<h3>Ensuring Identical Mode Timings</h3>
+<p>Some functionality, such as Active Stereo with TwinView,
+requires control over exactly which mode timings are used. For
+explicit control over which mode timings are used on each display
+device, you can specify the ModeLine you want to use (using one of
+the ModeLine generators available), and using a unique name. For
+example, if you wanted to use 1024x768 at 120 Hz on each monitor in
+TwinView with active stereo, you might add something like this to
+the monitor section of your X configuration file:</p>
+<pre class="screen">
+    # 1024x768 @ 120.00 Hz (GTF) hsync: 98.76 kHz; pclk: 139.05 MHz
+    Modeline "1024x768_120"  139.05  1024 1104 1216 1408  768 769 772 823 -HSync +Vsync
+</pre>
+<p>Then, in the Screen section of your X config file, specify a
+MetaMode like this:</p>
+<pre class="screen">
+    Option "MetaModes" "1024x768_120, 1024x768_120"
+</pre>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"optimus.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"flippingubb.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with Optimus
+Laptops&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;19.&nbsp;Configuring Flipping and UBB</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

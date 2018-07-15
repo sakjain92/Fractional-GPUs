@@ -1,0 +1,511 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate
+Extension</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="configmultxscreens.html" title=
+"Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One Card">
+<link rel="next" href="configlaptop.html" title=
+"Chapter&nbsp;16.&nbsp;Configuring a Notebook">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;15.&nbsp;Support for
+the X Resize and Rotate Extension</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"configmultxscreens.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"configlaptop.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="xrandrextension" id=
+"xrandrextension"></a>Chapter&nbsp;15.&nbsp;Support for the X
+Resize and Rotate Extension</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-support">RandR Support</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-1.1-rotation-behavior">RandR 1.1
+Rotation Behavior</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-properties">Output
+Properties</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-official-properties">Official
+Properties</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-unofficial-properties">Unofficial
+Properties</a></span></dt>
+</dl>
+</dd>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-dp12">DisplayPort 1.2</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-monitor-options">Monitor Configuration
+Options</a></span></dt>
+<dt><span class="section"><a href=
+"xrandrextension.html#randr-known-issues">Known
+Issues</a></span></dt>
+</dl>
+</div>
+<p>This NVIDIA driver release contains support for the X Resize and
+Rotate (RandR) Extension versions 1.1, 1.2, and 1.3. The version of
+the RandR extension advertised to X clients is controlled by the X
+server: the RandR extension and protocol are provided by the X
+server, which routes protocol requests to the NVIDIA X driver. Run
+<strong class="userinput"><code>xrandr --version</code></strong> to
+check the version of RandR provided by the X server.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="randr-support" id=
+"randr-support"></a>RandR Support</h2>
+</div>
+</div>
+</div>
+<p>Specific supported features include:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Modes can be set per-screen, and the X screen can be resized
+through the RRSetScreenConfig request (e.g., with xrandr(1)'s
+'--size' and '--rate' command line options).</p>
+</li>
+<li>
+<p>The X screen can be resized with the RandR 1.2 RRSetScreenSize
+request (e.g., with xrandr(1)'s '--fb' command line option).</p>
+</li>
+<li>
+<p>The state of the display hardware can be queried with the RandR
+1.2 and 1.3 RRGetScreenResources, RRGetScreenResourcesCurrent,
+RRGetOutputInfo, and RRGetCrtcInfo requests (e.g., with xrandr(1)'s
+'--query' command line option).</p>
+</li>
+<li>
+<p>Modes can be set with RandR CRTC granularity with the RandR 1.2
+RRSetCrtcConfig request. E.g., <strong class=
+"userinput"><code>xrandr --output DVI-I-2 --mode
+1920x1200</code></strong>.</p>
+</li>
+<li>
+<p>Rotation can be set with RandR CRTC granularity with the RandR
+1.2 RRSetCrtcConfig request. E.g., <strong class=
+"userinput"><code>xrandr --output DVI-I-2 --mode 1920x1200
+--rotation left</code></strong>.</p>
+</li>
+<li>
+<p>Per-CRTC transformations can be manipulated with the RandR 1.3
+RRSetCrtcTransform and RRGetCrtcTransform requests. E.g.,
+<strong class="userinput"><code>xrandr --output DVI-I-3 --mode
+1920x1200 --transform
+43.864288330078125,21.333328247070312,-16384,0,43.864288330078125,0,0,0.0321197509765625,19.190628051757812</code></strong>.</p>
+</li>
+<li>
+<p>The RandR 1.0/1.1 requests RRGetScreenInfo and RRSetScreenConfig
+manipulate MetaModes. The MetaModes that the X driver uses (either
+user-requested or implicitly generated) are reported through the
+RRGetScreenInfo request (e.g., <strong class=
+"userinput"><code>xrandr --query --q1</code></strong>) and chosen
+through the RRSetScreenConfig request (e.g., <strong class=
+"userinput"><code>xrandr --size 1920x1200 --orientation
+left</code></strong>).</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>The configurability exposed through RandR is also available
+through the MetaMode syntax, independent of X server version. See
+<a href="configtwinview.html#metamodes">MetaModes</a> for more
+details. As an example, these two commands are equivalent:</p>
+<pre class="screen">
+  xrandr --output DVI-I-2 --mode 1280x1024 --pos 0x0 --rotate left \
+    --output DVI-I-3 --mode 1920x1200 --pos 0x0
+
+  nvidia-settings --assign CurrentMetaMode="DVI-I-2: 1280x1024 +0+0 \
+    { Rotation=left }, DVI-I-3: 1920x1200 +0+0"
+</pre>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"randr-1.1-rotation-behavior" id=
+"randr-1.1-rotation-behavior"></a>RandR 1.1 Rotation Behavior</h2>
+</div>
+</div>
+</div>
+<p>On X servers that support RandR 1.2 or later, when an RandR 1.1
+rotation request is received (e.g., <strong class=
+"userinput"><code>xrandr --orientation left</code></strong>), the
+NVIDIA X driver will apply that request to an entire MetaMode.
+E.g., if you configure multiple monitors, either through a MetaMode
+or through RandR 1.2:</p>
+<pre class="screen">
+  xrandr --output DVI-I-2 --mode 1280x1024 --pos 0x0 \
+    --output DVI-I-3 --mode 1920x1200 --pos 1280x0
+
+  nvidia-settings --assign CurrentMetaMode="DVI-I-2: 1280x1024 +0+0, \
+    DVI-I-3: 1920x1200 +1280+0"
+</pre>
+<p>Requesting RandR 1.1 rotation through <strong class=
+"userinput"><code>xrandr --orientation left</code></strong>, will
+rotate the entire MetaMode, producing the equivalent of either:</p>
+<pre class="screen">
+  xrandr --output DVI-I-2 --mode 1280x1024 --pos 176x0 --rotate left \
+    --output DVI-I-3 --mode 1920x1200 --rotate left --pos 0x1280
+
+  nvidia-settings --assign CurrentMetaMode="DVI-I-2: 1280x1024 +176+0, \
+    { Rotation=left }, DVI-I-3: 1920x1200 +0+1280 { Rotation=left }"
+</pre>
+<p></p>
+<p>On X servers that do not support RandR 1.2 or later, the NVIDIA
+X driver does not advertise RandR rotation support. On such X
+servers, it is recommended to configure rotation through MetaModes,
+instead.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="randr-properties"
+id="randr-properties"></a>Output Properties</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Linux driver supports a number of output device
+properties.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="randr-official-properties" id=
+"randr-official-properties"></a>Official Properties</h3>
+</div>
+</div>
+</div>
+<p>Properties that do not start with an underscore are officially
+documented in the file <code class=
+"computeroutput">randrproto.txt</code> in X.Org's randrproto
+package. See that file for a full description of these
+properties.</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><a name="ConnectorNumber" id="ConnectorNumber"></a><code class=
+"computeroutput">ConnectorNumber</code></p>
+<p>This property groups RandR outputs by their physical connectors.
+For example, DVI-I ports have both an analog and a digital output,
+which is represented in RandR by two different output objects. One
+DVI-I port may be represented by RandR outputs <code class=
+"computeroutput">DVI-I-0</code> with <code class=
+"computeroutput">SignalFormat</code> <code class=
+"computeroutput">TMDS</code> (transition-minimized differential
+signaling, a digital signal format) and <code class=
+"computeroutput">DVI-I-1</code> with <code class=
+"computeroutput">SignalFormat</code> <code class=
+"computeroutput">VGA</code>, representing the analog part. In this
+case, both RandR outputs would have the same value of <code class=
+"computeroutput">ConnectorNumber</code>.</p>
+</li>
+<li>
+<p><a name="ConnectorType" id="ConnectorType"></a><code class=
+"computeroutput">ConnectorType</code></p>
+<p>This property lists the physical type of the connector. For
+example, in the DVI-I example above, both <code class=
+"computeroutput">DVI-I-0</code> and <code class=
+"computeroutput">DVI-I-1</code> would have a <code class=
+"computeroutput">ConnectorType</code> of <code class=
+"computeroutput">DVI-I</code>.</p>
+</li>
+<li>
+<p><a name="EDID" id="EDID"></a><code class=
+"computeroutput">EDID</code></p>
+<p>This property contains the raw bytes of the display's extended
+display identification data. This data is intended for applications
+to use to glean information about the monitor connected.</p>
+</li>
+<li>
+<p><a name="SignalFormat" id="SignalFormat"></a><code class=
+"computeroutput">SignalFormat</code></p>
+<p>This property describes the type of signaling used to send image
+data to the display device. For example, an analog device connected
+to a DVI-I port might use VGA as its signaling format.</p>
+</li>
+<li>
+<p><a name="Border" id="Border"></a><code class=
+"computeroutput">Border</code></p>
+<p>This property is a list of integers specifying adjustments for
+the edges of the displayed image. How this property is applied
+depends on the number of elements in the list:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>0 = No border is applied.</p>
+</li>
+<li>
+<p>1 = A border of Border[0] is applied to all four sides of the
+image.</p>
+</li>
+<li>
+<p>2 = A border of Border[0] is applied to the left and right sides
+of the image, and a border of Border[1] is applied to the top and
+bottom.</p>
+</li>
+<li>
+<p>4 = The border dimensions are as follows: Border[0]: left,
+Border[1]: top, Border[2]: right, Border[3]: bottom</p>
+</li>
+</ul>
+</div>
+<p>This property is functionally equivalent to the ViewPortOut
+MetaMode token.</p>
+</li>
+<li>
+<p><a name="BorderDimensions" id=
+"BorderDimensions"></a><code class="computeroutput">BorderDimensions</code></p>
+<p>This property lists how many Border adjustment parameters can
+actually be used. The NVIDIA implementation supports independently
+configuring all four Border values.</p>
+</li>
+<li>
+<p><a name="GUID" id="GUID"></a><code class=
+"computeroutput">GUID</code></p>
+<p>DisplayPort 1.2 specifies that all devices must have a
+globally-unique identifier, referred to as a GUID. When a GUID is
+available, the <code class="computeroutput">GUID</code> property
+contains its raw bytes.</p>
+</li>
+<li>
+<p><a name="CscMatrix" id="CscMatrix"></a><code class=
+"computeroutput">CscMatrix</code></p>
+<p>This property controls the color-space conversion matrix applied
+to the pixels being displayed. The matrix is 3 rows and 4 columns,
+stored in row-major order. Each entry is a 32-bit fixed-point
+number with 3 integer bits and 16 fractional bits. Each entry in
+the X colormap is treated as a 4-component column vector C = [ R,
+G, B, 1 ]. The resulting components of the color vector [ R', G',
+B' ] = CscMatrix * C are used as indices into the gamma ramp.</p>
+<p>For example, using xrandr version 1.5.0 or higher, you can
+exchange the red channel with the green channel using this
+command:</p>
+<pre class="screen">
+  xrandr --output DP-6 --set CscMatrix \
+    0,0x10000,0,0,0x10000,0,0,0,0,0,0x10000,0
+</pre>
+<p>To return to the default identity matrix, use</p>
+<pre class="screen">
+  xrandr --output DP-6 --set CscMatrix \
+    0x10000,0,0,0,0,0x10000,0,0,0,0,0x10000,0
+</pre>
+<p></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="randr-unofficial-properties" id=
+"randr-unofficial-properties"></a>Unofficial Properties</h3>
+</div>
+</div>
+</div>
+<p>Properties whose names begin with an underscore are not
+specified by X.Org. They may be removed or modified in future
+driver releases. The NVIDIA Linux driver supports the following
+unofficial properties:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><a name="ConnectorLocation" id=
+"ConnectorLocation"></a><code class=
+"computeroutput">_ConnectorLocation</code></p>
+<p>This property describes the physical location of the connector.
+On add-in graphics boards, connector location 0 should generally be
+the position closest to the motherboard, with increasing location
+numbers indicating connectors progressively farther away.</p>
+<p></p>
+<div class="informaltable">
+<table summary="(no summary available)" border="1">
+<colgroup>
+<col>
+<col></colgroup>
+<tbody>
+<tr>
+<td>Type</td>
+<td>INTEGER</td>
+</tr>
+<tr>
+<td>Format</td>
+<td>32</td>
+</tr>
+<tr>
+<td># Items</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Flags</td>
+<td>Immutable, Static</td>
+</tr>
+<tr>
+<td>Range</td>
+<td>0-</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="randr-dp12" id=
+"randr-dp12"></a>DisplayPort 1.2</h2>
+</div>
+</div>
+</div>
+</div>
+<p>When display devices are connected via DisplayPort 1.2 branch
+devices, additional RandR outputs will be created, one for each
+connected display device. These dynamic outputs will remain as long
+as the display device is connected or used in a MetaMode, even if
+they are not named in the current MetaMode. They will be deleted
+automatically when the display is disconnected and no MetaModes use
+them.</p>
+<p>See <a href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">Appendix&nbsp;C,
+<i>Display Device Names</i></a> for a description of how the names
+of these outputs are generated.</p>
+<p>If you are developing applications that use the RandR extension,
+please be aware that outputs can be created and destroyed
+dynamically. You should be sure to use the XRRSelectInput function
+to watch for events that indicate when this happens.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"randr-monitor-options" id="randr-monitor-options"></a>Monitor
+Configuration Options</h2>
+</div>
+</div>
+</div>
+<p>This NVIDIA Linux driver honors the <code class=
+"computeroutput">Enable</code>, <code class=
+"computeroutput">Ignore</code>, <code class=
+"computeroutput">Primary</code>, and <code class=
+"computeroutput">Rotate</code> options in the Monitor section of
+the X configuration file. These options will apply to a monitor if
+the Identifier of the Monitor section matches one of the display
+device's names (see <a href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">Appendix&nbsp;C,
+<i>Display Device Names</i></a> for a description of how a
+display's names are generated). For example, a Monitor section
+with</p>
+<pre class="screen">
+  Identifier "DFP"
+</pre>
+<p>will apply to all digitally-connected displays, while a Monitor
+section with</p>
+<pre class="screen">
+  Identifier "DPY-EDID-ee6cecc0-fa46-0c33-94e0-274313f9e7eb"
+</pre>
+<p>will apply only to a display device with a specific EDID-based
+identification hash. You can also specify the name of the Monitor
+section to use in the Screen section:</p>
+<pre class="screen">
+  Option "Monitor-&lt;dpyname&gt;" "&lt;Monitor name&gt;"
+</pre>
+<p></p>
+<p>See the xorg.conf(5) man page for a description of these
+options.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="randr-known-issues"
+id="randr-known-issues"></a>Known Issues</h2>
+</div>
+</div>
+</div>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Rotation and Transformations (configured either through RandR or
+MetaModes) are not yet supported with the GLX_NV_swap_group OpenGL
+extension.</p>
+</li>
+<li>
+<p>Some of the RandR 1.2 X configuration options provided by the
+XFree86 DDX implementation and documented in xorg.conf(5) are not
+yet supported.</p>
+</li>
+<li>
+<p>Transformations (configured either through RandR or MetaModes)
+are not yet correctly clipped.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"configmultxscreens.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"configlaptop.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One
+Card&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;16.&nbsp;Configuring a Notebook</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

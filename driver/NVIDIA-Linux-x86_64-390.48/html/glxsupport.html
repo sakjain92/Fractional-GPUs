@@ -1,0 +1,226 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;D.&nbsp;GLX Support</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">
+<link rel="next" href="dpi.html" title=
+"Appendix&nbsp;E.&nbsp;Dots Per Inch">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;D.&nbsp;GLX
+Support</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"displaydevicenames.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"dpi.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="glxsupport" id=
+"glxsupport"></a>Appendix&nbsp;D.&nbsp;GLX Support</h2>
+</div>
+</div>
+</div>
+<p>This release supports GLX 1.4.</p>
+<p>Additionally, the following GLX extensions are supported on
+appropriate GPUs:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>GLX_EXT_visual_info</p>
+</li>
+<li>
+<p>GLX_EXT_visual_rating</p>
+</li>
+<li>
+<p>GLX_SGIX_fbconfig</p>
+</li>
+<li>
+<p>GLX_SGIX_pbuffer</p>
+</li>
+<li>
+<p>GLX_ARB_get_proc_address</p>
+</li>
+<li>
+<p>GLX_SGI_video_sync</p>
+</li>
+<li>
+<p>GLX_SGI_swap_control</p>
+</li>
+<li>
+<p>GLX_ARB_multisample</p>
+</li>
+<li>
+<p>GLX_NV_float_buffer</p>
+</li>
+<li>
+<p>GLX_ARB_fbconfig_float</p>
+</li>
+<li>
+<p>GLX_NV_swap_group</p>
+</li>
+<li>
+<p>GLX_NV_video_out</p>
+</li>
+<li>
+<p>GLX_EXT_texture_from_pixmap</p>
+</li>
+<li>
+<p>GLX_NV_copy_image</p>
+</li>
+<li>
+<p>GLX_ARB_create_context</p>
+</li>
+<li>
+<p>GLX_EXT_import_context</p>
+</li>
+<li>
+<p>GLX_EXT_fbconfig_packed_float</p>
+</li>
+<li>
+<p>GLX_EXT_framebuffer_sRGB</p>
+</li>
+<li>
+<p>GLX_NV_present_video</p>
+</li>
+<li>
+<p>GLX_NV_multisample_coverage</p>
+</li>
+<li>
+<p>GLX_EXT_swap_control</p>
+</li>
+<li>
+<p>GLX_NV_video_capture</p>
+</li>
+<li>
+<p>GLX_ARB_create_context_profile</p>
+</li>
+<li>
+<p>GLX_EXT_create_context_es_profile</p>
+</li>
+<li>
+<p>GLX_EXT_create_context_es2_profile</p>
+</li>
+<li>
+<p>GLX_EXT_swap_control_tear</p>
+</li>
+<li>
+<p>GLX_EXT_buffer_age</p>
+</li>
+<li>
+<p>GLX_ARB_create_context_robustness</p>
+</li>
+</ul>
+</div>
+<p>For a description of these extensions, see the OpenGL extension
+registry at <a href="http://www.opengl.org/registry/" target=
+"_top">http://www.opengl.org/registry/</a></p>
+<p>Some of the above extensions exist as part of core GLX 1.4
+functionality, however, they are also exported as extensions for
+backwards compatibility.</p>
+<p>Unofficial GLX protocol support exists in NVIDIA's GLX client
+and GLX server implementations for the following OpenGL
+extensions:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>GL_ARB_geometry_shader4</p>
+</li>
+<li>
+<p>GL_ARB_shader_objects</p>
+</li>
+<li>
+<p>GL_ARB_texture_buffer_object</p>
+</li>
+<li>
+<p>GL_ARB_vertex_buffer_object</p>
+</li>
+<li>
+<p>GL_ARB_vertex_shader</p>
+</li>
+<li>
+<p>GL_EXT_bindable_uniform</p>
+</li>
+<li>
+<p>GL_EXT_compiled_vertex_array</p>
+</li>
+<li>
+<p>GL_EXT_geometry_shader4</p>
+</li>
+<li>
+<p>GL_EXT_gpu_shader4</p>
+</li>
+<li>
+<p>GL_EXT_texture_buffer_object</p>
+</li>
+<li>
+<p>GL_NV_geometry_program4</p>
+</li>
+<li>
+<p>GL_NV_vertex_program</p>
+</li>
+<li>
+<p>GL_NV_parameter_buffer_object</p>
+</li>
+<li>
+<p>GL_NV_vertex_program4</p>
+</li>
+</ul>
+</div>
+<p>Until the GLX protocol for these OpenGL extensions is finalized,
+using these extensions through GLX indirect rendering will require
+the AllowUnofficialGLXProtocol X configuration option, and the
+__GL_ALLOW_UNOFFICIAL_PROTOCOL environment variable in the
+environment of the client application. Unofficial protocol requires
+the use of NVIDIA GLX libraries on both the client and the server.
+Note: GLX protocol is used when an OpenGL application indirect
+renders (i.e., runs on one computer, but submits protocol requests
+such that the rendering is performed on another computer). The
+above OpenGL extensions are fully supported when doing direct
+rendering.</p>
+<p>GLX visuals and FBConfigs are only available for X screens with
+depths 16, 24, or 30.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"displaydevicenames.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"dpi.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Appendix&nbsp;C.&nbsp;Display Device Names&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;E.&nbsp;Dots Per Inch</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

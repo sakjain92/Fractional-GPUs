@@ -1,0 +1,143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One
+Card</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="xineramaglx.html" title=
+"Chapter&nbsp;13.&nbsp;Configuring GLX in Xinerama">
+<link rel="next" href="xrandrextension.html" title=
+"Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate Extension">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;14.&nbsp;Configuring
+Multiple X Screens on One Card</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"xineramaglx.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"xrandrextension.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="configmultxscreens" id=
+"configmultxscreens"></a>Chapter&nbsp;14.&nbsp;Configuring Multiple
+X Screens on One Card</h2>
+</div>
+</div>
+</div>
+<p>GPUs that support TwinView (<a href="configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">Chapter&nbsp;12,
+<i>Configuring Multiple Display Devices on One X Screen</i></a>)
+can also be configured to treat each connected display device as a
+separate X screen.</p>
+<p>While there are several disadvantages to this approach as
+compared to TwinView (e.g.: windows cannot be dragged between X
+screens, hardware accelerated OpenGL cannot span the two X
+screens), it does offer one advantage over TwinView: If each
+display device is a separate X screen, then properties that may
+vary between X screens may vary between displays (e.g.: depth, root
+window size, etc).</p>
+<p>To configure two separate X screens to share one graphics card,
+here is what you will need to do:</p>
+<p>First, create two separate Device sections, each listing the
+BusID of the graphics card to be shared and listing the driver as
+"nvidia", and assign each a separate screen:</p>
+<pre class="screen">
+    Section "Device"
+        Identifier  "nvidia0"
+        Driver      "nvidia"
+        # Edit the BusID with the location of your graphics card
+        BusID       "PCI:2:0:0"
+        Screen      0
+    EndSection
+
+    Section "Device"
+        Identifier  "nvidia1"
+        Driver      "nvidia"
+        # Edit the BusID with the location of your graphics card
+        BusId       "PCI:2:0:0"
+        Screen      1
+    EndSection
+</pre>
+<p>Then, create two Screen sections, each using one of the Device
+sections:</p>
+<pre class="screen">
+    Section "Screen"
+        Identifier  "Screen0"
+        Device      "nvidia0"
+        Monitor     "Monitor0"
+        DefaultDepth 24
+        Subsection "Display"
+            Depth       24
+            Modes       "1600x1200" "1024x768" "800x600" "640x480" 
+        EndSubsection
+    EndSection
+
+    Section "Screen"
+        Identifier  "Screen1"
+        Device      "nvidia1"
+        Monitor     "Monitor1"
+        DefaultDepth 24
+        Subsection "Display"
+            Depth       24
+            Modes       "1600x1200" "1024x768" "800x600" "640x480" 
+        EndSubsection
+    EndSection
+</pre>
+<p>(Note: You'll also need to create a second Monitor section)
+Finally, update the ServerLayout section to use and position both
+Screen sections:</p>
+<pre class="screen">
+    Section "ServerLayout"
+        ...
+        Screen         0 "Screen0" 
+        Screen         1 "Screen1" leftOf "Screen0"
+        ...
+    EndSection
+</pre>
+<p>For further details, refer to the XF86Config(5x) or
+xorg.conf(5x) man pages.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"xineramaglx.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"xrandrextension.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;13.&nbsp;Configuring GLX in Xinerama&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate
+Extension</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

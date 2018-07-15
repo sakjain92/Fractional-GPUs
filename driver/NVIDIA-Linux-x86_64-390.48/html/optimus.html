@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with Optimus
+Laptops</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="configlaptop.html" title=
+"Chapter&nbsp;16.&nbsp;Configuring a Notebook">
+<link rel="next" href="programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;17.&nbsp;Using the
+NVIDIA Driver with Optimus Laptops</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"configlaptop.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"programmingmodes.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="optimus" id=
+"optimus"></a>Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with
+Optimus Laptops</h2>
+</div>
+</div>
+</div>
+<p>Some laptops with NVIDIA GPUs make use of Optimus technology to
+allow switching between an integrated GPU and a discrete NVIDIA
+GPU. The NVIDIA Linux driver can be used on these systems, though
+functionality may be limited.</p>
+<h3>Installing the NVIDIA Driver on an Optimus Laptop</h3>
+<p>The driver may be installed normally on Optimus systems, but the
+NVIDIA X driver and the NVIDIA OpenGL driver may not be able to
+display to the laptop's internal display panel unless a means to
+connect the panel to the NVIDIA GPU (for example, a hardware
+multiplexer, or "mux", often controllable by a BIOS setting) is
+available. On systems without a mux, the NVIDIA GPU can still be
+useful for offscreen rendering, running CUDA applications, and
+other uses that don't require driving a display.</p>
+<p>On muxless Optimus laptops, or on laptops where a mux is
+present, but not set to drive the internal display from the NVIDIA
+GPU, the internal display is driven by the integrated GPU. On these
+systems, it's important that the X server not be configured to use
+the NVIDIA X driver after the driver is installed. Instead, the
+correct driver for the integrated GPU should be used. Often, this
+can be determined automatically by the X server, and no explicit
+configuration is required, especially on newer X server versions.
+If your X server autoselects the NVIDIA X driver after
+installation, you may need to explicitly select the driver for your
+integrated GPU.</p>
+<p>As an alternative to using only the integrated graphics device,
+support for the display output source functionality provided by the
+X Resize and Rotate extension version 1.4 is available. This
+functionality allows for graphics to be rendered on the NVIDIA GPU
+and displayed on the integrated graphics device. For information on
+how to use this functionality, see <a href="randr14.html" title=
+"Chapter&nbsp;32.&nbsp;Offloading Graphics Display with RandR 1.4">Chapter&nbsp;32,
+<i>Offloading Graphics Display with RandR 1.4</i></a>.</p>
+<p>An additional caveat is that existing OpenGL libraries may be
+overwritten by the install process. If you want to prevent this
+from happening, e.g., if you intend to use OpenGL on the integrated
+GPU, you may prevent the installer from installing the OpenGL and
+GLX libraries by passing the option <code class=
+"option">--no-opengl-files</code> to the <code class=
+"filename">.run</code> file, or directly to nvidia-installer,
+e.g.:</p>
+<pre class="screen">
+# NVIDIA-Linux-x86_64-390.48.run --no-opengl-files
+</pre>
+<p></p>
+<p>See <a href="installdriver.html" title=
+"Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver">Chapter&nbsp;4,
+<i>Installing the NVIDIA Driver</i></a> for details on the driver
+install process.</p>
+<h3>Loading the Kernel Module and Creating the Device Files without
+X</h3>
+<p>In order for programs that use the NVIDIA driver to work
+correctly (e.g.: X, OpenGL, and CUDA applications), the kernel
+module must be loaded, and the device files <code class=
+"filename">/dev/nvidiactl</code> and <code class=
+"filename">/dev/nvidia[0-9]+</code> must exist with read and write
+permissions for any users of such applications. If the setuid root
+nvidia-modprobe(1) utility is installed (the default when the
+driver is installed from .run file), this should be handled
+automatically. Otherwise, the kernel module will need to be loaded,
+and the device files created, through your Linux distribution's
+mechanisms.</p>
+<p>See <a href="faq.html#devicenodes">&ldquo;How and when are the
+NVIDIA device files created?&rdquo;</a> for more information.</p>
+<p>Note that on some Optimus notebooks the driver may fail to
+initialize the GPU due to system-specific ACPI interaction
+problems: see <a href=
+"commonproblems.html#optimusacpivbios">&ldquo;Why does the VBIOS
+fail to load on my Optimus system?&rdquo;</a> for more
+information.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"configlaptop.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"programmingmodes.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;16.&nbsp;Configuring a Notebook&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;18.&nbsp;Programming Modes</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

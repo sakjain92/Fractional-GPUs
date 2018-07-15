@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;30.&nbsp;Configuring SDI Video Output</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="framelock.html" title=
+"Chapter&nbsp;29.&nbsp;Configuring Frame Lock and Genlock">
+<link rel="next" href="depth30.html" title=
+"Chapter&nbsp;31.&nbsp;Configuring Depth 30 Displays">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;30.&nbsp;Configuring
+SDI Video Output</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"framelock.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"depth30.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="sdi" id=
+"sdi"></a>Chapter&nbsp;30.&nbsp;Configuring SDI Video Output</h2>
+</div>
+</div>
+</div>
+<p>Broadcast, film, and video post production and digital cinema
+applications can require Serial Digital (SDI) or High Definition
+Serial Digital (HD-SDI) video output. SDI/HD-SDI is a digital video
+interface used for the transmission of uncompressed video signals
+as well as packetized data. SDI is standardized in ITU-R BT.656 and
+SMPTE 259M while HD-SDI is standardized in SMPTE 292M. SMPTE 372M
+extends HD-SDI to define a dual-link configuration that uses a pair
+of SMPTE 292M links to provide a 2.970 Gbit/second interface. SMPTE
+424M extends the interface further to define a single 2.97
+Gbit/second serial data link.</p>
+<p>SDI and HD-SDI video output is provided through the use of the
+NVIDIA driver along with an NVIDIA SDI output daughter board. In
+addition to single- and dual-link SDI/HD-SDI digital video output,
+Frame Lock and Genlock synchronization are provided in order to
+synchronize the outgoing video with an external source signal (see
+<a href="framelock.html" title=
+"Chapter&nbsp;29.&nbsp;Configuring Frame Lock and Genlock">Chapter&nbsp;29,
+<i>Configuring Frame Lock and Genlock</i></a> for details on these
+technologies). This section describes the setup and use of the SDI
+video output.</p>
+<h3>Hardware Setup</h3>
+<p>Before you begin, you should check that your hardware has been
+properly installed. The following steps must be performed when the
+system is off:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Insert the NVIDIA SDI Output card into any available expansion
+slot within six inches of the NVIDIA Quadro graphics card. Secure
+the card's bracket using the method provided by the chassis
+manufacturer (usually a thumb screw or an integrated latch).</p>
+</li>
+<li>
+<p>Connect one end of the 14-pin ribbon cable to the Quadro Sync
+connector on the NVIDIA Quadro graphics card, and the other end to
+the NVIDIA SDI output card.</p>
+</li>
+<li>
+<p>Connect the DVI-loopback connector by connecting one end of the
+DVI cable to the DVI connector on the NVIDIA SDI output card and
+the other end to the "north" DVI connector on the NVIDIA Quadro
+graphics card. The "north" DVI connector on the NVIDIA Quadro
+graphics card is the DVI connector that is the farthest from the
+graphics card PCIe connection to the motherboard. The SDI output
+card will NOT function properly if this cable is connected to the
+"south" DVI connector.</p>
+</li>
+</ol>
+</div>
+<p>Once the above installation is complete, you may boot the system
+and configure the SDI video output using nvidia-settings. These
+instructions assume that you have already successfully installed
+the NVIDIA Linux Accelerated Graphics Driver. If you have not done
+so, see <a href="installdriver.html" title=
+"Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver">Chapter&nbsp;4,
+<i>Installing the NVIDIA Driver</i></a> for details.</p>
+<h3>Clone Mode Configuration with <span><strong class=
+"command">nvidia-settings</strong></span></h3>
+<p>SDI video output is configured through the nvidia-settings
+utility. See the <code class="filename">nvidia-settings(1)</code>
+man page, and the nvidia-settings online help (click the "Help"
+button in the lower right corner of the interface for per-page help
+information).</p>
+<p>After the system has booted and X Windows has been started, run
+nvidia-settings as</p>
+<pre class="screen">
+    % nvidia-settings
+</pre>
+<p>When the NVIDIA X Server Settings page appears, follow the steps
+below to configure the SDI video output.</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Click on the <code class="computeroutput">Graphics to Video
+Out</code> tree item on the side menu. This will open the
+<code class="computeroutput">Graphics to Video Out</code> page.</p>
+</li>
+<li>
+<p>Go to the "Synchronization Options" subpage and choose a
+synchronization method. From the <code class="computeroutput">Sync
+Options</code> drop down click the list arrow to the right and then
+click the method that you want to use to synchronize the SDI
+output.</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Sync Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free Running</td>
+<td>The SDI output will be synchronized with the timing chosen from
+the SDI signal format list.</td>
+</tr>
+<tr>
+<td>Genlock</td>
+<td>SDI output will be synchronized with the external sync
+signal.</td>
+</tr>
+<tr>
+<td>Frame Lock</td>
+<td>The SDI output will be synchronized with the timing chosen from
+the SDI signal format list. In this case, the list of available
+timings is limited to those timings that can be synchronized with
+the detected external sync signal.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>Note that you must first choose the correct Sync Format before
+an incoming sync signal will be detected.</p>
+</li>
+<li>
+<p>From the top Graphics to Video Out page, choose the output video
+format that will control the video resolution, field rate, and
+SMPTE signaling standard for the outgoing video stream. From the
+<code class="computeroutput">Clone Mode</code> drop down box, click
+the <code class="computeroutput">Video Format</code> arrow and then
+click the signal format that you would like to use. Note that only
+those resolutions that are smaller or equal to the desktop
+resolution will be available. Also, this list is pruned according
+to the sync option selected. If Genlock synchronization is chosen,
+the output video format is automatically set to match the incoming
+video sync format and this drop down list will be grayed out
+preventing you from choosing another format. If Frame Lock
+synchronization has been selected, then only those modes that are
+compatible with the detected sync signal will be available.</p>
+</li>
+<li>
+<p>Choose the output data format from the <code class=
+"computeroutput">Output Data Format</code> drop down list.</p>
+</li>
+<li>
+<p>Click the <code class="computeroutput">Enable SDI Output</code>
+button to enable video output using the settings above. The status
+of the SDI output can be verified by examining the LED indicators
+in the <code class="computeroutput">Graphics to SDI property</code>
+page banner.</p>
+</li>
+<li>
+<p>To subsequently stop SDI output, simply click on the button that
+now says <code class="computeroutput">Disable SDI
+Output</code>.</p>
+</li>
+<li>
+<p>In order to change any of the SDI output parameters such as the
+Output Video Format, Output Data Format as well as the
+Synchronization Delay, it is necessary to first disable the SDI
+output.</p>
+</li>
+</ol>
+</div>
+<p></p>
+<h3>Configuration for TwinView or as a Separate X Screen</h3>
+<p>SDI video output can be configured through the nvidia-settings X
+Server Display Configuration page, for use in TwinView or as a
+separate X screen. The SDI video output can be configured as if it
+were a digital flat panel, choosing the resolution, refresh rate,
+and position within the desktop.</p>
+<p>Similarly, the SDI video output can be configured for use in
+TwinView or as a separate X screen through the X configuration
+file. The supported SDI video output modes can be requested by name
+anywhere a mode name can be used in the X configuration file
+(either in the "Modes" line, or in the "MetaModes" option).
+E.g.,</p>
+<pre class="screen">
+ Option "MetaModes" "CRT-0:nvidia-auto-select, DFP-1:1280x720_60.00_smpte296"
+    
+</pre>
+<p>The mode names are reported in the nvidia-settings Display
+Configuration page when in advanced mode.</p>
+<p>As well, the initial output data format, sync mode and sync
+source can be set via the <a href=
+"xconfigoptions.html#GvoDataFormat"><code class=
+"computeroutput">Option "GvoDataFormat" "string"</code></a>,
+<a href="xconfigoptions.html#GvoSyncMode"><code class=
+"computeroutput">Option "GvoSyncMode" "string"</code></a>, and
+<a href="xconfigoptions.html#GvoSyncSource"><code class=
+"computeroutput">Option "GvoSyncSource" "string"</code></a>. See
+<a href="xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a> for instructions on how to set these X
+options.</p>
+<p>Note that SDI "Clone Mode" as configured through the Graphics to
+Video Out page in nvidia-settings is mutually exclusive with using
+the SDI video output in TwinView or as a separate X screen.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"framelock.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"depth30.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;29.&nbsp;Configuring Frame Lock and Genlock&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;31.&nbsp;Configuring Depth 30 Displays</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

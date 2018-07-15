@@ -1,0 +1,222 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>NVIDIA Accelerated Linux Graphics Driver README and
+Installation Guide</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="next" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">NVIDIA Accelerated Linux Graphics
+Driver README and Installation Guide</th>
+</tr>
+<tr>
+<td width="20%" align="left">&nbsp;</td>
+<th width="60%" align="center">&nbsp;</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"installationandconfiguration.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="book" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h1 class="title"><a name="README" id="README"></a>NVIDIA
+Accelerated Linux Graphics Driver README and Installation
+Guide</h1>
+</div>
+<div>
+<div class="author">
+<h3 class="author"><span class="firstname">NVIDIA</span>
+<span class="surname">Corporation</span></h3>
+</div>
+</div>
+<div>
+<p class="copyright">Copyright &copy; 2006 - 2013 NVIDIA
+Corporation</p>
+</div>
+<div>
+<div class="legalnotice"><a name="NVIDIALegal" id=
+"NVIDIALegal"></a>
+<p>ALL NVIDIA DESIGN SPECIFICATIONS, REFERENCE BOARDS, FILES,
+DRAWINGS, DIAGNOSTICS, LISTS, AND OTHER DOCUMENTS (TOGETHER AND
+SEPARATELY, "MATERIALS") ARE BEING PROVIDED "AS IS." NVIDIA MAKES
+NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH
+RESPECT TO THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED
+WARRANTIES OF NONINFRINGEMENT, MERCHANTABILITY, AND FITNESS FOR A
+PARTICULAR PURPOSE. Information furnished is believed to be
+accurate and reliable. However, NVIDIA Corporation assumes no
+responsibility for the consequences of use of such information or
+for any infringement of patents or other rights of third parties
+that may result from its use. No license is granted by implication
+or otherwise under any patent or patent rights of NVIDIA
+Corporation. Specifications mentioned in this publication are
+subject to change without notice. This publication supersedes and
+replaces all information previously supplied. NVIDIA Corporation
+products are not authorized for use as critical components in life
+support devices or systems without express written approval of
+NVIDIA Corporation.</p>
+<p>NVIDIA, the NVIDIA logo, NVIDIA nForce, GeForce, NVIDIA Quadro,
+Vanta, TNT2, TNT, RIVA, RIVA TNT, Tegra, and TwinView are
+registered trademarks or trademarks of NVIDIA Corporation in the
+United States and/or other countries.</p>
+<p>Linux is a registered trademark of Linus Torvalds. Fedora and
+Red Hat are trademarks of Red Hat, Inc. SuSE is a registered
+trademark of SuSE AG. Mandriva is a registered trademark of
+Mandriva S.A. Intel and Pentium are registered trademarks of Intel
+Corporation. Athlon is a registered trademark of Advanced Micro
+Devices. OpenGL is a registered trademark of Silicon Graphics Inc.
+PCI Express is a registered trademark and/or service mark of
+PCI-SIG. Windows is a registered trademark of Microsoft Corporation
+in the United States and other countries. Other company and product
+names may be trademarks or registered trademarks of the respective
+owners with which they are associated.</p>
+</div>
+</div>
+</div>
+<hr></div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="part"><a href=
+"installationandconfiguration.html">I. Installation and
+Configuration Instructions</a></span></dt>
+<dd>
+<dl>
+<dt><span class="chapter"><a href="introduction.html">1.
+Introduction</a></span></dt>
+<dt><span class="chapter"><a href="minimumrequirements.html">2.
+Minimum Requirements</a></span></dt>
+<dt><span class="chapter"><a href="selectdriver.html">3. Selecting
+and Downloading the NVIDIA Packages for Your System</a></span></dt>
+<dt><span class="chapter"><a href="installdriver.html">4.
+Installing the NVIDIA Driver</a></span></dt>
+<dt><span class="chapter"><a href="installedcomponents.html">5.
+Listing of Installed Components</a></span></dt>
+<dt><span class="chapter"><a href="editxconfig.html">6. Configuring
+X for the NVIDIA Driver</a></span></dt>
+<dt><span class="chapter"><a href="faq.html">7. Frequently Asked
+Questions</a></span></dt>
+<dt><span class="chapter"><a href="commonproblems.html">8. Common
+Problems</a></span></dt>
+<dt><span class="chapter"><a href="knownissues.html">9. Known
+Issues</a></span></dt>
+<dt><span class="chapter"><a href="dma_issues.html">10. Allocating
+DMA Buffers on 64-bit Platforms</a></span></dt>
+<dt><span class="chapter"><a href="openglenvvariables.html">11.
+Specifying OpenGL Environment Variable Settings</a></span></dt>
+<dt><span class="chapter"><a href="configtwinview.html">12.
+Configuring Multiple Display Devices on One X
+Screen</a></span></dt>
+<dt><span class="chapter"><a href="xineramaglx.html">13.
+Configuring GLX in Xinerama</a></span></dt>
+<dt><span class="chapter"><a href="configmultxscreens.html">14.
+Configuring Multiple X Screens on One Card</a></span></dt>
+<dt><span class="chapter"><a href="xrandrextension.html">15.
+Support for the X Resize and Rotate Extension</a></span></dt>
+<dt><span class="chapter"><a href="configlaptop.html">16.
+Configuring a Notebook</a></span></dt>
+<dt><span class="chapter"><a href="optimus.html">17. Using the
+NVIDIA Driver with Optimus Laptops</a></span></dt>
+<dt><span class="chapter"><a href="programmingmodes.html">18.
+Programming Modes</a></span></dt>
+<dt><span class="chapter"><a href="flippingubb.html">19.
+Configuring Flipping and UBB</a></span></dt>
+<dt><span class="chapter"><a href="procinterface.html">20. Using
+the Proc Filesystem Interface</a></span></dt>
+<dt><span class="chapter"><a href="powermanagement.html">21.
+Configuring Power Management Support</a></span></dt>
+<dt><span class="chapter"><a href="xcompositeextension.html">22.
+Using the X Composite Extension</a></span></dt>
+<dt><span class="chapter"><a href="nvidiasettings.html">23. Using
+the nvidia-settings Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-smi.html">24. Using the
+nvidia-smi Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-ml.html">25. The NVIDIA
+Management Library</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-debugdump.html">26. Using
+the nvidia-debugdump Utility</a></span></dt>
+<dt><span class="chapter"><a href="nvidia-persistenced.html">27.
+Using the nvidia-persistenced Utility</a></span></dt>
+<dt><span class="chapter"><a href="sli.html">28. Configuring SLI
+and Multi-GPU FrameRendering</a></span></dt>
+<dt><span class="chapter"><a href="framelock.html">29. Configuring
+Frame Lock and Genlock</a></span></dt>
+<dt><span class="chapter"><a href="sdi.html">30. Configuring SDI
+Video Output</a></span></dt>
+<dt><span class="chapter"><a href="depth30.html">31. Configuring
+Depth 30 Displays</a></span></dt>
+<dt><span class="chapter"><a href="randr14.html">32. Offloading
+Graphics Display with RandR 1.4</a></span></dt>
+<dt><span class="chapter"><a href="kms.html">33. Direct Rendering
+Manager Kernel Modesetting (DRM KMS)</a></span></dt>
+<dt><span class="chapter"><a href="addressingcapabilities.html">34.
+Addressing Capabilities</a></span></dt>
+<dt><span class="chapter"><a href="addtlresources.html">35. NVIDIA
+Contact Info and Additional Resources</a></span></dt>
+<dt><span class="chapter"><a href="acknowledgements.html">36.
+Acknowledgements</a></span></dt>
+</dl>
+</dd>
+<dt><span class="part"><a href="appendices.html">II.
+Appendices</a></span></dt>
+<dd>
+<dl>
+<dt><span class="appendix"><a href="supportedchips.html">A.
+Supported NVIDIA GPU Products</a></span></dt>
+<dt><span class="appendix"><a href="xconfigoptions.html">B. X
+Config Options</a></span></dt>
+<dt><span class="appendix"><a href="displaydevicenames.html">C.
+Display Device Names</a></span></dt>
+<dt><span class="appendix"><a href="glxsupport.html">D. GLX
+Support</a></span></dt>
+<dt><span class="appendix"><a href="dpi.html">E. Dots Per
+Inch</a></span></dt>
+<dt><span class="appendix"><a href="i2c.html">F. i2c Bus
+Support</a></span></dt>
+<dt><span class="appendix"><a href="vdpausupport.html">G. VDPAU
+Support</a></span></dt>
+<dt><span class="appendix"><a href="audiosupport.html">H. Audio
+Support</a></span></dt>
+<dt><span class="appendix"><a href="newusertips.html">I. Tips for
+New Linux Users</a></span></dt>
+<dt><span class="appendix"><a href="profiles.html">J. Application
+Profiles</a></span></dt>
+<dt><span class="appendix"><a href="gpunames.html">K. GPU
+Names</a></span></dt>
+</dl>
+</dd>
+</dl>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left">&nbsp;</td>
+<td width="20%" align="center">&nbsp;</td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"installationandconfiguration.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">&nbsp;</td>
+<td width="20%" align="center">&nbsp;</td>
+<td width="40%" align="right" valign="top">
+&nbsp;Part&nbsp;I.&nbsp;Installation and Configuration
+Instructions</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel
+Modesetting (DRM KMS)</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="randr14.html" title=
+"Chapter&nbsp;32.&nbsp;Offloading Graphics Display with RandR 1.4">
+<link rel="next" href="addressingcapabilities.html" title=
+"Chapter&nbsp;34.&nbsp;Addressing Capabilities">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;33.&nbsp;Direct
+Rendering Manager Kernel Modesetting (DRM KMS)</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"randr14.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"addressingcapabilities.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="kms" id=
+"kms"></a>Chapter&nbsp;33.&nbsp;Direct Rendering Manager Kernel
+Modesetting (DRM KMS)</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"kms.html#drm-kms-known-issues">Known Issues</a></span></dt>
+</dl>
+</div>
+<p>The NVIDIA GPU driver package provides a kernel module,
+nvidia-drm.ko, which registers a DRM driver with the DRM subsystem
+of the Linux kernel. The capabilities advertised by this DRM driver
+depend on the Linux kernel version and configuration:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>PRIME: This is needed to support graphics display offload in
+RandR 1.4. Linux kernel version 3.13 or higher is required, with
+CONFIG_DRM enabled.</p>
+</li>
+<li>
+<p>Atomic Modeset: This is used for display of non-X11 based
+desktop environments, such as Wayland and Mir. Linux kernel version
+4.1 or higher is required, with CONFIG_DRM and
+CONFIG_DRM_KMS_HELPER enabled.</p>
+</li>
+</ul>
+</div>
+<p>NVIDIA's DRM KMS support is still considered experimental. It is
+disabled by default, but can be enabled on suitable kernels with
+the 'modeset' kernel module parameter. E.g.,</p>
+<pre class="screen">
+modprobe -r nvidia-drm ; modprobe nvidia-drm modeset=1
+</pre>
+<p></p>
+<p>Applications can present through NVIDIA's DRM KMS implementation
+using any of the following:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The DRM KMS "dumb buffer" mechanism to create and map
+CPU-accessible buffers: DRM_IOCTL_MODE_CREATE_DUMB,
+DRM_IOCTL_MODE_MAP_DUMB, and DRM_IOCTL_MODE_DESTROY_DUMB.</p>
+</li>
+<li>
+<p>Using the EGL_EXT_device_drm, EGL_EXT_output_drm, and
+EGL_EXT_stream_consumer_egloutput EGL extensions to associate
+EGLStream producers with specific DRM KMS planes.</p>
+</li>
+</ul>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"drm-kms-known-issues" id="drm-kms-known-issues"></a>Known
+Issues</h2>
+</div>
+</div>
+</div>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>The NVIDIA DRM KMS implementation is currently incompatible with
+SLI. The X server will fail to initialize SLI if DRM KMS is
+enabled.</p>
+</li>
+<li>
+<p>The NVIDIA DRM KMS implementation does not yet register an
+overlay plane: only primary and cursor planes are currently
+provided.</p>
+</li>
+<li>
+<p>Buffer allocation and submission to DRM KMS using gbm is not
+currently supported.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"randr14.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"addressingcapabilities.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;32.&nbsp;Offloading Graphics Display with RandR
+1.4&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;34.&nbsp;Addressing Capabilities</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

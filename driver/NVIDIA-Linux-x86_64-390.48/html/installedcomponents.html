@@ -1,0 +1,496 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;5.&nbsp;Listing of Installed Components</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="installdriver.html" title=
+"Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver">
+<link rel="next" href="editxconfig.html" title=
+"Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;5.&nbsp;Listing of
+Installed Components</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"installdriver.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"editxconfig.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="installedcomponents" id=
+"installedcomponents"></a>Chapter&nbsp;5.&nbsp;Listing of Installed
+Components</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Accelerated Linux Graphics Driver consists of the
+following components (filenames in parentheses are the full names
+of the components after installation). Some paths may be different
+on different systems (e.g., X modules may be installed in
+/usr/X11R6/ rather than /usr/lib/xorg/).</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>An X driver (<code class=
+"filename">/usr/lib/xorg/modules/drivers/nvidia_drv.so</code>);
+this driver is needed by the X server to use your NVIDIA
+hardware.</p>
+</li>
+<li>
+<p>A GLX extension module for X (<code class=
+"filename">/usr/lib/xorg/modules/extensions/libglx.so.390.48</code>);
+this module is used by the X server to provide server-side GLX
+support.</p>
+</li>
+<li>
+<p>An X module for wrapped software rendering (<code class=
+"filename">/usr/lib/xorg/modules/libnvidia-wfb.so.390.48</code>
+and optionally, <code class=
+"filename">/usr/lib/xorg/modules/libwfb.so</code>); this module is
+used by the X driver to perform software rendering on GeForce 8
+series GPUs. If <code class="filename">libwfb.so</code> already
+exists, nvidia-installer will not overwrite it. Otherwise, it will
+create a symbolic link from <code class="filename">libwfb.so</code>
+to <code class="filename">libnvidia-wfb.so.390.48</code>.</p>
+</li>
+<li>
+<p>EGL and OpenGL ES libraries ( <code class=
+"filename">/usr/lib/libEGL.so.1</code>, <code class=
+"filename">/usr/lib/libGLESv1_CM.so.390.48</code>, and
+<code class="filename">/usr/lib/libGLESv2.so.390.48</code> );
+these libraries provide the API entry points for all OpenGL ES and
+EGL function calls. They are loaded at run-time by
+applications.</p>
+</li>
+<li>
+<p>A Wayland EGL external platform library (<code class=
+"filename">/usr/lib/libnvidia-egl-wayland.so.1</code>) and its
+corresponding configuration file ( <code class=
+"filename">/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json</code>
+); this library provides client-side Wayland support on top of the
+EGLDevice and EGLStream families of extensions, for use in
+combination with an EGLStream-enabled Wayland compositor: <a href=
+"https://cgit.freedesktop.org/~jjones/weston/" target=
+"_top">https://cgit.freedesktop.org/~jjones/weston/</a></p>
+<p>More information can be found along with the EGL external
+interface and Wayland library source code at <a href=
+"https://github.com/NVIDIA/eglexternalplatform" target=
+"_top">https://github.com/NVIDIA/eglexternalplatform</a> and
+<a href="https://github.com/NVIDIA/egl-wayland" target=
+"_top">https://github.com/NVIDIA/egl-wayland</a>.</p>
+</li>
+<li>
+<p>Vendor neutral graphics libraries provided by libglvnd
+(<code class="filename">/usr/lib/libOpenGL.so.0</code>,
+<code class="filename">/usr/lib/libGLX.so.0</code>, and
+<code class="filename">/usr/lib/libGLdispatch.so.0</code>); these
+libraries are currently used to provide full OpenGL dispatching
+support to NVIDIA's implementation of EGL.</p>
+<p>Source code for libglvnd is available at <a href=
+"https://github.com/NVIDIA/libglvnd" target=
+"_top">https://github.com/NVIDIA/libglvnd</a></p>
+</li>
+<li>
+<p>GLVND vendor implementation libraries for GLX (<code class=
+"filename">/usr/lib/libGLX_nvidia.so.0</code>) and EGL
+(<code class="filename">/usr/lib/libEGL_nvidia.so.0</code>); these
+libraries provide NVIDIA implementations of OpenGL functionality
+which may be accessed using the GLVND client-facing libraries.</p>
+</li>
+<li>
+<p>A GLX client library and Vulkan ICD (<code class=
+"filename">/usr/lib/libGL.so.1</code>), either as part of the GLVND
+infrastructure, or a legacy, non-GLVND GLX client library. This
+library provides API entry points for all GLX function calls, and
+is loaded at run-time by applications. Users may choose one or the
+other at installation time by using either the <code class=
+"option">--glvnd-glx-client</code> or the <code class=
+"option">--no-glvnd-glx-client</code> command line option to
+<span><strong class="command">nvidia-installer</strong></span>.</p>
+<p>Note that although both the GLVND and non-GLVND GLX client
+libraries share the same SONAME of libGL.so.1, only one of them at
+a time may be installed at a time. <code class=
+"filename">/usr/lib/libGL.so.390.48</code> is the non-GLVND
+GLX client library, and <code class=
+"filename">/usr/lib/libGL.so.1.0.0</code> is the GLVND GLX client
+library.</p>
+<p>This library is also used as the Vulkan ICD. Its configuration
+file is installed as <code class=
+"filename">/etc/vulkan/icd.d/nvidia_icd.json</code>.</p>
+<p>Repackagers of the driver are encouraged to provide the
+GLVND-based driver stack to promote adoption of the new
+infrastructure, but those who choose to package the legacy GLX
+client library instead of, or as an alternative to, the GLVND GLX
+client library should be aware that the NVIDIA EGL driver depends
+upon GLVND for proper functionality. The legacy GLX client library
+may coexist with most GLVND libraries, with the exception of
+<code class="filename">libGL.so.1</code> and <code class=
+"filename">libGLX.so.0</code>, so it is possible to support both
+NVIDIA EGL and legacy, non-GLVND NVIDIA GLX by installing all of
+the GLVND libraries except for libGL and libGLX alongside the
+legacy libGL.</p>
+</li>
+<li>
+<p>Various libraries that are used internally by other driver
+components. These include <code class=
+"filename">/usr/lib/libnvidia-cfg.so.390.48</code>,
+<code class=
+"filename">/usr/lib/libnvidia-compiler.so.390.48</code>,
+<code class=
+"filename">/usr/lib/libnvidia-eglcore.so.390.48</code>,
+<code class=
+"filename">/usr/lib/libnvidia-glcore.so.390.48</code>, and
+<code class=
+"filename">/usr/lib/libnvidia-glsi.so.390.48</code>.</p>
+</li>
+<li>
+<p>A VDPAU (Video Decode and Presentation API for Unix-like
+systems) library for the NVIDIA vendor implementation,
+(<code class="filename">/usr/lib/vdpau/libvdpau_nvidia.so.390.48</code>);
+see <a href="vdpausupport.html" title=
+"Appendix&nbsp;G.&nbsp;VDPAU Support">Appendix&nbsp;G, <i>VDPAU
+Support</i></a> for details.</p>
+</li>
+<li>
+<p>The CUDA library (<code class=
+"filename">/usr/lib/libcuda.so.390.48</code>) which provides
+runtime support for CUDA (high-performance computing on the GPU)
+applications.</p>
+</li>
+<li>
+<p>The Fatbinary Loader library (<code class=
+"filename">/usr/lib/libnvidia-fatbinaryloader.so.390.48</code>)
+provides support for the CUDA driver to work with CUDA fatbinaries.
+Fatbinary is a container format which can package multiple PTX and
+Cubin files compiled for different SM architectures.</p>
+</li>
+<li>
+<p>The PTX JIT Compiler library (<code class=
+"filename">/usr/lib/libnvidia-ptxjitcompiler.so.390.48</code>)
+is a JIT compiler which compiles PTX into GPU machine code and is
+used by the CUDA driver.</p>
+</li>
+<li>
+<p>Two OpenCL libraries (<code class=
+"filename">/usr/lib/libOpenCL.so.1.0.0</code>, <code class=
+"filename">/usr/lib/libnvidia-opencl.so.390.48</code>); the
+former is a vendor-independent Installable Client Driver (ICD)
+loader, and the latter is the NVIDIA Vendor ICD. A config file
+<code class="filename">/etc/OpenCL/vendors/nvidia.icd</code> is
+also installed, to advertise the NVIDIA Vendor ICD to the ICD
+Loader.</p>
+</li>
+<li>
+<p>The <code class="filename">nvidia-cuda-mps-control</code> and
+<code class="filename">nvidia-cuda-mps-server</code> applications,
+which allow MPI processes to run concurrently on a single GPU.</p>
+</li>
+<li>
+<p>A kernel module (<code class="filename">/lib/modules/`uname
+-r`/kernel/drivers/video/nvidia-modeset.ko</code>); this kernel
+module is responsible for programming the display engine of the
+GPU. User-mode NVIDIA driver components such as the NVIDIA X
+driver, OpenGL driver, and VDPAU driver communicate with
+nvidia-modeset.ko through the /dev/nvidia-modeset device file.</p>
+</li>
+<li>
+<p>A kernel module (<code class="filename">/lib/modules/`uname
+-r`/kernel/drivers/video/nvidia.ko</code>); this kernel module
+provides low-level access to your NVIDIA hardware for all of the
+above components. It is generally loaded into the kernel when the X
+server is started, and is used by the X driver and OpenGL.
+nvidia.ko consists of two pieces: the binary-only core, and a
+kernel interface that must be compiled specifically for your kernel
+version. Note that the Linux kernel does not have a consistent
+binary interface like the X server, so it is important that this
+kernel interface be matched with the version of the kernel that you
+are using. This can either be accomplished by compiling yourself,
+or using precompiled binaries provided for the kernels shipped with
+some of the more common Linux distributions.</p>
+</li>
+<li>
+<p>NVIDIA Unified Memory kernel module (<code class=
+"filename">/lib/modules/`uname
+-r`/kernel/drivers/video/nvidia-uvm.ko</code>); this kernel module
+provides functionality for sharing memory between the CPU and GPU
+in CUDA programs. It is generally loaded into the kernel when a
+CUDA program is started, and is used by the CUDA driver on
+supported platforms.</p>
+</li>
+<li>
+<p>The nvidia-tls libraries (<code class=
+"filename">/usr/lib/libnvidia-tls.so.390.48</code> and
+<code class=
+"filename">/usr/lib/tls/libnvidia-tls.so.390.48</code>); these
+files provide thread local storage support for the NVIDIA OpenGL
+libraries (libGL, libnvidia-glcore, and libglx). Each nvidia-tls
+library provides support for a particular thread local storage
+model (such as ELF TLS), and the one appropriate for your system
+will be loaded at run time.</p>
+</li>
+<li>
+<p>The nvidia-ml library (<code class=
+"filename">/usr/lib/libnvidia-ml.so.390.48</code>); The NVIDIA
+Management Library provides a monitoring and management API. See
+<a href="nvidia-ml.html" title=
+"Chapter&nbsp;25.&nbsp;The NVIDIA Management Library">Chapter&nbsp;25,
+<i>The NVIDIA Management Library</i></a> for more information.</p>
+</li>
+<li>
+<p>The application nvidia-installer (<code class=
+"filename">/usr/bin/nvidia-installer</code>) is NVIDIA's tool for
+installing and updating NVIDIA drivers. See <a href=
+"installdriver.html" title=
+"Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver">Chapter&nbsp;4,
+<i>Installing the NVIDIA Driver</i></a> for a more thorough
+description.</p>
+<p>Source code is available at <a href=
+"https://download.nvidia.com/XFree86/nvidia-installer/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-installer/</a>.</p>
+</li>
+<li>
+<p>The application nvidia-modprobe (<code class=
+"filename">/usr/bin/nvidia-modprobe</code>) is installed as setuid
+root and is used to load the NVIDIA kernel module and create the
+<code class="filename">/dev/nvidia*</code> device nodes by
+processes (such as CUDA applications) that don't run with
+sufficient privileges to do those things themselves.</p>
+<p>Source code is available at <a href=
+"https://download.nvidia.com/XFree86/nvidia-modprobe/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-modprobe/</a>.</p>
+</li>
+<li>
+<p>The application nvidia-xconfig (<code class=
+"filename">/usr/bin/nvidia-xconfig</code>) is NVIDIA's tool for
+manipulating X server configuration files. See <a href=
+"editxconfig.html" title=
+"Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver">Chapter&nbsp;6,
+<i>Configuring X for the NVIDIA Driver</i></a> for more
+information.</p>
+<p>Source code is available at <a href=
+"https://download.nvidia.com/XFree86/nvidia-xconfig/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-xconfig/</a>.</p>
+</li>
+<li>
+<p>The application nvidia-settings (<code class=
+"filename">/usr/bin/nvidia-settings</code>) is NVIDIA's tool for
+dynamic configuration while the X server is running. See <a href=
+"nvidiasettings.html" title=
+"Chapter&nbsp;23.&nbsp;Using the nvidia-settings Utility">Chapter&nbsp;23,
+<i>Using the nvidia-settings Utility</i></a> for more
+information.</p>
+</li>
+<li>
+<p>The libnvidia-gtk libraries (<code class=
+"filename">/usr/lib/libnvidia-gtk2.so.390.48</code> and on
+some platforms <code class=
+"filename">/usr/lib/libnvidia-gtk3.so.390.48</code>); these
+libraries are required to provide the nvidia-settings user
+interface.</p>
+<p>Source code is available at <a href=
+"https://download.nvidia.com/XFree86/nvidia-settings/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-settings/</a>.</p>
+</li>
+<li>
+<p>The application nvidia-smi (<code class=
+"filename">/usr/bin/nvidia-smi</code>) is the NVIDIA System
+Management Interface for management and monitoring functionality.
+See <a href="nvidia-smi.html" title=
+"Chapter&nbsp;24.&nbsp;Using the nvidia-smi Utility">Chapter&nbsp;24,
+<i>Using the nvidia-smi Utility</i></a> for more information.</p>
+</li>
+<li>
+<p>The application nvidia-debugdump (<code class=
+"filename">/usr/bin/nvidia-debugdump</code>) is NVIDIA's tool for
+collecting internal GPU state. It is normally invoked by the
+nvidia-bug-report.sh (<code class=
+"filename">/usr/bin/nvidia-bug-report.sh</code>) script. See
+<a href="nvidia-debugdump.html" title=
+"Chapter&nbsp;26.&nbsp;Using the nvidia-debugdump Utility">Chapter&nbsp;26,
+<i>Using the nvidia-debugdump Utility</i></a> for more
+information.</p>
+</li>
+<li>
+<p>The daemon nvidia-persistenced (<code class=
+"filename">/usr/bin/nvidia-persistenced</code>) is the NVIDIA
+Persistence Daemon for allowing the NVIDIA kernel module to
+maintain persistent state when no other NVIDIA driver components
+are running. See <a href="nvidia-persistenced.html" title=
+"Chapter&nbsp;27.&nbsp;Using the nvidia-persistenced Utility">Chapter&nbsp;27,
+<i>Using the nvidia-persistenced Utility</i></a> for more
+information.</p>
+<p>Source code is available at <a href=
+"https://download.nvidia.com/XFree86/nvidia-persistenced/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-persistenced/</a>.</p>
+</li>
+<li>
+<p>The NVCUVID library (<code class=
+"filename">/usr/lib/libnvcuvid.so.390.48</code>); The NVIDIA
+CUDA Video Decoder (NVCUVID) library provides an interface to
+hardware video decoding capabilities on NVIDIA GPUs with CUDA.</p>
+</li>
+<li>
+<p>The NvEncodeAPI library (<code class=
+"filename">/usr/lib/libnvidia-encode.so.390.48</code>); The
+NVENC Video Encoding library provides an interface to video encoder
+hardware on supported NVIDIA GPUs.</p>
+</li>
+<li>
+<p>The NvIFROpenGL library (<code class=
+"filename">/usr/lib/libnvidia-ifr.so.390.48</code>); The
+NVIDIA OpenGL-based Inband Frame Readback library provides an
+interface to capture and optionally encode an OpenGL
+framebuffer.</p>
+</li>
+<li>
+<p>The NvFBC library (<code class=
+"filename">/usr/lib/libnvidia-fbc.so.390.48</code>); The
+NVIDIA Framebuffer Capture library provides an interface to capture
+and optionally encode the framebuffer of an X server screen.</p>
+</li>
+<li>
+<p>An X driver configuration file (<code class=
+"filename">/usr/share/X11/xorg.conf.d/nvidia-drm-outputclass.conf</code>);
+If the X server is sufficiently new, this file will be installed to
+configure the X server to load the <code class=
+"filename">nvidia_drv.so</code> driver automatically if it is
+started after the NVIDIA DRM kernel module (nvidia-drm.ko) is
+loaded. This feature is supported in X.Org xserver 1.16 and higher
+when running on Linux kernel 3.13 or higher with CONFIG_DRM
+enabled.</p>
+</li>
+<li>
+<p>Predefined application profile keys and documentation for those
+keys can be found in the following files in the directory
+<code class="filename">/usr/share/nvidia/</code>: <code class=
+"filename">nvidia-application-profiles-390.48-rc</code>,
+<code class=
+"filename">nvidia-application-profiles-390.48-key-documentation</code>.</p>
+<p>See <a href="profiles.html" title=
+"Appendix&nbsp;J.&nbsp;Application Profiles">Appendix&nbsp;J,
+<i>Application Profiles</i></a> for more information.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Problems will arise if applications use the wrong version of a
+library. This can be the case if there are either old libGL
+libraries or stale symlinks left lying around. If you think there
+may be something awry in your installation, check that the
+following files are in place (these are all the files of the NVIDIA
+Accelerated Linux Graphics Driver, as well as their symlinks):</p>
+<pre class="screen">
+    /usr/lib/xorg/modules/drivers/nvidia_drv.so
+    /usr/lib/xorg/modules/libwfb.so (if your X server is new enough), or
+    /usr/lib/xorg/modules/libnvidia-wfb.so and
+    /usr/lib/xorg/modules/libwfb.so -&gt; libnvidia-wfb.so
+
+    /usr/lib/xorg/modules/extensions/libglx.so.390.48
+    /usr/lib/xorg/modules/extensions/libglx.so -&gt; libglx.so.390.48
+
+    (the above may also be in /usr/lib/modules or /usr/X11R6/lib/modules)
+
+    /usr/lib/libGL.so.390.48
+    /usr/lib/libGL.so.1 -&gt; libGL.so.390.48
+    /usr/lib/libGL.so -&gt; libGL.so.1
+
+    (on GLVND-based installations, libGL.so.1 from GLVND may be used instead
+    of libGL.so.390.48 as shown above.)
+
+    /usr/lib/libnvidia-glcore.so.390.48
+
+    /usr/lib/libcuda.so.390.48
+    /usr/lib/libcuda.so -&gt; libcuda.so.390.48
+
+    /lib/modules/`uname -r`/video/nvidia.{o,ko}, or
+    /lib/modules/`uname -r`/kernel/drivers/video/nvidia.{o,ko}
+</pre>
+<p>If there are other libraries whose "soname" conflicts with that
+of the NVIDIA libraries, ldconfig may create the wrong symlinks. It
+is recommended that you manually remove or rename conflicting
+libraries (be sure to rename clashing libraries to something that
+ldconfig will not look at -- we have found that prepending "XXX" to
+a library name generally does the trick), rerun 'ldconfig', and
+check that the correct symlinks were made. An example of a library
+that often creates conflicts is "/usr/lib/mesa/libGL.so*".</p>
+<p>If the libraries appear to be correct, then verify that the
+application is using the correct libraries. For example, to check
+that the application /usr/bin/glxgears is using the NVIDIA
+libraries, run:</p>
+<pre class="screen">
+    % ldd /usr/bin/glxgears
+        linux-gate.so.1 =&gt;  (0xffffe000)
+        libGL.so.1 =&gt; /usr/lib/libGL.so.1 (0xb7ed1000)
+        libXext.so.6 =&gt; /usr/lib/libXext.so.6 (0xb7ec0000)
+        libX11.so.6 =&gt; /usr/lib/libX11.so.6 (0xb7de0000)
+        libpthread.so.0 =&gt; /lib/tls/libpthread.so.0 (0x00946000)
+        libm.so.6 =&gt; /lib/tls/libm.so.6 (0x0075d000)
+        libc.so.6 =&gt; /lib/tls/libc.so.6 (0x00631000)
+        libnvidia-tls.so.390.48 =&gt; /usr/lib/tls/libnvidia-tls.so.390.48 (0xb7ddd000)
+        libnvidia-glcore.so.390.48 =&gt; /usr/lib/libnvidia-glcore.so.390.48 (0xb5d1f000)
+        libdl.so.2 =&gt; /lib/libdl.so.2 (0x00782000)
+        /lib/ld-linux.so.2 (0x00614000)
+</pre>
+<p>In the example above, the list of libraries reported by
+<span><strong class="command">ldd</strong></span> includes
+<code class="filename">libnvidia-tls.so.390.48</code> and
+<code class="filename">libnvidia-glcore.so.390.48</code>: this
+is because <span><strong class="command">glxgears</strong></span>
+links <code class="filename">libGL.so.1</code>, which in this case
+is the legacy, non-GLVND NVIDIA GLX client library. When
+<code class="filename">libGL.so.1</code> is provided by GLVND
+instead, <code class="filename">libGLX.so.0</code> and <code class=
+"filename">libGLdispatch.so.0</code> should appear in the output of
+<span><strong class="command">ldd</strong></span>. If the GLX
+client library is something other than the NVIDIA or GLVND
+<code class="filename">libGL.so.1</code>, then you will need to
+either remove the library that is getting in the way or adjust your
+dynamic loader search path using the <code class=
+"envar">LD_LIBRARY_PATH</code> environment variable. You may want
+to consult the man pages for <span><strong class=
+"command">ldconfig</strong></span> and <span><strong class=
+"command">ldd</strong></span>.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"installdriver.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"editxconfig.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

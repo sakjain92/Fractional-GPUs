@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;13.&nbsp;Configuring GLX in Xinerama</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+<link rel="next" href="configmultxscreens.html" title=
+"Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One Card">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;13.&nbsp;Configuring
+GLX in Xinerama</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"configtwinview.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"configmultxscreens.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="xineramaglx" id=
+"xineramaglx"></a>Chapter&nbsp;13.&nbsp;Configuring GLX in
+Xinerama</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Linux Driver supports GLX when Xinerama is enabled on
+similar GPUs. The Xinerama extension takes multiple physical X
+screens (possibly spanning multiple GPUs), and binds them into one
+logical X screen. This allows windows to be dragged between GPUs
+and to span across multiple GPUs. The NVIDIA driver supports
+hardware accelerated OpenGL rendering across all NVIDIA GPUs when
+Xinerama is enabled.</p>
+<p>To configure Xinerama</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Configure multiple X screens (refer to the XF86Config(5x) or
+xorg.conf(5x) man pages for details).</p>
+</li>
+<li>
+<p>Enable Xinerama by adding the line</p>
+<pre class="screen">
+    Option "Xinerama" "True"
+</pre>
+<p>to the "ServerFlags" section of your X config file.</p>
+</li>
+</ol>
+</div>
+<p></p>
+<p>Requirements:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Using identical GPUs is recommended. Some combinations of
+non-identical, but similar, GPUs are supported. If a GPU is
+incompatible with the rest of a Xinerama desktop then no OpenGL
+rendering will appear on the screens driven by that GPU. Rendering
+will still appear normally on screens connected to other supported
+GPUs. In this situation the X log file will include a message of
+the form:</p>
+<pre class="screen">
+(WW) NVIDIA(2): The GPU driving screen 2 is incompatible with the rest of
+(WW) NVIDIA(2):      the GPUs composing the desktop.  OpenGL rendering will
+(WW) NVIDIA(2):      be disabled on screen 2.
+</pre></li>
+<li>
+<p>NVIDIA's GLX implementation only supports Xinerama when physical
+X screen 0 is driven by the NVIDIA X driver. This is because the
+X.Org X server bases the visuals of the logical Xinerama X screen
+on the visuals of physical X screen 0.</p>
+<p>When physical X screen 0 is not being driven by the NVIDIA X
+driver and Xinerama is enabled, then GLX will be disabled. If
+physical X screens other than screen 0 are not being driven by the
+NVIDIA X driver, OpenGL rendering will be disabled on them.</p>
+</li>
+<li>
+<p>Only the intersection of capabilities across all GPUs will be
+advertised.</p>
+<p>The maximum OpenGL viewport size is 16384x16384 pixels. If an
+OpenGL window is larger than the maximum viewport, regions beyond
+the viewport will be blank.</p>
+</li>
+<li>
+<p>X configuration options that affect GLX operation (e.g.: stereo,
+overlays) should be set consistently across all X screens in the X
+server.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Known Issues:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Versions of XFree86 prior to 4.5 and versions of X.Org prior to
+6.8.0 lack the required interfaces to properly implement overlays
+with the Xinerama extension. On earlier server versions mixing
+overlays and Xinerama will result in rendering corruption. If you
+are using the Xinerama extension with overlays, it is recommended
+that you upgrade to XFree86 4.5, X.Org 6.8.0, or newer.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"configtwinview.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"configmultxscreens.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X
+Screen&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One
+Card</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

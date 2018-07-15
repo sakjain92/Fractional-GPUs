@@ -1,0 +1,683 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;29.&nbsp;Configuring Frame Lock and
+Genlock</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="sli.html" title=
+"Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU FrameRendering">
+<link rel="next" href="sdi.html" title=
+"Chapter&nbsp;30.&nbsp;Configuring SDI Video Output">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;29.&nbsp;Configuring
+Frame Lock and Genlock</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"sli.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"sdi.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="framelock" id=
+"framelock"></a>Chapter&nbsp;29.&nbsp;Configuring Frame Lock and
+Genlock</h2>
+</div>
+</div>
+</div>
+<p>NOTE: Frame Lock and Genlock features are supported only on
+specific hardware, as noted below.</p>
+<p>Visual computing applications that involve multiple displays, or
+even multiple windows within a display, can require special signal
+processing and application controls in order to function properly.
+For example, in order to produce quality video recording of
+animated graphics, the graphics display must be synchronized with
+the video camera. As another example, applications presented on
+multiple displays must be synchronized in order to complete the
+illusion of a larger, virtual canvas.</p>
+<p>This synchronization is enabled through the Frame Lock and
+Genlock capabilities of the NVIDIA driver. This section describes
+the setup and use of Frame Lock and Genlock.</p>
+<h3>Definition of Terms</h3>
+<p>GENLOCK: Genlock refers to the process of synchronizing the
+pixel scanning of one or more displays to an external
+synchronization source. Genlock requires the external signal to be
+either TTL or composite, such as used for NTSC, PAL, or HDTV. It
+should be noted that Genlock is guaranteed only to be
+frame-synchronized, and not necessarily pixel-synchronized.</p>
+<p>FRAME LOCK: Frame Lock involves the use of hardware to
+synchronize the frames on each display in a connected system. When
+graphics and video are displayed across multiple monitors, Frame
+Locked systems help maintain image continuity to create a virtual
+canvas. Frame Lock is especially critical for stereo viewing, where
+the left and right fields must be in sync across all displays.</p>
+<p>In short, to enable Genlock means to sync to an external signal.
+To enable Frame Lock means to sync 2 or more display devices to a
+signal generated internally by the hardware, and to use both means
+to sync 2 or more display devices to an external signal.</p>
+<p>SWAP SYNC: Swap sync refers to the synchronization of buffer
+swaps of multiple application windows. By means of swap sync,
+applications running on multiple systems can synchronize the
+application buffer swaps between all the systems. In order to work
+across multiple systems, swap sync requires that the systems are
+Frame Locked.</p>
+<p>QUADRO SYNC DEVICE: A Quadro Sync Device refers to a device
+capable of Frame Lock/Genlock. See "Supported Hardware" below.</p>
+<h3>Supported Hardware</h3>
+<p>Frame Lock and Genlock are supported for the following
+hardware:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Quadro Sync II, used in conjunction with a Quadro GP100, Quadro
+P6000, Quadro P5000, or Quadro P4000</p>
+</li>
+<li>
+<p>Quadro Sync, used in conjunction with a Quadro M6000 24GB,
+Quadro M6000, Quadro M5000, Quadro M4000, Quadro K6000, Quadro
+K5200, Quadro K5000, or Quadro K4200</p>
+</li>
+<li>
+<p>Quadro Plex 7000</p>
+</li>
+<li>
+<p>Quadro G-Sync II, used in conjunction with a Quadro 6000 or
+Quadro 5000</p>
+</li>
+</ul>
+</div>
+<p></p>
+<h3>Hardware Setup</h3>
+<p>Before you begin, you should check that your hardware has been
+properly installed. The following steps must be performed while the
+system is off.</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>On a Quadro Sync card with four Sync connectors, connect a
+ribbon cable to any of the four connectors, if none are already
+connected.</p>
+<p>On a Quadro G-Sync II card with two Sync connectors, locate the
+Sync connector labeled "primary". If the associated ribbon cable is
+not already joined to this connector, do so now. If you plan to use
+Frame Lock or Genlock in conjunction with SLI FrameRendering or
+Multi-GPU FrameRendering (see <a href="sli.html" title=
+"Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU FrameRendering">
+Chapter&nbsp;28, <i>Configuring SLI and Multi-GPU
+FrameRendering</i></a>) or other multi-GPU configurations, you
+should connect the Sync connector labeled "secondary" to the second
+GPU. A section at the end of this appendix describes restrictions
+on such setups.</p>
+</li>
+<li>
+<p>Install the Quadro Sync card in any available slot. Note that
+the slot itself is only used for physical mounting, so even a known
+"bad" slot is acceptable. The slot must be close enough to the
+graphics card that the ribbon cable can reach.</p>
+</li>
+<li>
+<p>On a Quadro Sync card with four Sync connectors, external power
+is required. Connect a 6-pin PCIe power cable or a SATA power cable
+to the card. No external power is required for Quadro G-Sync II
+cards with two Frame Lock connectors.</p>
+</li>
+<li>
+<p>Connect the other end of the ribbon cable to the Quadro Sync
+connector on the graphics card.</p>
+<p>On supported Quadro Kepler cards, the Quadro Sync connector is
+identical in appearance to the SLI connector. The ribbon cable from
+the Quadro Sync card should be connected to the connector labeled
+"SDI | SYNC". If the ribbon cable is connected to the SLI
+connector, the GPU will not be able to synchronize with the Quadro
+Sync card.</p>
+</li>
+</ol>
+</div>
+<p>You may now boot the system and begin the software setup of
+Genlock and/or Frame Lock. These instructions assume that you have
+already successfully installed the NVIDIA Accelerated Linux Driver
+Set. If you have not done so, see <a href="installdriver.html"
+title=
+"Chapter&nbsp;4.&nbsp;Installing the NVIDIA Driver">Chapter&nbsp;4,
+<i>Installing the NVIDIA Driver</i></a>.</p>
+<h3>Configuration with nvidia-settings GUI</h3>
+<p>Frame Lock and Genlock are configured through the
+nvidia-settings utility. See the <code class=
+"filename">nvidia-settings(1)</code> man page, and the
+nvidia-settings online help (click the "Help" button in the lower
+right corner of the interface for per-page help information).</p>
+<p>From the nvidia-settings Frame Lock panel, you may control the
+addition of Quadro Sync (and display) devices to the Frame
+Lock/Genlock group, monitor the status of that group, and
+enable/disable Frame Lock and Genlock.</p>
+<p>After the system has booted and X Windows has been started, run
+nvidia-settings as</p>
+<pre class="screen">
+    % nvidia-settings
+</pre>
+<p>You may wish to start this utility before continuing, as we
+refer to it frequently in the subsequent discussion.</p>
+<p>The setup of Genlock and Frame Lock are described separately. We
+then describe the use of Genlock and Frame Lock together.</p>
+<h3>Genlock Setup</h3>
+<p>After the system has been booted, connect the external signal to
+the house sync connector (the BNC connector) on either the graphics
+card or the Quadro Sync card. There is a status LED next to the
+connector. A solid red or unlit LED indicates that the hardware
+cannot detect the timing signal. A green LED indicates that the
+hardware is detecting a timing signal. An occasional red flash is
+okay. On a Quadro Sync card with four Sync connectors, a blinking
+green LED indicates that the server is locked to the house sync.
+The Quadro Sync device (graphics card or Quadro Sync card) will
+need to be configured correctly for the signal to be detected.</p>
+<p>In the Frame Lock panel of the nvidia-settings interface, add
+the X Server that contains the display and Quadro Sync devices that
+you would like to sync to this external source by clicking the "Add
+Devices..." button. An X Server is typically specified in the
+format <code class="computeroutput">system:m</code>, e.g.:</p>
+<pre class="screen">
+    mycomputer.domain.com:0
+</pre>
+<p>or</p>
+<pre class="screen">
+    localhost:0
+</pre>
+<p>After adding an X Server, rows will appear in the "Quadro Sync
+Devices" section on the Frame Lock panel that displays relevant
+status information about the Quadro Sync devices, GPUs attached to
+those Quadro Sync devices and the display devices driven by those
+GPUs. In particular, the Quadro Sync rows will display the server
+name and Quadro Sync device number along with "Receiving" LED,
+"Rate", "House" LED, "Port 0"/"Port 1" Images, and "Delay"
+information. The GPU rows will display the GPU product name
+information along with the GPU ID for the server. The Display
+Device rows will show the display device name and device type along
+with server/client check boxes, refresh rate, "Timing" LED and
+"Stereo" LED.</p>
+<p>Once the Quadro Sync and display devices have been added to the
+Frame Lock/Genlock group, a Server display device will need to be
+selected. This is done by selecting the "Server" check box of the
+desired display device.</p>
+<p>If you are using a Quadro Sync card, you must also click the
+"Use House Sync if Present" check box. To enable synchronization of
+this Quadro Sync device to the external source, click the "Enable
+Frame Lock" button. The display device(s) may take a moment to
+stabilize. If it does not stabilize, you may have selected a
+synchronization signal that the system cannot support. You should
+disable synchronization by clicking the "Disable Frame Lock" button
+and check the external sync signal.</p>
+<p>Modifications to Genlock settings (e.g., "Use House Sync if
+Present", "Add Devices...") must be done while synchronization is
+disabled.</p>
+<p><a name="framelocksetup" id="framelocksetup"></a></p>
+<h3>Frame Lock Setup</h3>
+<p>Frame Lock is supported across an arbitrary number of Quadro
+Sync systems, although mixing different generations of Quadro Sync
+products in the same Frame Lock group is not supported.
+Additionally, each system to be included in the Frame Lock group
+must be configured with identical mode timings. See <a href=
+"programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">Chapter&nbsp;18,
+<i>Programming Modes</i></a> for information on mode timings.</p>
+<p>Connect the systems through their RJ45 ports using standard CAT5
+patch cables. These ports are located on the Frame Lock card.
+<span class="emphasis"><em>Do not connect a Frame Lock port to an
+ethernet card or hub. Doing so may permanently damage the
+hardware</em></span>. The connections should be made in a
+daisy-chain fashion: each card has two RJ45 ports, call them 1 and
+2. Connect port 1 of system A to port 2 of system B, connect port 1
+of system B to port 2 of system C, etc. Note that you will always
+have two empty ports in your Frame Lock group.</p>
+<p>The ports self-configure as inputs or outputs once Frame Lock is
+enabled. Each port has a yellow and a green LED that reflect this
+state. A flashing yellow LED indicates an output and a flashing
+green LED indicates an input. On a Quadro G-Sync II card with two
+Sync connectors, a solid green LED indicates that the port has not
+yet been configured; on a Quadro Sync card with four Sync
+connectors, a solid green LED indicates that the port has been
+configured as an input, but no sync pulse is detected, and a solid
+yellow LED means the card is configured as an output, but no sync
+is being transmitted.</p>
+<p>In the Frame Lock panel of the nvidia-settings interface, add
+the X server that contains the display devices that you would like
+to include in the Frame Lock group by clicking the "Add Devices..."
+button (see the description for adding display devices in the
+previous section on GENLOCK SETUP. Like the Genlock status
+indicators, the "Port 0" and "Port 1" columns in the table on the
+Frame Lock panel contain indicators whose states mirror the states
+of the physical LEDs on the RJ45 ports. Thus, you may monitor the
+status of these ports from the software interface.</p>
+<p>Any X Server can be added to the Frame Lock group, provided
+that</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>The system supporting the X Server is configured to support
+Frame Lock and is connected via RJ45 cable to the other systems in
+the Frame Lock group.</p>
+</li>
+<li>
+<p>The system driving nvidia-settings can communicate with the X
+server that is to be included for Frame Lock. This means that
+either the server must be listening over TCP and the system's
+firewall is permissive enough to allow remote X11 display
+connections, or that you've configured an alternative mechanism
+such as ssh(1) forwarding between the machines.</p>
+<p>For the case of listening over TCP, verify that the "-nolisten
+tcp" commandline option was not used when starting the X server.
+You can find the X server commandline with a command such as</p>
+<pre class="screen">
+    % ps ax | grep X
+</pre>
+<p>If "-nolisten tcp" is on the X server commandline, consult your
+Linux distribution documentation for details on how to properly
+remove this option. For example, distributions configured to use
+the GDM login manager may need to set "DisallowTCP=false" in the
+GDM configuration file (e.g., /etc/gdm/custom.conf,
+/etc/X11/gdm/gdm.conf, or /etc/gdb/gdb.conf; the exact
+configuration file name and path varies by the distribution). Or,
+distributions configured to use the KDM login manager may have the
+line</p>
+<pre class="screen">
+    ServerArgsLocal=-nolisten tcp
+</pre>
+<p>in their kdm file (e.g., /etc/kde3/kdm/kdmrc). This line can be
+commented out by prepending with "#". Starting with version 1.17,
+the X.org X server no longer allows listening over TCP by default
+when built with its default build configuration options. On newer X
+servers that were not built with --enable-listen-tcp at build
+configuration time, in addition to ensuring that "-nolisten tcp" is
+not set on the X server commandline, you will also need to ensure
+that "-listen tcp" is explicitly set.</p>
+</li>
+<li>
+<p>The system driving nvidia-settings can locate and has display
+privileges on the X server that is to be included for Frame
+Lock.</p>
+<p>A system can gain display privileges on a remote system by
+executing</p>
+<pre class="screen">
+    % xhost +
+</pre>
+<p>on the remote system. See the xhost(1) man page for details.</p>
+</li>
+</ol>
+</div>
+<p>Typically, Frame Lock is controlled through one of the systems
+that will be included in the Frame Lock group. While this is not a
+requirement, note that nvidia-settings will only display the Frame
+Lock panel when running on an X server that supports Frame
+Lock.</p>
+<p>To enable synchronization on these display devices, click the
+"Enable Frame Lock" button. The screens may take a moment to
+stabilize. If they do not stabilize, you may have selected mode
+timings that one or more of the systems cannot support. In this
+case you should disable synchronization by clicking the "Disable
+Frame Lock" button and refer to <a href="programmingmodes.html"
+title="Chapter&nbsp;18.&nbsp;Programming Modes">Chapter&nbsp;18,
+<i>Programming Modes</i></a> for information on mode timings.</p>
+<p>Modifications to Frame Lock settings (e.g. "Add/Remove
+Devices...") must be done while synchronization is disabled.</p>
+<p>nvidia-settings will not automatically enable Frame Lock via the
+nvidia-settings.rc file. To enable Frame Lock when starting the X
+server, a line such as the following can be added to the
+<code class="filename">~/.xinitrc</code> file:</p>
+<pre class="screen">
+    # nvidia-settings -a [gpu:0]/FrameLockEnable=1
+</pre>
+<p></p>
+<h3>Frame Lock + Genlock</h3>
+<p>The use of Frame Lock and Genlock together is a simple extension
+of the above instructions for using them separately. You should
+first follow the instructions for <a href=
+"framelock.html#framelocksetup" title="Frame Lock Setup">Frame Lock
+Setup</a>, and then to one of the systems that will be included in
+the Frame Lock group, attach an external sync source. In order to
+sync the Frame Lock group to this single external source, you must
+select a display device driven by the GPU connected to the Quadro
+Sync card (On Quadro G-Sync II cards, this display device must be
+connected to the primary connector) that is connected to the
+external source to be the signal server for the group. This is done
+by selecting the check box labeled "Server" of the tree on the
+Frame Lock panel in nvidia-settings. If you are using a Quadro Sync
+based Frame Lock group, you must also select the "Use House Sync if
+Present" check box. Enable synchronization by clicking the "Enable
+Frame Lock" button. As with other Frame Lock/Genlock controls, you
+must select the signal server while synchronization is
+disabled.</p>
+<h3>GPU Status LEDs on the Quadro Sync Card</h3>
+<p>In addition to the graphical indicators in the control panel
+described in the Genlock Setup section above, the Quadro Sync card
+for Quadro Kepler GPUs has two status LEDs for each of the four
+ports:</p>
+<p>A sync status LED indicates the sync status for each port. An
+unlit LED indicates that no GPU is connected to the port; a steady
+amber LED indicates that a GPU is connected, but not synced to any
+sync source; and a steady green LED indicates that a GPU is
+connected and in sync with an internal or external sync source. A
+flashing LED indicates that a connected GPU is in the process of
+locking to a sync source; flashing green indicates that the sync
+source's timings are within a reasonable range, and flashing amber
+indicates that the timings are out of range, and the GPU may be
+unable to lock to the sync source.</p>
+<p>A stereo status LED indicates the stereo sync status for each
+port. The LED will be lit steady amber when the card first powers
+on. An unlit LED indicates that stereo is not active, or that no
+GPU is connected; a blinking green LED indicates that stereo is
+active, but not locked to the stereo master; and a steady green LED
+indicates that stereo is active and locked to the stereo
+master.</p>
+<h3>Configuration with nvidia-settings command line</h3>
+<p>Frame Lock may also be configured through the nvidia-settings
+command line. This method of configuring Frame Lock may be useful
+in a scripted environment to automate the setup process. (Note that
+the examples listed below depend on the actual hardware
+configuration and as such may not work as-is.)</p>
+<p>To properly configure Frame Lock, the following steps should be
+completed:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Make sure Frame Lock Sync is disabled on all GPUs.</p>
+</li>
+<li>
+<p>Make sure all display devices that are to be Frame Locked have
+the same refresh rate.</p>
+</li>
+<li>
+<p>Configure which (display/GPU) device should be the master.</p>
+</li>
+<li>
+<p>Configure house sync (if applicable).</p>
+</li>
+<li>
+<p>Configure the slave display devices.</p>
+</li>
+<li>
+<p>Enable Frame Lock sync on the master GPU.</p>
+</li>
+<li>
+<p>Enable Frame Lock sync on the slave GPUs.</p>
+</li>
+<li>
+<p>Toggle the test signal on the master GPU (for testing the
+hardware connectivity.)</p>
+</li>
+</ol>
+</div>
+<p></p>
+<p>For a full list of the nvidia-settings Frame Lock attributes,
+please see the <code class="filename">nvidia-settings(1)</code> man
+page. Examples:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>1 System, 1 Frame Lock board, 1 GPU, and 1 display device
+syncing to the house signal:</p>
+<pre class="screen">
+  # - Make sure Frame Lock sync is disabled
+  nvidia-settings -a [gpu:0]/FrameLockEnable=0
+  nvidia-settings -q [gpu:0]/FrameLockEnable
+
+  # - Enable use of house sync signal
+  nvidia-settings -a [framelock:0]/FrameLockUseHouseSync=1
+
+  # - Configure the house sync signal video mode
+  nvidia-settings -a [framelock:0]/FrameLockVideoMode=0
+
+  # - Query the enabled displays on the gpu(s)
+  nvidia-settings -V all -q gpus
+
+  # - Check the refresh rate is as desired
+  nvidia-settings -q [dpy:DVI-I-0]/RefreshRate
+
+  # - Query the valid Frame Lock configurations for the display device
+  nvidia-settings -q [dpy:DVI-I-0]/FrameLockDisplayConfig
+
+  # - Set DVI-I-0 as a slave (this display will be synchronized to the
+  #   input signal)
+  #
+  # NOTE: FrameLockDisplayConfig takes one of three values:
+  #       0 (disabled), 1 (client), 2 (server).
+  nvidia-settings -a [dpy:DVI-I-0]/FrameLockDisplayConfig=0
+
+  # - Enable Frame Lock
+  nvidia-settings -a [gpu:0]/FrameLockEnable=1
+
+  # - Toggle the test signal
+  nvidia-settings -a [gpu:0]/FrameLockTestSignal=1
+  nvidia-settings -a [gpu:0]/FrameLockTestSignal=0
+</pre>
+<p></p>
+</li>
+<li>
+<p>2 Systems, each with 2 GPUs, 1 Frame Lock board and 1 display
+device per GPU syncing from the first system's first display
+device:</p>
+<pre class="screen">
+  # - Make sure Frame Lock sync is disabled on all gpus
+  nvidia-settings -a myserver:0[gpu]/FrameLockEnable=0
+  nvidia-settings -a myslave1:0[gpu]/FrameLockEnable=0
+
+  # - Disable the house sync signal on the master device
+  nvidia-settings -a myserver:0[framelock:0]/FrameLockUseHouseSync=0
+
+  # - Query the enabled displays on the GPUs
+  nvidia-settings -c myserver:0 -q gpus
+  nvidia-settings -c myslave1:0 -q gpus
+
+  # - Check the refresh rate is the same for all displays
+  nvidia-settings -q myserver:0[dpy]/RefreshRate
+  nvidia-settings -q myslave1:0[dpy]/RefreshRate
+
+  # - Query the valid Frame Lock configurations for the display devices
+  nvidia-settings -q myserver:0[dpy]/FrameLockDisplayConfig
+  nvidia-settings -q myslave1:0[dpy]/FrameLockDisplayConfig
+
+  # - Set the server display device
+  nvidia-settings -a myserver:0[dpy:DVI-I-0]/FrameLockDisplayConfig=2
+
+  # - Set the slave display devices
+  nvidia-settings -a myserver:0[dpy:DVI-I-1]/FrameLockDisplayConfig=1
+  nvidia-settings -a myslave1:0[dpy]/FrameLockDisplayConfig=1
+
+  # - Enable Frame Lock on server
+  nvidia-settings -a myserver:0[gpu:0]/FrameLockEnable=1
+
+  # - Enable Frame Lock on slave devices
+  nvidia-settings -a myserver:0[gpu:1]/FrameLockEnable=1
+  nvidia-settings -a myslave1:0[gpu]/FrameLockEnable=1
+
+  # - Toggle the test signal (on the master GPU)
+  nvidia-settings -a myserver:0[gpu:0]/FrameLockTestSignal=1
+  nvidia-settings -a myserver:0[gpu:0]/FrameLockTestSignal=0
+</pre>
+<p></p>
+</li>
+<li>
+<p>1 System, 4 GPUs, 2 Frame Lock boards and 2 display devices per
+GPU syncing from the first GPU's display device:</p>
+<pre class="screen">
+  # - Make sure Frame Lock sync is disabled
+  nvidia-settings -a [gpu]/FrameLockEnable=0
+
+  # - Disable the house sync signal on the master device
+  nvidia-settings -a [framelock:0]/FrameLockUseHouseSync=0
+
+  # - Query the enabled displays on the GPUs
+  nvidia-settings -V all -q gpus
+
+  # - Check the refresh rate is the same for all displays
+  nvidia-settings -q [dpy]/RefreshRate
+
+  # - Query the valid Frame Lock configurations for the display devices
+  nvidia-settings -q [dpy]/FrameLockDisplayConfig
+  
+  # - Set the master display device
+  nvidia-settings -a [gpu:0.dpy:DVI-I-0]/FrameLockDisplayConfig=2
+
+  # - Set the slave display devices
+  nvidia-settings -a [gpu:0.dpy:DVI-I-1]/FrameLockDisplayConfig=1
+  nvidia-settings -a [gpu:1.dpy]/FrameLockDisplayConfig=1
+  nvidia-settings -a [gpu:2.dpy]/FrameLockDisplayConfig=1
+  nvidia-settings -a [gpu:3.dpy]/FrameLockDisplayConfig=1
+
+  # - Enable Frame Lock on master GPU
+  nvidia-settings -a [gpu:0]/FrameLockEnable=1
+
+  # - Enable Frame Lock on slave devices
+  nvidia-settings -a [gpu:1]/FrameLockEnable=1
+  nvidia-settings -a [gpu:2]/FrameLockEnable=1
+  nvidia-settings -a [gpu:3]/FrameLockEnable=1
+
+  # - Toggle the test signal
+  nvidia-settings -a [gpu:0]/FrameLockTestSignal=1
+  nvidia-settings -a [gpu:0]/FrameLockTestSignal=0
+</pre>
+<p></p>
+</li>
+</ol>
+</div>
+<p></p>
+<h3>Leveraging Frame Lock/Genlock in OpenGL</h3>
+<p>With the GLX_NV_swap_group extension, OpenGL applications can be
+implemented to join a group of applications within a system for
+local swap sync, and bind the group to a barrier for swap sync
+across a Frame Lock group. A universal frame counter is also
+provided to promote synchronization across applications.</p>
+<h3>Frame Lock Restrictions:</h3>
+<p>The following restrictions must be met for enabling Frame
+Lock:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>All display devices set as client in a Frame Lock group must
+have the same mode timings as the server (master) display device.
+If a House Sync signal is used (instead of internal timings), all
+client display devices must be set to have the same refresh rate as
+the incoming house sync signal.</p>
+</li>
+<li>
+<p>All X Screens (driving the selected client/server display
+devices) must have the same stereo setting. See the <a href=
+"xconfigoptions.html#Stereo">Stereo</a> X configuration option for
+instructions on how to set the stereo X option.</p>
+</li>
+<li>
+<p>The Frame Lock server (master) display device must be on a GPU
+on the primary connector connected to a Quadro G-Sync II device.
+This restriction does not apply to Quadro Sync devices with four
+Sync connectors.</p>
+</li>
+<li>
+<p>If connecting a single GPU to a Quadro G-Sync II device, the
+primary connector must be used. On a Quadro Sync device with four
+Sync connectors, any connector may be used.</p>
+</li>
+<li>
+<p>In configurations with more than one display device per GPU, we
+recommend enabling Frame Lock on all display devices on those
+GPUs.</p>
+</li>
+<li>
+<p>Virtual terminal switching or mode switching will disable Frame
+Lock on the display device. Note that the glXQueryFrameCountNV
+entry point (provided by the GLX_NV_swap_group extension) will only
+provide incrementing numbers while Frame Lock is enabled.
+Therefore, applications that use glXQueryFrameCountNV to control
+animation will appear to stop animating while Frame Lock is
+disabled.</p>
+</li>
+</ol>
+</div>
+<p></p>
+<h3>Supported Frame Lock Configurations:</h3>
+<p>The following configurations are currently supported:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Basic Frame Lock: Single GPU, Single X Screen, Single Display
+Device with or without OpenGL applications that make use of
+Quad-Buffered Stereo and/or the GLX_NV_swap_group extension.</p>
+</li>
+<li>
+<p>Frame Lock + TwinView: Single GPU, Single X Screen, Multiple
+Display Devices with or without OpenGL applications that make use
+of Quad-Buffered Stereo and/or the GLX_NV_swap_group extension.</p>
+</li>
+<li>
+<p>Frame Lock + Xinerama: 1 or more GPU(s), Multiple X Screens,
+Multiple Display Devices with or without OpenGL applications that
+make use of Quad-Buffered Stereo and/or the GLX_NV_swap_group
+extension.</p>
+</li>
+<li>
+<p>Frame Lock + TwinView + Xinerama: 1 or more GPU(s), Multiple X
+Screens, Multiple Display Devices with or without OpenGL
+applications that make use of Quad-Buffered Stereo and/or the
+GLX_NV_swap_group extension.</p>
+</li>
+<li>
+<p>Frame Lock + SLI SFR, AFR, or AA: 2 GPUs, Single X Screen,
+Single Display Device with either OpenGL applications that make use
+of Quad-Buffered Stereo or the GLX_NV_swap_group extension. Note
+that for Frame Lock + SLI Frame Rendering applications that make
+use of both Quad-Buffered Stereo and the GLX_NV_swap_group
+extension are not supported. Note that only 2-GPU SLI
+configurations are currently supported.</p>
+</li>
+<li>
+<p>Frame Lock + Multi-GPU SFR, AFR, or AA: 2 GPUs, Single X Screen,
+Single Display Device with either OpenGL applications that make use
+of Quad-Buffered Stereo or the GLX_NV_swap_group extension. Note
+that for Frame Lock + Multi-GPU Frame Rendering applications that
+make use of both Quad-Buffered Stereo and the GLX_NV_swap_group
+extension are not supported.</p>
+</li>
+</ol>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"sli.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"sdi.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU
+FrameRendering&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;30.&nbsp;Configuring SDI Video Output</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

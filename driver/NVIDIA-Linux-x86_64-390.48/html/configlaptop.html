@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;16.&nbsp;Configuring a Notebook</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="xrandrextension.html" title=
+"Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate Extension">
+<link rel="next" href="optimus.html" title=
+"Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with Optimus Laptops">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;16.&nbsp;Configuring a
+Notebook</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"xrandrextension.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"optimus.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="configlaptop" id=
+"configlaptop"></a>Chapter&nbsp;16.&nbsp;Configuring a
+Notebook</h2>
+</div>
+</div>
+</div>
+<h3>Installation and configuration</h3>
+<p>Installation and configuration of the NVIDIA Linux Driver Set on
+a notebook is the same as for any desktop environment, with a few
+additions, as described below.</p>
+<h3>Power Management</h3>
+<p>All notebook NVIDIA GPUs support power management, both S3 (also
+known as "Standby" or "Suspend to RAM") and S4 (also known as
+"Hibernate", "Suspend to Disk" or "SWSUSP"). Power management is
+system-specific and is dependent upon all the components in the
+system; some systems may be more problematic than other
+systems.</p>
+<p>Most recent notebook NVIDIA GPUs also support PowerMizer, which
+monitors application work load to adjust system parameters to
+deliver the optimal balance of performance and battery life.
+However, PowerMizer is only enabled by default on some notebooks.
+Please see the known issues below for more details.</p>
+<h3>Hotkey Switching of Display Devices</h3>
+<p>Most laptops generate keyboard events when the display change
+hotkey is pressed. On some laptops, these are simply normal
+keyboard keys. On others, they generate ACPI events that may be
+translated into keyboard events by other system components.</p>
+<p>The NVIDIA driver does not handle ACPI display change hotkeys
+itself. Instead, it is expected for desktop environments to listen
+for these key-press events and respond by reconfiguring the display
+devices as necessary.</p>
+<h3>Docking Events</h3>
+<p>All notebook NVIDIA GPUs support docking, however support may be
+limited by the OS or system. There are three types of notebook
+docking (hot, warm, and cold), which refer to the state of the
+system when the docking event occurs. hot refers to a powered on
+system with a live desktop, warm refers to a system that has
+entered a suspended power management state, and cold refers to a
+system that has been powered off. Only warm and cold docking are
+supported by the NVIDIA driver.</p>
+<h3>Known Notebook Issues</h3>
+<p>There are a few known issues associated with notebooks:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>In many cases, suspending and/or resuming will fail. As
+mentioned above, this functionality is very system-specific. There
+are still many cases that are problematic. Here are some tips that
+may help:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>In some cases, hibernation can have bad interactions with the
+PCI Express bus clocks, which can lead to system hangs when
+entering hibernation. This issue is still being investigated, but a
+known workaround is to leave an OpenGL application running when
+hibernating.</p>
+</li>
+<li>
+<p>On notebooks with relatively little system memory, repetitive
+hibernation attempts may fail due to insufficient free memory. This
+problem can be avoided by running `echo 0 &gt;
+/sys/power/image_size`, which reduces the image size to be stored
+during hibernation.</p>
+</li>
+<li>
+<p>Some distributions use a tool called vbetool to save and restore
+VGA adapter state. This tool is incompatible with NVIDIA GPUs'
+Video BIOSes and is likely to lead to problems restoring the GPU
+and its state. Disabling calls to this tool in your distribution's
+init scripts may improve power management reliability.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+<li>
+<p>On some notebooks, PowerMizer is not enabled by default. This
+issue is being investigated, and there is no known workaround.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"xrandrextension.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"optimus.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate
+Extension&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;17.&nbsp;Using the NVIDIA Driver with Optimus
+Laptops</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

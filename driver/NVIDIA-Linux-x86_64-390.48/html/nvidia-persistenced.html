@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;27.&nbsp;Using the nvidia-persistenced
+Utility</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="nvidia-debugdump.html" title=
+"Chapter&nbsp;26.&nbsp;Using the nvidia-debugdump Utility">
+<link rel="next" href="sli.html" title=
+"Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU FrameRendering">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;27.&nbsp;Using the
+nvidia-persistenced Utility</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"nvidia-debugdump.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"sli.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="nvidia-persistenced" id=
+"nvidia-persistenced"></a>Chapter&nbsp;27.&nbsp;Using the
+nvidia-persistenced Utility</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Background46f43">Background</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Usage01b5d">Usage</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#Troubleshootingc8305">Troubleshooting</a></span></dt>
+<dt><span class="section"><a href=
+"nvidia-persistenced.html#NotesForPackage3f7a9">Notes for Package
+Maintainers</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="Background46f43" id=
+"Background46f43"></a>Background</h2>
+</div>
+</div>
+</div>
+<p>A Linux daemon utility, <span><strong class=
+"command">nvidia-persistenced</strong></span>, addresses an
+undesirable side effect of the NVIDIA kernel driver behavior in
+certain computing environments. Whenever the NVIDIA device
+resources are no longer in use, the NVIDIA kernel driver will tear
+down the device state. Normally, this is the intended behavior of
+the device driver, but for some applications, the latencies
+incurred by repetitive device initialization can significantly
+impact performance.</p>
+<p>To avoid this behavior, <span><strong class=
+"command">nvidia-persistenced</strong></span> provides a
+configuration option called "persistence mode" that can be set by
+NVIDIA management software, such as <span><strong class=
+"command">nvidia-smi</strong></span>. When persistence mode is
+enabled, the daemon holds the NVIDIA character device files open,
+preventing the NVIDIA kernel driver from tearing down device state
+when no other process is using the device. This utility does not
+actually use any device resources itself - it will simply sleep
+while maintaining a reference to the NVIDIA device state.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="Usage01b5d" id=
+"Usage01b5d"></a>Usage</h2>
+</div>
+</div>
+</div>
+<p><span><strong class=
+"command">nvidia-persistenced</strong></span> is included with the
+NVIDIA Linux GPU driver. After installing the driver, this utility
+may be installed to run on system startup or manually with the
+command:</p>
+<pre class="screen">
+    # nvidia-persistenced
+</pre>
+<p>in a terminal window. Note that the daemon may require root
+privileges to create its runtime data directory,
+/var/run/nvidia-persistenced/, or it may otherwise need to be run
+as a user that has access to that directory.</p>
+<p>Detailed help and usage information is available primarily via
+the <span><strong class=
+"command">nvidia-persistenced</strong></span> man page, as well as
+the <span><strong class="command">--help</strong></span> command
+line option.</p>
+<p>The source code to nvidia-persistenced is released under the MIT
+license and is available at: <a href=
+"https://download.nvidia.com/XFree86/nvidia-persistenced/" target=
+"_top">https://download.nvidia.com/XFree86/nvidia-persistenced/</a>.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"Troubleshootingc8305" id=
+"Troubleshootingc8305"></a>Troubleshooting</h2>
+</div>
+</div>
+</div>
+<p>If you have difficulty getting <span><strong class=
+"command">nvidia-persistenced</strong></span> to work as expected,
+the best way to gather information as to what is happening is to
+run the daemon with the <span><strong class=
+"command">--verbose</strong></span> option.</p>
+<p><span><strong class=
+"command">nvidia-persistenced</strong></span> detaches from its
+parent process very early on, and as such only invalid command line
+argument errors will be printed in the terminal window. All other
+output, including verbose informational messages, are sent to the
+syslog interface instead. Consult your distribution's documentation
+for accessing syslog output.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"NotesForPackage3f7a9" id="NotesForPackage3f7a9"></a>Notes for
+Package Maintainers</h2>
+</div>
+</div>
+</div>
+<p>The daemon utility <span><strong class=
+"command">nvidia-persistenced</strong></span> is installed by the
+NVIDIA Linux GPU driver installer, but it is not installed to run
+on system startup. Due to the wide variety of init systems used by
+the various Linux distributions that the NVIDIA Linux GPU driver
+supports, we request that package maintainers for those
+distributions provide the packaging necessary to integrate well
+with their platform.</p>
+<p>NVIDIA provides sample init scripts for some common init systems
+in
+/usr/share/doc/NVIDIA_GLX-1.0/sample/nvidia-persistenced-init.tar.bz2
+to aid in installation of the utility.</p>
+<p><span><strong class=
+"command">nvidia-persistenced</strong></span> is intended to be run
+as a daemon from system initialization, and is generally designed
+as a tool for compute-only platforms where the NVIDIA device is not
+used to display a graphical user interface. As such, depending on
+how your package is typically used, it may not be necessary to
+install the daemon to run on system initialization.</p>
+<p>If <span><strong class=
+"command">nvidia-persistenced</strong></span> is packaged to run on
+system initialization, the package installation, init script or
+system management utility that runs the daemon should provide the
+following:</p>
+<div class="variablelist">
+<dl>
+<dt><span class="term">A non-root user to run as</span></dt>
+<dd>
+<p>It is strongly recommended, though not required, that the daemon
+be run as a non-root user for security purposes.</p>
+<p>The daemon may either be started with root privileges and the
+<span><strong class="command">--user</strong></span> option, or it
+may be run directly as the non-root user.</p>
+</dd>
+<dt><span class="term">Runtime access to
+/var/run/nvidia-persistenced/</span></dt>
+<dd>
+<p>The daemon must be able to create its socket and PID file in
+this directory.</p>
+<p>If the daemon is run as root, it will create this directory
+itself and remove it when it shuts down cleanly.</p>
+<p>If the daemon is run as a non-root user, this directory must
+already exist, and the daemon will not attempt to remove it when it
+shuts down cleanly.</p>
+<p>If the daemon is started as root, but provided a non-root user
+to run as via the <span><strong class=
+"command">--user</strong></span> option, the daemon will create
+this directory itself, <span><strong class=
+"command">chown</strong></span> it to the provided user, and
+<span><strong class="command">setuid</strong></span> to the
+provided user to drop root privileges. The daemon may be unable to
+remove this directory when it shuts down cleanly, depending on the
+privileges of the provided user.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"nvidia-debugdump.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"sli.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;26.&nbsp;Using the nvidia-debugdump Utility&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU
+FrameRendering</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

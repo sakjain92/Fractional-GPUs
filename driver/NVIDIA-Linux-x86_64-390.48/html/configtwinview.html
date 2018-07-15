@@ -1,0 +1,740 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices
+on One X Screen</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="openglenvvariables.html" title=
+"Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable Settings">
+<link rel="next" href="xineramaglx.html" title=
+"Chapter&nbsp;13.&nbsp;Configuring GLX in Xinerama">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;12.&nbsp;Configuring
+Multiple Display Devices on One X Screen</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"openglenvvariables.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"xineramaglx.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="configtwinview" id=
+"configtwinview"></a>Chapter&nbsp;12.&nbsp;Configuring Multiple
+Display Devices on One X Screen</h2>
+</div>
+</div>
+</div>
+<p>Multiple display devices (digital flat panels, CRTs, and TVs)
+can display the contents of a single X screen in any arbitrary
+configuration. Configuring multiple display devices on a single X
+screen has several distinct advantages over other techniques (such
+as Xinerama):</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>A single X screen is used. The NVIDIA driver conceals all
+information about multiple display devices from the X server; as
+far as X is concerned, there is only one screen.</p>
+</li>
+<li>
+<p>Both display devices share one frame buffer. Thus, all the
+functionality present on a single display (e.g., accelerated
+OpenGL) is available with multiple display devices.</p>
+</li>
+<li>
+<p>No additional overhead is needed to emulate having a single
+desktop.</p>
+</li>
+</ul>
+</div>
+<p>If you are interested in using each display device as a separate
+X screen, see <a href="configmultxscreens.html" title=
+"Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One Card">Chapter&nbsp;14,
+<i>Configuring Multiple X Screens on One Card</i></a>.</p>
+<h3>Relevant X Configuration Options</h3>
+<p>When the NVIDIA X driver starts, by default it will enable as
+many display devices as are connected and as the GPU supports
+driving simultaneously. Most NVIDIA GPUs based on the Kepler
+architecture, or newer, support driving up to four display devices
+simultaneously. Most NVIDIA GPUs older than Kepler support driving
+up to two display devices simultaneously.</p>
+<p>If multiple X screens are configured on the GPU, the NVIDIA X
+driver will attempt to reserve display devices and GPU resources
+for those other X screens (honoring the "UseDisplayDevice" and
+"MetaModes" X configuration options of each X screen) and then
+allocate all remaining resources to the first X screen configured
+on the GPU.</p>
+<p>There are several X configuration options that influence how
+multiple display devices are used by an X screen:</p>
+<pre class="screen">
+    Option "MetaModes"                "&lt;list of MetaModes&gt;"
+
+    Option "HorizSync"                "&lt;hsync range(s)&gt;"
+    Option "VertRefresh"              "&lt;vrefresh range(s)&gt;"
+
+    Option "MetaModeOrientation"      "&lt;relationship of head 1 to head 0&gt;"
+    Option "ConnectedMonitor"         "&lt;list of connected display devices&gt;"
+</pre>
+<p>See detailed descriptions of each option below.</p>
+<h3>Detailed Description of Options</h3>
+<div class="variablelist">
+<dl>
+<dt><span class="term">HorizSync,</span> <span class=
+"term">VertRefresh</span></dt>
+<dd>
+<p>With these options, you can specify a semicolon-separated list
+of frequency ranges, each optionally prepended with a display
+device name. In addition, if SLI Mosaic mode is enabled, a GPU
+specifier can be used. For example:</p>
+<pre class="screen">
+    Option "HorizSync"   "CRT-0: 50-110; DFP-0: 40-70"
+    Option "VertRefresh" "CRT-0: 60-120; GPU-0.DFP-0: 60"
+</pre>
+<p>See <a href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">Appendix&nbsp;C,
+<i>Display Device Names</i></a> on Display Device Names for more
+information.</p>
+<p>These options are normally not needed: by default, the NVIDIA X
+driver retrieves the valid frequency ranges from the display
+device's EDID (see the <a href=
+"xconfigoptions.html#UseEdidFreqs">UseEdidFreqs</a> option). The
+"HorizSync" and "VertRefresh" options override any frequency ranges
+retrieved from the EDID.</p>
+</dd>
+<dt><a name="metamodes" id="metamodes"></a><span class=
+"term">MetaModes</span></dt>
+<dd>
+<p>MetaModes are "containers" that store information about what
+mode should be used on each display device.</p>
+<p>Multiple MetaModes list the combinations of modes and the
+sequence in which they should be used. In MetaMode syntax, modes
+within a MetaMode are comma separated, and multiple MetaModes are
+separated by semicolons. For example:</p>
+<pre class="screen">
+    "&lt;mode name 0&gt;, &lt;mode name 1&gt;; &lt;mode name 2&gt;, &lt;mode name 3&gt;"
+</pre>
+<p>Where &lt;mode name 0&gt; is the name of the mode to be used on
+display device 0 concurrently with &lt;mode name 1&gt; used on
+display device 1. A mode switch will then cause &lt;mode name 2&gt;
+to be used on display device 0 and &lt;mode name 3&gt; to be used
+on display device 1. Here is an example MetaMode:</p>
+<pre class="screen">
+    Option "MetaModes" "1280x1024,1280x1024; 1024x768,1024x768"
+</pre>
+<p>If you want a display device to not be active for a certain
+MetaMode, you can use the mode name "NULL", or simply omit the mode
+name entirely:</p>
+<pre class="screen">
+    "1600x1200, NULL; NULL, 1024x768"
+</pre>
+<p>or</p>
+<pre class="screen">
+    "1600x1200; , 1024x768"
+</pre>
+<p>Optionally, mode names can be followed by offset information to
+control the positioning of the display devices within the virtual
+screen space; e.g.,</p>
+<pre class="screen">
+    "1600x1200 +0+0, 1024x768 +1600+0; ..."
+</pre>
+<p>Offset descriptions follow the conventions used in the X
+"-geometry" command line option; i.e., both positive and negative
+offsets are valid, though negative offsets are only allowed when a
+virtual screen size is explicitly given in the X config file.</p>
+<p>When no offsets are given for a MetaMode, the offsets will be
+computed following the value of the MetaModeOrientation option (see
+below). Note that if offsets are given for any one of the modes in
+a single MetaMode, then offsets will be expected for all modes
+within that single MetaMode; in such a case offsets will be assumed
+to be +0+0 when not given.</p>
+<p>When not explicitly given, the virtual screen size will be
+computed as the bounding box of all MetaMode bounding boxes.
+MetaModes with a bounding box larger than an explicitly given
+virtual screen size will be discarded.</p>
+<p>A MetaMode string can be further modified with a "Panning
+Domain" specification; e.g.,</p>
+<pre class="screen">
+    "1024x768 @1600x1200, 800x600 @1600x1200"
+</pre>
+<p>A panning domain is the area in which a display device's
+viewport will be panned to follow the mouse. Panning actually
+happens on two levels with MetaModes: first, an individual display
+device's viewport will be panned within its panning domain, as long
+as the viewport is contained by the bounding box of the MetaMode.
+Once the mouse leaves the bounding box of the MetaMode, the entire
+MetaMode (i.e., all display devices) will be panned to follow the
+mouse within the virtual screen, unless the "PanAllDisplays" X
+configuration option is disabled. Note that individual display
+devices' panning domains default to being clamped to the position
+of the display devices' viewports, thus the default behavior is
+just that viewports remain "locked" together and only perform the
+second type of panning.</p>
+<p>The most beneficial use of panning domains is probably to
+eliminate dead areas -- regions of the virtual screen that are
+inaccessible due to display devices with different resolutions. For
+example:</p>
+<pre class="screen">
+    "1600x1200, 1024x768"
+</pre>
+<p>produces an inaccessible region below the 1024x768 display.
+Specifying a panning domain for the second display device:</p>
+<pre class="screen">
+    "1600x1200, 1024x768 @1024x1200"
+</pre>
+<p>provides access to that dead area by allowing you to pan the
+1024x768 viewport up and down in the 1024x1200 panning domain.</p>
+<p>Offsets can be used in conjunction with panning domains to
+position the panning domains in the virtual screen space (note that
+the offset describes the panning domain, and only affects the
+viewport in that the viewport must be contained within the panning
+domain). For example, the following describes two modes, each with
+a panning domain width of 1900 pixels, and the second display is
+positioned below the first:</p>
+<pre class="screen">
+    "1600x1200 @1900x1200 +0+0, 1024x768 @1900x768 +0+1200"
+</pre>
+<p>Because it is often unclear which mode within a MetaMode will be
+used on each display device, mode descriptions within a MetaMode
+can be prepended with a display device name. For example:</p>
+<pre class="screen">
+    "CRT-0: 1600x1200,  DFP-0: 1024x768"
+</pre>
+<p>If no MetaMode string is specified, then the X driver uses the
+modes listed in the relevant "Display" subsection, attempting to
+place matching modes on each display device.</p>
+<p>Each mode of the MetaMode may also have extra attributes
+associated with it, specified as a comma-separated list of
+token=value pairs inside curly brackets. The value for each token
+can optionally be enclosed in parentheses, to prevent commas within
+the value from being interpreted as token=value pair separators.
+Currently, the only token that requires a parentheses-enclosed
+value is "Transform".</p>
+<p>The possible tokens within the curly bracket list are:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>"Stereo": possible values are "PassiveLeft" or "PassiveRight".
+When used in conjunction with stereo mode "4", this allows each
+display to be configured independently to show any stereo eye. For
+example:</p>
+<pre class="screen">
+    "CRT-0: 1600x1200 +0+0 { Stereo = PassiveLeft }, CRT-1: 1600x1200 +1600+0 { Stereo=PassiveRight }"
+</pre>
+<p>If the X screen is not configured for stereo mode "4", these
+options are ignored. See the <a href=
+"xconfigoptions.html#Stereo">Stereo</a> X configuration option for
+more details about stereo configurations.</p>
+</li>
+<li>
+<p>"Rotation": this rotates the content of an individual display
+device. Possible values are "0" (with synonyms "no", "off" and
+"normal"), "90" (with synonyms "left" and "CCW"), "180" (with
+synonyms "invert" and "inverted") and "270" (with synonyms "right"
+and "CW"). For example:</p>
+<pre class="screen">
+    "DFP-0: nvidia-auto-select { Rotation=left }, DFP-1: nvidia-auto-select { Rotation=right }"
+</pre>
+<p>Independent rotation configurability of each display device is
+also possible through RandR. See <a href="xrandrextension.html"
+title=
+"Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate Extension">
+Chapter&nbsp;15, <i>Support for the X Resize and Rotate
+Extension</i></a> for details.</p>
+</li>
+<li>
+<p>"Reflection": this reflects the content of an individual display
+device about either the X axis, the Y axis, or both the X and Y
+axes. Possible values are "X", "Y" and "XY". For example:</p>
+<pre class="screen">
+    "DFP-0: nvidia-auto-select { Reflection=X }, DFP-1: nvidia-auto-select"
+</pre>
+<p>Independent reflection configurability of each display device is
+also possible through RandR. See <a href="xrandrextension.html"
+title=
+"Chapter&nbsp;15.&nbsp;Support for the X Resize and Rotate Extension">
+Chapter&nbsp;15, <i>Support for the X Resize and Rotate
+Extension</i></a> for details.</p>
+</li>
+<li>
+<p>"Transform": this is a 3x3 matrix of floating point values that
+defines a transformation from the ViewPortOut for a display device
+to a region within the X screen. This is equivalent to the
+transformation matrix specified through the RandR 1.3
+RRSetCrtcTransform request. As in RandR, the transform is applied
+before any specified rotation and reflection values to compute the
+complete transform.</p>
+<p>The 3x3 matrix is represented in the MetaMode syntax as a
+comma-separated list of nine floating point values, stored in
+row-major order. This is the same as the value passed to the
+xrandr(1) '--transform' command line option.</p>
+<p>Note that the transform value must be enclosed in parentheses,
+so that the commas separating the nine floating point values are
+interpreted correctly.</p>
+<p>For example:</p>
+<pre class="screen">
+    "DFP-0: nvidia-auto-select { Transform=(43.864288330078125, 21.333328247070312, -16384, 0, 43.864288330078125, 0, 0, 0.0321197509765625, 19.190628051757812) }"
+</pre>
+<p></p>
+</li>
+<li>
+<p>"PixelShiftMode": This allows a display to be configured in
+pixel shift mode, in which a display overlays multiple downscaled
+images to simulate a higher effective resolution. This is used in
+certain JVC e-shift projectors. All pixel shift modes require a
+Quadro Kepler or later GPU. Possible values are "4kTopLeft",
+"4kBottomRight", and "8k".</p>
+<p>In 4K pixel shift mode, two cloned displays are configured in
+pixel shift mode, and either display is configured to display
+either the top left or bottom right pixels of every pixel quad.
+Note that the mode timings used by each display are one quarter of
+the resolution read from the X screen and one quarter of the
+effective resolution displayed (e.g., "1920x1080" rather than
+"3840x2160").</p>
+<p>For example, here is the configuration of a 4K pixel shift mode,
+with an effective desktop resolution of 3840x2160:</p>
+<pre class="screen">
+    "DFP-0: 1920x1080 +0+0 { PixelShiftMode = 4kTopLeft, ViewPortIn = 3840x2160 }, DFP-1: 1920x1080 +0+0 { PixelShiftMode = 4kBottomRight, ViewPortIn = 3840x2160 }"
+</pre>
+<p></p>
+<p>In 8K pixel shift mode, the image is downscaled from the
+ViewPortIn resolution to the mode timing resolution, to produce two
+different images: one for the top left pixel of every pixel quad
+and one for the bottom right of every pixel quad. The display
+alternates between the two images each vblank. This requires a
+Quadro graphics card with a 3-pin DIN stereo connector.</p>
+<p>For example, here is the configuration for an 8K pixel shift
+mode, with an effective desktop resolution and refresh rate of
+8192x4800 @30Hz, split across 4 1024x2400@60Hz displays. Note that
+the panning offsets of each display are in X screen (ViewPortIn)
+coordinates:</p>
+<pre class="screen">
+    "DFP-0: 1024x2400 +0+0 { PixelShiftMode=8k, ViewPortIn = 2048x4800 }, DFP-1: 1024x2400 +2048+0 { PixelShiftMode=8k, ViewPortIn = 2048x4800 }, DFP-2: 1024x2400 +4096+0 { PixelShiftMode=8k, ViewPortIn = 2048x4800 }, DFP-4: 1024x2400 +6144+0 { PixelShiftMode=8k, ViewPortIn = 2048x4800 }"
+</pre>
+<p></p>
+<p>In both examples above, the ViewPortIn is provided here for
+illustrative purposes only. When PixelShiftMode is used, the
+ViewPortIn and ViewPortOut are always inferred from the mode
+timings: the ViewPortOut will match the mode timing resolution,
+which is half the intended resolution. The ViewPortIn will be twice
+the ViewPortOut, in order to achieve the pixel shift effect.</p>
+</li>
+<li>
+<p>"ViewPortOut": this specifies the region within the mode sent to
+the display device that will display pixels from the X screen. The
+region of the mode outside the ViewPortOut will contain black. The
+format is "WIDTH x HEIGHT +X +Y".</p>
+<p>This is useful, for example, for configuring overscan
+compensation. E.g., if the mode sent to the display device is
+1920x1080, to configure a 10 pixel border on all four sides:</p>
+<pre class="screen">
+    "DFP-0: 1920x1080 { ViewPortOut=1900x1060+10+10 }"
+</pre>
+<p>Or, to only display an image in the lower right quarter of the
+1920x1080 mode:</p>
+<pre class="screen">
+    "DFP-0: 1920x1080 { ViewPortOut=960x540+960+540 }"
+</pre>
+<p></p>
+<p>When not specified, the ViewPortOut defaults to the size of the
+mode.</p>
+</li>
+<li>
+<p>"ViewPortIn": this defines the size of the region of the X
+screen which will be displayed within the ViewPortOut. The format
+is "WIDTH x HEIGHT".</p>
+<p>ViewPortIn is useful for configuring scaling between the X
+screen and the display device. For example, to display an 800x600
+region from the X screen on a 1920x1200 mode:</p>
+<pre class="screen">
+    "DFP-0: 1920x1200 { ViewPortIn=800x600 }"
+</pre>
+<p>Or, to display a 2560x1600 region from the X screen on a
+1920x1200 mode:</p>
+<pre class="screen">
+    "DFP-0: 1920x1200 { ViewPortIn=2560x1600 }"
+</pre>
+<p>Or, in conjunction with ViewPortOut, to scale an 800x600 region
+of the X screen within a 1920x1200 mode while preserving the aspect
+ratio:</p>
+<pre class="screen">
+    "DFP-0: 1920x1200 { ViewPortIn=800x600, ViewPortOut=1600x1200+160+0 }"
+</pre>
+<p></p>
+<p>Scaling from ViewPortIn to ViewPortOut is also expressible
+through the "Transform" attribute. In fact, ViewPortIn is just a
+shortcut for populating the transformation matrix. If both
+ViewPortIn and Transform are specified in the MetaMode for a
+display device, ViewPortIn is ignored.</p>
+<p>ViewPortIn is also ignored if PixelShiftMode is enabled, as
+PixelShiftMode implies a transformation of double width and
+height.</p>
+</li>
+<li>
+<p>"PanningTrackingArea": this defines the region of the MetaMode
+inside which cursor movement will influence panning of the display
+device. The format is "WIDTH x HEIGHT + X + Y", to describe the
+size and offset of the region within the X screen. E.g.,</p>
+<pre class="screen">
+    "DFP-0: 1920x1200 +0+0 { PanningTrackingArea = 1920x1200 +0+0 }"
+</pre>
+<p></p>
+<p>If not specified in the MetaMode, this will default to the
+entire X screen. If the <a href=
+"xconfigoptions.html#PanAllDisplays">PanAllDisplays</a> X
+configuration option is explicitly set to False, then
+PanningTrackingArea will default to the panning domain of the
+display device.</p>
+<p>This is equivalent to the panning tracking_area region in the
+RRSetPanning RandR 1.3 protocol request.</p>
+</li>
+<li>
+<p>"PanningBorder": this defines the distances from the edges of
+the ViewPortIn that will activate panning if the pointer hits them.
+If the borders are 0, the display device will pan when the pointer
+hits the edge of the ViewPortIn (the default). If the borders are
+positive, the display device will pan when the pointer gets close
+to the edge of the ViewPortIn. If the borders are negative, the
+display device will pan when the pointer is beyond the edge of the
+ViewPortIn.</p>
+<p>The format is "LeftBorder/TopBorder/RightBorder/BottomBorder".
+E.g.,</p>
+<pre class="screen">
+    "DFP-0: 1920x1200 +0+0 { PanningBorder = 10/10/10/10 }"
+</pre>
+<p></p>
+<p>This is equivalent to the panning border in the RRSetPanning
+RandR 1.3 protocol request.</p>
+</li>
+<li>
+<p>"ForceCompositionPipeline": possible values are "On" or "Off".
+The NVIDIA X driver can use a composition pipeline to apply X
+screen transformations and rotations. "ForceCompositionPipeline"
+can be used to force the use of this pipeline, even when no
+transformations or rotations are applied to the screen.</p>
+</li>
+<li>
+<p>"ForceFullCompositionPipeline": possible values are "On" or
+"Off". This option implicitly enables "ForceCompositionPipeline"
+and additionally makes use of the composition pipeline to apply
+ViewPortOut scaling.</p>
+</li>
+<li>
+<p>"WarpMesh", "BlendTexture", "OffsetTexture": these string
+attributes control the operation of Warp and Blend, an advanced
+transformation feature available on select NVIDIA Quadro GPUs. Warp
+and Blend can adjust a display's geometry (warp) with a greater
+level of control than a simple matrix transformation: for example,
+to facilitate projecting an image onto a non-planar surface, and
+its intensity (blend) per pixel: for example, to seamlessly combine
+images from multiple overlapping projectors into a single large
+image. Each of the "WarpMesh", "BlendTexture", and "OffsetTexture"
+MetaMode tokens can be set to the name of a pixmap which has
+already been bound to a name via the XNVCtrlBindWarpPixmapName()
+NV_CONTROL call. See the <code class=
+"filename">nv-control-warpblend</code> sample application
+distributed with the <span><strong class=
+"command">nvidia-settings</strong></span> source code for a more
+detailed description of the functionality of each of these pixmaps,
+how to lay data out into the pixmaps, and an example implementation
+of an X application that loads and binds pixmaps so that they are
+ready to use in a MetaMode.</p>
+<p>If driving the current mode in the RGB 4:4:4 color space would
+require a pixel clock that exceeds the display's or GPU's
+capabilities, and the display and GPU are capable of driving that
+mode in the YCbCr 4:2:0 color space, then the color space will be
+overridden to YCbCr 4:2:0 and Warp and Blend will be disabled.</p>
+<p>Warp and Blend is not yet supported with the GLX_NV_swap_group
+OpenGL extension.</p>
+</li>
+<li>
+<p>"BlendOrder": Controls the order of warping and blending when
+using Warp and Blend. By default, warping is performed first,
+followed by blending; setting the "BlendOrder" MetaMode token to
+"BlendAfterWarp" will reverse the default order.</p>
+</li>
+<li>
+<p>"ResamplingMethod": Controls the filtering method used to smooth
+the display image when scaling screen transformations (such as a
+WarpMesh or scaling ViewPortOut) are in use. Possible values are
+"Bilinear" (default), "BicubicTriangular", "BicubicBellShaped",
+"BicubicBspline", "BicubicAdaptiveTriangular",
+"BicubicAdaptiveBellShaped", "BicubicAdaptiveBspline", and
+"Nearest".</p>
+<p>Bicubic resampling is only available on NVIDIA Quadro GPUs, and
+is unavailable when a mode requiring a YUV 4:2:0 color space is in
+use. Bicubic resampling is not supported with the GLX_NV_swap_group
+OpenGL extension.</p>
+</li>
+<li>
+<p>"AllowGSYNC": Controls whether G-SYNC monitors are put into
+G-SYNC mode or left in continuous refresh mode.</p>
+<p>By default, G-SYNC monitors are put into G-SYNC mode when a mode
+is set, and transition into and out of variable refresh mode
+seamlessly. However, this prevents certain other features, such as
+Ultra Low Motion Blur and Frame Lock, from working. Set this to
+"Off" to use continuous refresh rates that are compatible with
+these features.</p>
+<p>Note: Disabling G-SYNC on any display in a MetaMode disables it
+for the entire MetaMode.</p>
+</li>
+</ul>
+</div>
+<p>Note that the current MetaMode can also be configured through
+the NV-CONTROL X extension and the nvidia-settings utility. For
+example:</p>
+<pre class="screen">
+    nvidia-settings --assign CurrentMetaMode="DFP-0: 1920x1200 { ViewPortIn=800x600, ViewPortOut=1600x1200+160+0 }"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term">MetaModeOrientation</span></dt>
+<dd>
+<p>This option controls the positioning of the display devices
+within the virtual X screen, when offsets are not explicitly given
+in the MetaModes. The possible values are:</p>
+<pre class="screen">
+    "RightOf"  (the default)
+    "LeftOf"
+    "Above"
+    "Below"
+    "SamePositionAs"
+</pre>
+<p>When "SamePositionAs" is specified, all display devices will be
+assigned an offset of 0,0. For backwards compatibility, "Clone" is
+a synonym for "SamePositionAs".</p>
+<p>Because it is often unclear which display device relates to
+which, MetaModeOrientation can be confusing. You can further
+clarify the MetaModeOrientation with display device names to
+indicate which display device is positioned relative to which
+display device. For example:</p>
+<pre class="screen">
+    "CRT-0 LeftOf DFP-0"
+</pre>
+<p></p>
+</dd>
+<dt><span class="term">ConnectedMonitor</span></dt>
+<dd>
+<p>With this option you can override what the NVIDIA kernel module
+detects is connected to your graphics card. This may be useful, for
+example, if any of your display devices do not support detection
+using Display Data Channel (DDC) protocols. Valid values are a
+comma-separated list of display device names; for example:</p>
+<pre class="screen">
+    "CRT-0, CRT-1"
+    "CRT"
+    "CRT-1, DFP-0"
+</pre>
+<p>WARNING: this option overrides what display devices are detected
+by the NVIDIA kernel module, and is very seldom needed. You really
+only need this if a display device is not detected, either because
+it does not provide DDC information, or because it is on the other
+side of a KVM (Keyboard-Video-Mouse) switch. In most other cases,
+it is best not to specify this option.</p>
+</dd>
+</dl>
+</div>
+<p>Just as in all X config entries, spaces are ignored and all
+entries are case insensitive.</p>
+<div class="qandaset">
+<table border="0" summary="Q and A Set">
+<col align="left" width="1%">
+<tbody>
+<tr class="qandadiv">
+<td align="left" valign="top" colspan="2"><a name=
+"FrequentlyAsked7a5bb" id="FrequentlyAsked7a5bb"></a>
+<h3 class="title">12.1. Frequently Asked TwinView Questions</h3>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="NothingGetsDispcf9c6" id=
+"NothingGetsDispcf9c6"></a></td>
+<td align="left" valign="top">
+<p><b>Nothing gets displayed on my second monitor; what is
+wrong?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Monitors that do not support monitor detection using Display
+Data Channel (DDC) protocols (this includes most older monitors)
+are not detectable by your NVIDIA card. You need to explicitly tell
+the NVIDIA X driver what you have connected using the
+"ConnectedMonitor" option; e.g.,</p>
+<pre class="screen">
+    Option "ConnectedMonitor" "CRT, CRT"
+</pre>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WillWindowManag82696" id=
+"WillWindowManag82696"></a></td>
+<td align="left" valign="top">
+<p><b>Will window managers be able to appropriately place windows
+(e.g., avoiding placing windows across both display devices, or in
+inaccessible regions of the virtual desktop)?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Yes. Window managers can query the layout of display devices
+through either RandR 1.2 or Xinerama.</p>
+<p>The NVIDIA X driver provides a Xinerama extension that X clients
+(such as window managers) can use to discover the current layout of
+display devices. Note that the Xinerama protocol provides no way to
+notify clients when a configuration change occurs, so if you
+modeswitch to a different MetaMode, your window manager may still
+think you have the previous configuration. Using RandR 1.2, or the
+Xinerama extension in conjunction with the XF86VidMode extension to
+get modeswitch events, window managers should be able to determine
+the display device configuration at any given time.</p>
+<p>Unfortunately, the data provided by XineramaQueryScreens()
+appears to confuse some window managers; to work around such broken
+window managers, you can disable communication of the display
+device layout with the <a href=
+"xconfigoptions.html#nvidiaXineramaInfo">nvidiaXineramaInfo</a> X
+configuration option.</p>
+<p>The order that display devices are reported in via the NVIDIA
+Xinerama information can be configured with the
+nvidiaXineramaInfoOrder X configuration option.</p>
+<p>Be aware that the NVIDIA driver cannot provide the Xinerama
+extension if the X server's own Xinerama extension is being used.
+Explicitly specifying Xinerama in the X config file or on the X
+server commandline will prohibit NVIDIA's Xinerama extension from
+installing, so make sure that the X server's log file does not
+contain:</p>
+<pre class="screen">
+    (++) Xinerama: enabled
+</pre>
+<p>if you want the NVIDIA driver to be able to provide the Xinerama
+extension while in TwinView.</p>
+<p>Another solution is to use panning domains to eliminate
+inaccessible regions of the virtual screen (see the MetaMode
+description above).</p>
+<p>A third solution is to use two separate X screens, rather than
+use TwinView. See <a href="configmultxscreens.html" title=
+"Chapter&nbsp;14.&nbsp;Configuring Multiple X Screens on One Card">Chapter&nbsp;14,
+<i>Configuring Multiple X Screens on One Card</i></a>.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="HowAreVirtualScad03c" id=
+"HowAreVirtualScad03c"></a></td>
+<td align="left" valign="top">
+<p><b>How are virtual screen dimensions determined in
+TwinView?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>After all requested modes have been validated, and the offsets
+for each MetaMode's viewports have been computed, the NVIDIA driver
+computes the bounding box of the panning domains for each MetaMode.
+The maximum bounding box width and height is then found.</p>
+<p>Note that one side effect of this is that the virtual width and
+virtual height may come from different MetaModes. Given the
+following MetaMode string:</p>
+<pre class="screen">
+    "1600x1200,NULL; 1024x768+0+0, 1024x768+0+768"
+</pre>
+<p>the resulting virtual screen size will be 1600 x 1536.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="CanIPlayFullScr76116" id=
+"CanIPlayFullScr76116"></a></td>
+<td align="left" valign="top">
+<p><b>Can I play full screen games across both display
+devices?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>Yes. While the details of configuration will vary from game to
+game, the basic idea is that a MetaMode presents X with a mode
+whose resolution is the bounding box of the viewports for that
+MetaMode. For example, the following:</p>
+<pre class="screen">
+    Option "MetaModes" "1024x768,1024x768; 800x600,800x600"
+    Option "MetaModeOrientation" "RightOf"
+</pre>
+<p>produce two modes: one whose resolution is 2048x768, and another
+whose resolution is 1600x600. Games such as Quake 3 Arena use the
+VidMode extension to discover the resolutions of the modes
+currently available. To configure Quake 3 Arena to use the above
+MetaMode string, add the following to your q3config.cfg file:</p>
+<pre class="screen">
+    seta r_customaspect "1"
+    seta r_customheight "600"
+    seta r_customwidth  "1600"
+    seta r_fullscreen   "1"
+    seta r_mode         "-1"
+</pre>
+<p>Note that, given the above configuration, there is no mode with
+a resolution of 800x600 (remember that the MetaMode "800x600,
+800x600" has a resolution of 1600x600"), so if you change Quake 3
+Arena to use a resolution of 800x600, it will display in the lower
+left corner of your screen, with the rest of the screen grayed out.
+To have single head modes available as well, an appropriate
+MetaMode string might be something like:</p>
+<pre class="screen">
+    "800x600,800x600; 1024x768,NULL; 800x600,NULL; 640x480,NULL"
+</pre>
+<p>More precise configuration information for specific games is
+beyond the scope of this document, but the above examples coupled
+with numerous online sources should be enough to point you in the
+right direction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"openglenvvariables.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"xineramaglx.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;11.&nbsp;Specifying OpenGL Environment Variable
+Settings&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;13.&nbsp;Configuring GLX in Xinerama</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

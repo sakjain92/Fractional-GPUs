@@ -1,0 +1,428 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;I.&nbsp;Tips for New Linux Users</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="audiosupport.html" title=
+"Appendix&nbsp;H.&nbsp;Audio Support">
+<link rel="next" href="profiles.html" title=
+"Appendix&nbsp;J.&nbsp;Application Profiles">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;I.&nbsp;Tips for New
+Linux Users</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"audiosupport.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"profiles.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="newusertips" id=
+"newusertips"></a>Appendix&nbsp;I.&nbsp;Tips for New Linux
+Users</h2>
+</div>
+</div>
+</div>
+<p>This installation guide assumes that the user has at least a
+basic understanding of Linux techniques and terminology. In this
+section we provide tips that the new user may find helpful. While
+the these tips are meant to clarify and assist users in installing
+and configuring the NVIDIA Linux Driver, it is by no means a
+tutorial on the use or administration of the Linux operating
+system. Unlike many desktop operating systems, it is relatively
+easy to cause irreparable damage to your Linux system. If you are
+unfamiliar with the use of Linux, we strongly recommend that you
+seek a tutorial through your distributor before proceeding.</p>
+<h3>The command prompt</h3>
+<p>While newer releases of Linux bring new desktop interfaces to
+the user, much of the work in Linux takes place at the command
+prompt. If you are familiar with the Windows operating system, the
+Linux command prompt is analogous to the Windows command prompt,
+although the syntax and use varies somewhat. All of the commands in
+this section are performed at the command prompt. Some systems are
+configured to boot into console mode, in which case the user is
+presented with a prompt at login. Other systems are configured to
+start the X window system, in which case the user must open a
+terminal or console window in order to get a command prompt. This
+can usually be done by searching the desktop menus for a terminal
+or console program. While it is customizable, the basic prompt
+usually consists of a short string of information, one of the
+characters <code class="prompt">#</code>, <code class=
+"prompt">$</code>, or <code class="prompt">%</code>, and a cursor
+(possibly flashing) that indicates where the user's input will be
+displayed.</p>
+<h3>Navigating the directory structure</h3>
+<p>Linux has a hierarchical directory structure. From anywhere in
+the directory structure, the <span><strong class=
+"command">ls</strong></span> command will list the contents of that
+directory. The <span><strong class="command">file</strong></span>
+command will print the type of files in a directory. For
+example,</p>
+<pre class="screen">
+    % file filename
+</pre>
+<p>will print the type of the file <code class=
+"filename">filename</code>. Changing directories is done with the
+<span><strong class="command">cd</strong></span> command.</p>
+<pre class="screen">
+    % cd dirname
+</pre>
+<p>will change the current directory to <code class=
+"filename">dirname</code>. From anywhere in the directory
+structure, the command <span><strong class=
+"command">pwd</strong></span> will print the name of the current
+directory. There are two special directories, <code class=
+"filename">.</code> and <code class="filename">..</code>, which
+refer to the current directory and the next directory up the
+hierarchy, respectively. For any commands that require a file name
+or directory name as an argument, you may specify the absolute or
+the relative paths to those elements. An absolute path begins with
+the "/" character, referring to the top or root of the directory
+structure. A relative path begins with a directory in the current
+working directory. The relative path may begin with <code class=
+"filename">.</code> or <code class="filename">..</code>. Elements
+of a path are separated with the "/" character. As an example, if
+the current directory is <code class="filename">/home/jesse</code>
+and the user wants to change to the <code class=
+"filename">/usr/local</code> directory, he can use either of the
+following commands to do so:</p>
+<pre class="screen">
+    % cd /usr/local
+</pre>
+<p>or</p>
+<pre class="screen">
+    % cd ../../usr/local
+</pre>
+<p></p>
+<h3>File permissions and ownership</h3>
+<p>All files and directories have permissions and ownership
+associated with them. This is useful for preventing
+non-administrative users from accidentally (or maliciously)
+corrupting the system. The permissions and ownership for a file or
+directory can be determined by passing the <code class=
+"option">-l</code> option to the <span><strong class=
+"command">ls</strong></span> command. For example:</p>
+<pre class="screen">
+% ls -l
+drwxr-xr-x     2    jesse    users    4096    Feb     8 09:32 bin
+drwxrwxrwx    10    jesse    users    4096    Feb    10 12:04 pub
+-rw-r--r--     1    jesse    users      45    Feb     4 03:55 testfile
+-rwx------     1    jesse    users      93    Feb     5 06:20 myprogram
+-rw-rw-rw-     1    jesse    users     112    Feb     5 06:20 README
+% 
+</pre>
+<p>The first character column in the first output field states the
+file type, where 'd' is a directory and '-' is a regular file. The
+next nine columns specify the permissions (see paragraph below) of
+the element. The second field indicates the number of files
+associated with the element, the third field indicates the owner,
+the fourth field indicates the group that the file is associated
+with, the fifth field indicates the size of the element in bytes,
+the sixth, seventh and eighth fields indicate the time at which the
+file was last modified and the ninth field is the name of the
+element.</p>
+<p>As stated, the last nine columns in the first field indicate the
+permissions of the element. These columns are grouped into threes,
+the first grouping indicating the permissions for the owner of the
+element (<code class="systemitem">jesse</code> in this case), the
+second grouping indicating the permissions for the group associated
+with the element, and the third grouping indicating the permissions
+associated with the rest of the world. The <code class=
+"systemitem">r</code>, <code class="systemitem">w</code>, and
+<code class="systemitem">x</code> indicate read, write and execute
+permissions, respectively, for each of these associations. For
+example, user <code class="systemitem">jesse</code> has read and
+write permissions for <code class="filename">testfile</code>, users
+in the group <code class="systemitem">users</code> have read
+permission only, and the rest of the world also has read
+permissions only. However, for the file <code class=
+"filename">myprogram</code>, user <code class=
+"systemitem">jesse</code> has read, write and execute permissions
+(suggesting that <code class="filename">myprogram</code> is a
+program that can be executed), while the group <code class=
+"systemitem">users</code> and the rest of the world have no
+permissions (suggesting that the owner doesn't want anyone else to
+run his program). The permissions, ownership and group associated
+with an element can be changed with the commands
+<span><strong class="command">chmod</strong></span>,
+<span><strong class="command">chown</strong></span> and
+<span><strong class="command">chgrp</strong></span>, respectively.
+If a user with the appropriate permissions wanted to change the
+user/group ownership of <code class="filename">README</code> from
+jesse/users to joe/admin, he would do the following:</p>
+<pre class="screen">
+    # chown joe README
+    # chgrp admin README
+</pre>
+<p>The syntax for chmod is slightly more complicated and has
+several variations. The most concise way of setting the permissions
+for a single element uses a triplet of numbers, one for each of
+user, group and world. The value for each number in the triplet
+corresponds to a combination of read, write and execute
+permissions. Execute only is represented as 1, write only is
+represented as 2, and read only is represented as 4. Combinations
+of these permissions are represented as sums of the individual
+permissions. Read and execute is represented as 5, where as read,
+write and execute is represented as 7. No permissions is
+represented as 0. Thus, to give the owner read, write and execute
+permissions, the group read and execute permissions and the world
+no permissions, a user would do as follows:</p>
+<pre class="screen">
+    % chmod 750 myprogram
+</pre>
+<p></p>
+<h3>The shell</h3>
+<p>The shell provides an interface between the user and the
+operating system. It is the job of the shell to interpret the input
+that the user gives at the command prompt and call upon the system
+to do something in response. There are several different shells
+available, each with somewhat different syntax and capabilities.
+The two most common flavors of shells used on Linux stem from the
+Bourne shell (<span><strong class="command">sh</strong></span>) and
+the C-shell (<span><strong class="command">csh</strong></span>)
+Different users have preferences and biases towards one shell or
+the other, and some certainly make it easier (or at least more
+intuitive) to do some things than others. You can determine your
+current shell by printing the value of the <code class=
+"envar">SHELL</code> environment variable from the command prompt
+with</p>
+<pre class="screen">
+    % echo $SHELL
+</pre>
+<p>You can start a new shell simply by entering the name of the
+shell from the command prompt:</p>
+<pre class="screen">
+    % csh
+</pre>
+<p>or</p>
+<pre class="screen">
+    % sh
+</pre>
+<p>and you can run a program from within a specific shell by
+preceding the name of the executable with the name of the shell in
+which it will be run:</p>
+<pre class="screen">
+    % sh myprogram
+</pre>
+<p>The user's default shell at login is determined by whoever set
+up his account. While there are many syntactic differences between
+shells, perhaps the one that is encountered most frequently is the
+way in which environment variables are set.</p>
+<h3>Setting environment variables</h3>
+<p>Every session has associated with it environment variables,
+which consist of name/value pairs and control the way in which the
+shell and programs run from the shell behave. An example of an
+environment variable is the <code class="envar">PATH</code>
+variable, which tells the shell which directories to search when
+trying to locate an executable file that the user has entered at
+the command line. If you are certain that a command exists, but the
+shell complains that it cannot be found when you try to execute it,
+there is likely a problem with the <code class="envar">PATH</code>
+variable. Environment variables are set differently depending on
+the shell being used. For the Bourne shell (<span><strong class=
+"command">sh</strong></span>), it is done as:</p>
+<pre class="screen">
+    % export MYVARIABLE="avalue"
+</pre>
+<p>for the C-shell, it is done as:</p>
+<pre class="screen">
+    % setenv MYVARIABLE "avalue"
+</pre>
+<p>In both cases the quotation marks are only necessary if the
+value contains spaces. The <span><strong class=
+"command">echo</strong></span> command can be used to examine the
+value of an environment variable:</p>
+<pre class="screen">
+    % echo $MYVARIABLE
+</pre>
+<p>Commands to set environment variables can also include
+references to other environment variables (prepended with the "$"
+character), including themselves. In order to add the path
+<code class="filename">/usr/local/bin</code> to the beginning of
+the search path, and the current directory <code class=
+"filename">.</code> to the end of the search path, a user would
+enter</p>
+<pre class="screen">
+    % export PATH=/usr/local/bin:$PATH:.
+</pre>
+<p>in the Bourne shell, and</p>
+<pre class="screen">
+    % setenv PATH /usr/local/bin:${PATH}:.
+</pre>
+<p>in C-shell. Note the curly braces are required to protect the
+variable name in C-shell.</p>
+<h3>Editing text files</h3>
+<p>There are several text editors available for the Linux operating
+system. Some of these editors require the X window system, while
+others are designed to operate in a console or terminal. It is
+generally a good thing to be competent with a terminal-based text
+editor, as there are times when the files necessary for X to run
+are the ones that must be edited. Three popular editors are
+<span><strong class="command">vi</strong></span>,
+<span><strong class="command">pico</strong></span> and
+<span><strong class="command">emacs</strong></span>, each of which
+can be started from the command line, optionally supplying the name
+of a file to be edited. <span><strong class=
+"command">vi</strong></span> is arguably the most ubiquitous as
+well as the least intuitive of the three. <span><strong class=
+"command">pico</strong></span> is relatively straightforward for a
+new user, though not as often installed on systems. If you don't
+have <span><strong class="command">pico</strong></span>, you may
+have a similar editor called <span><strong class=
+"command">nano</strong></span>. <span><strong class=
+"command">emacs</strong></span> is highly extensible and fairly
+widely available, but can be somewhat unwieldy in a non-X
+environment. The newer versions each come with online help, and
+offline help can be found in the manual and info pages for each
+(see the section on Linux Manual and Info pages). Many programs use
+the <code class="envar">EDITOR</code> environment variable to
+determine which text editor to start when editing is required.</p>
+<h3>Root user</h3>
+<p>Upon installation, almost all distributions set up the default
+administrative user with the username <code class=
+"systemitem">root</code>. There are many things on the system that
+only <code class="systemitem">root</code> (or a similarly
+privileged user) can do, one of which is installing the NVIDIA
+Linux Driver. <span class="emphasis"><em>We must emphasize that
+assuming the identity of <code class="systemitem">root</code> is
+inherently risky and as <code class="systemitem">root</code> it is
+relatively easy to corrupt your system or otherwise render it
+unusable.</em></span> There are three ways to become <code class=
+"systemitem">root</code>. You may log in as <code class=
+"systemitem">root</code> as you would any other user, you may use
+the switch user command (<span><strong class=
+"command">su</strong></span>) at the command prompt, or, on some
+systems, use the <span><strong class="command">sudo</strong></span>
+utility, which allows users to run programs as <code class=
+"systemitem">root</code> while keeping a log of their actions. This
+last method is useful in case a user inadvertently causes damage to
+the system and cannot remember what he has done (or prefers not to
+admit what he has done). It is generally a good practice to remain
+<code class="systemitem">root</code> only as long as is necessary
+to accomplish the task requiring <code class=
+"systemitem">root</code> privileges (another useful feature of the
+<span><strong class="command">sudo</strong></span> utility).</p>
+<h3>Booting to a different runlevel</h3>
+<p>Runlevels in Linux dictate which services are started and
+stopped automatically when the system boots or shuts down. The
+runlevels typically range from 0 to 6, with runlevel 5 typically
+starting the X window system as part of the services (runlevel 0 is
+actually a system halt, and 6 is a system reboot). It is good
+practice to install the NVIDIA Linux Driver while X is not running,
+and it is a good idea to prevent X from starting on reboot in case
+there are problems with the installation (otherwise you may find
+yourself with a broken system that automatically tries to start X,
+but then hangs during the startup, preventing you from doing the
+repairs necessary to fix X). Depending on your network setup,
+runlevels 1, 2 or 3 should be sufficient for installing the Driver.
+Level 3 typically includes networking services, so if utilities
+used by the system during installation depend on a remote
+filesystem, Levels 1 and 2 will be insufficient. If your system
+typically boots to a console with a command prompt, you should not
+need to change anything. If your system typically boots to the X
+window system with a graphical login and desktop, you must both
+exit X and change your default runlevel.</p>
+<p>On most distributions, the default runlevel is stored in the
+file <code class="filename">/etc/inittab</code>, although you may
+have to consult the guide for your own distribution. The line that
+indicates the default runlevel appears as</p>
+<pre class="screen">
+    id:n:initdefault:
+</pre>
+<p>or similar, where <code class="computeroutput">n</code>
+indicates the number of the runlevel. <code class=
+"filename">/etc/inittab</code> must be edited as root. Please read
+the sections on editing files and root user if you are unfamiliar
+with this concept. Also, it is recommended that you create a copy
+of the file prior to editing it, particularly if you are new to
+Linux text editors, in case you accidentally corrupt the file:</p>
+<pre class="screen">
+    # cp /etc/inittab /etc/inittab.original
+</pre>
+<p>The line should be edited such that an appropriate runlevel is
+the default (1, 2, or 3 on most systems):</p>
+<pre class="screen">
+    id:3:initdefault:
+</pre>
+<p>After saving the changes, exit X. After the Driver installation
+is complete, you may revert the default runlevel to its original
+state, either by editing the <code class=
+"filename">/etc/inittab</code> again or by moving your backup copy
+back to its original name.</p>
+<p>Different distributions provide different ways to exit X. On
+many systems, the <span><strong class=
+"command">init</strong></span> utility will change the current
+runlevel. This can be used to change to a runlevel in which X is
+not running.</p>
+<pre class="screen">
+    # init 3
+</pre>
+<p>There are other methods by which to exit X. Please consult your
+distribution.</p>
+<h3>Linux Manual and Info pages</h3>
+<p>System manual or info pages are usually installed during
+installation. These pages are typically up-to-date and generally
+contain a comprehensive listing of the use of programs and
+utilities on the system. Also, many programs include the
+<code class="option">--help</code> option, which usually prints a
+list of common options for that program. To view the manual page
+for a command, enter</p>
+<pre class="screen">
+    % man commandname
+</pre>
+<p>at the command prompt, where <code class=
+"option">commandname</code> refers to the command in which you are
+interested. Similarly, entering</p>
+<pre class="screen">
+    % info commandname
+</pre>
+<p>will bring up the info page for the command. Depending on the
+application, one or the other may be more up-to-date. The interface
+for the info system is interactive and navigable. If you are unable
+to locate the man page for the command you are interested in, you
+may need to add additional elements to your <code class=
+"envar">MANPATH</code> environment variable. See the section on
+environment variables.</p>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"audiosupport.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"profiles.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Appendix&nbsp;H.&nbsp;Audio Support&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;J.&nbsp;Application Profiles</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

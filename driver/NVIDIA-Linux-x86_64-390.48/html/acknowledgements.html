@@ -1,0 +1,427 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;36.&nbsp;Acknowledgements</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="addtlresources.html" title=
+"Chapter&nbsp;35.&nbsp;NVIDIA Contact Info and Additional Resources">
+<link rel="next" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">
+Chapter&nbsp;36.&nbsp;Acknowledgements</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"addtlresources.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"appendices.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="acknowledgements" id=
+"acknowledgements"></a>Chapter&nbsp;36.&nbsp;Acknowledgements</h2>
+</div>
+</div>
+</div>
+<div class="variablelist">
+<dl>
+<dt><span class="term">loki_update</span></dt>
+<dd>
+<p><code class="filename">nvidia-installer</code> was inspired by
+the <code class="filename">loki_update</code> tool: <a href=
+"http://icculus.org/loki_setup/" target=
+"_top">http://icculus.org/loki_setup/</a></p>
+</dd>
+<dt><span class="term">makeself</span></dt>
+<dd>
+<p>The self-extracting archive (also known as the <code class=
+"filename">.run</code> file) is generated using <code class=
+"filename">makeself.sh</code>: <a href=
+"http://www.megastep.org/makeself/" target=
+"_top">http://www.megastep.org/makeself/</a></p>
+<p>The version of makeself.sh used to create the .run is bundled
+within the .run file, and can retrieved by extracting the .run
+file's contents, e.g.:</p>
+<pre class="screen">
+$ sh NVIDIA-Linux-x86_64-390.48.run --extract-only
+$ ls -l NVIDIA-Linux-x86_64-390.48/makeself.sh
+</pre>
+<p></p>
+</dd>
+<dt><span class="term">LLVM</span></dt>
+<dd>
+<p>Portions of the NVIDIA OpenCL implementation contain components
+licensed from third parties under the following terms:</p>
+<div class="literallayout">
+<p>Clang&nbsp;&amp;&nbsp;LLVM:<br>
+Copyright&nbsp;(c)&nbsp;2003-2008&nbsp;University&nbsp;of&nbsp;Illinois&nbsp;at&nbsp;Urbana-Champaign.<br>
+
+All&nbsp;rights&nbsp;reserved.</p>
+</div>
+<div class="literallayout">
+<p>Portions&nbsp;of&nbsp;LLVM's&nbsp;System&nbsp;library:<br>
+Copyright&nbsp;(C)&nbsp;2004&nbsp;eXtensible&nbsp;Systems,&nbsp;Inc.</p>
+</div>
+<div class="literallayout">
+<p>Developed&nbsp;by:<br>
+LLVM&nbsp;Team<br>
+University&nbsp;of&nbsp;Illinois&nbsp;at&nbsp;Urbana-Champaign<br>
+<a href="http://llvm.org" target="_top">http://llvm.org</a></p>
+</div>
+<p>Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal with the Software without
+restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimers.</p>
+</li>
+<li>
+<p>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimers in the documentation and/or other materials provided
+with the distribution.</p>
+</li>
+<li>
+<p>Neither the names of the LLVM Team, University of Illinois at
+Urbana-Champaign, nor the names of its contributors may be used to
+endorse or promote products derived from this Software without
+specific prior written permission.</p>
+</li>
+</ul>
+</div>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS WITH THE SOFTWARE.</p>
+</dd>
+<dt><span class="term">xz-embedded</span></dt>
+<dd>
+<p>The self-installing .run package is compressed using xz, and
+includes a decompressor built from the xz-embedded project,
+available at <a href="http://tukaani.org/xz/embedded.html" target=
+"_top">http://tukaani.org/xz/embedded.html</a>.</p>
+</dd>
+<dt><span class="term">jansson</span></dt>
+<dd>
+<p>nvidia-settings uses jansson for parsing configuration files,
+available at <a href="http://www.digip.org/jansson/" target=
+"_top">http://www.digip.org/jansson/</a>.</p>
+<p>This library carries the following copyright notice:</p>
+<p>Copyright (c) 2009-2012 Petri Lehtinen
+&lt;petri@digip.org&gt;</p>
+<p>Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</dd>
+<dt><span class="term">lz4</span></dt>
+<dd>
+<p>The NVIDIA GPU driver uses the lz4 compression algorithm as
+implemented by the lz4 library, available at <a href=
+"https://code.google.com/p/lz4/" target=
+"_top">https://code.google.com/p/lz4/</a>.</p>
+<p>This library carries the following copyright notice:</p>
+<div class="literallayout">
+<p>LZ4&nbsp;-&nbsp;Fast&nbsp;LZ&nbsp;compression&nbsp;algorithm<br>
+Copyright&nbsp;(C)&nbsp;2011-2013,&nbsp;Yann&nbsp;Collet.<br>
+BSD&nbsp;2-Clause&nbsp;License&nbsp;(http://www.opensource.org/licenses/bsd-license.php)</p>
+</div>
+<p>Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the following
+conditions are met:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</p>
+</li>
+<li>
+<p>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</p>
+</li>
+</ul>
+</div>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.</p>
+<p>You can contact the author at :</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>LZ4 source repository : <a href="http://code.google.com/p/lz4/"
+target="_top">http://code.google.com/p/lz4/</a></p>
+</li>
+<li>
+<p>LZ4 public forum : <a href=
+"https://groups.google.com/forum/#!forum/lz4c" target=
+"_top">https://groups.google.com/forum/#!forum/lz4c</a></p>
+</li>
+</ul>
+</div>
+<p></p>
+</dd>
+<dt><span class="term">X.Org</span></dt>
+<dd>
+<p>This NVIDIA Linux driver contains code from the X.Org
+project.</p>
+<p>Source code from the X.Org project is available from <a href=
+"http://cgit.freedesktop.org/xorg/xserver" target=
+"_top">http://cgit.freedesktop.org/xorg/xserver</a></p>
+</dd>
+<dt><span class="term">NetBSD Compiler Intrinsics</span></dt>
+<dd>
+<p>The NetBSD implementations of the following compiler intrinsics
+are used for better portability: __udivdi3, __umoddi3, __divdi3,
+__moddi3, __ucmpdi2, __cmpdi2, __fixunssfdi, __fixunsdfdi,
+__ashldi3 and __lshrdi3.</p>
+<p>These carry the following copyright notice:</p>
+<p>Copyright (c) 1992, 1993 The Regents of the University of
+California. All rights reserved.</p>
+<p>This software was developed by the Computer Systems Engineering
+group at Lawrence Berkeley Laboratory under DARPA contract BG 91-66
+and contributed to Berkeley.</p>
+<p>Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the following
+conditions are met:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</p>
+</li>
+<li>
+<p>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</p>
+</li>
+<li>
+<p>All advertising materials mentioning features or use of this
+software must display the following acknowledgement: This product
+includes software developed by the University of California,
+Berkeley and its contributors.</p>
+</li>
+<li>
+<p>Neither the name of the University nor the names of its
+contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.</p>
+</li>
+</ol>
+</div>
+<p>THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS
+IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+</dd>
+<dt><span class="term">JSMN</span></dt>
+<dd>
+<p>This NVIDIA Linux driver uses a JSON parser based on
+<code class="filename">jsmn</code>: <a href=
+"http://zserge.bitbucket.org/jsmn.html" target=
+"_top">http://zserge.bitbucket.org/jsmn.html</a></p>
+<p>This library carries the following copyright notice:</p>
+<p>Copyright (c) 2010 Serge A. Zaitsev</p>
+<p>Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</dd>
+<dt><span class="term">SHA-256</span></dt>
+<dd>
+<p>Portions of the driver use the SHA-256 algorithm derived from
+sha2.c: <a href="https://github.com/ouah/sha2/blob/master/sha2.c"
+target=
+"_top">https://github.com/ouah/sha2/blob/master/sha2.c</a></p>
+<p>This library carries the following copyright notice:</p>
+<p>Copyright (C) 2005, 2007 Olivier Gay
+&lt;olivier.gay@a3.epfl.ch&gt; All rights reserved.</p>
+<p>Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the following
+conditions are met:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</p>
+</li>
+<li>
+<p>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</p>
+</li>
+<li>
+<p>Neither the name of the project nor the names of its
+contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.</p>
+</li>
+</ol>
+</div>
+<p>THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS
+IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+</dd>
+<dt><span class="term">libselinux</span></dt>
+<dd>
+<p>This NVIDIA Linux driver contains code from libselinux, which is
+released in the public domain.</p>
+</dd>
+<dt><span class="term">SoftFloat</span></dt>
+<dd>
+<p>Portions of the driver use the SoftFloat floating point
+emulation library: <a href=
+"http://www.jhauser.us/arithmetic/SoftFloat.html" target=
+"_top">http://www.jhauser.us/arithmetic/SoftFloat.html</a></p>
+<p>SoftFloat has the following license terms:</p>
+<p>John R. Hauser</p>
+<p>2017 August 10</p>
+<p>The following applies to the whole of SoftFloat Release 3d as
+well as to each source file individually.</p>
+<p>Copyright 2011, 2012, 2013, 2014, 2015, 2016, 2017 The Regents
+of the University of California. All rights reserved.</p>
+<p>Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the following
+conditions are met:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Redistributions of source code must retain the above copyright
+notice, this list of conditions, and the following disclaimer.</p>
+</li>
+<li>
+<p>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions, and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</p>
+</li>
+<li>
+<p>Neither the name of the University nor the names of its
+contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.</p>
+</li>
+</ol>
+</div>
+<p>THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS "AS
+IS", AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE, ARE DISCLAIMED. IN NO EVENT SHALL THE
+REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"addtlresources.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"appendices.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;35.&nbsp;NVIDIA Contact Info and Additional
+Resources&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Part&nbsp;II.&nbsp;Appendices</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

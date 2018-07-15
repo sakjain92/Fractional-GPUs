@@ -1,0 +1,535 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU
+FrameRendering</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="nvidia-persistenced.html" title=
+"Chapter&nbsp;27.&nbsp;Using the nvidia-persistenced Utility">
+<link rel="next" href="framelock.html" title=
+"Chapter&nbsp;29.&nbsp;Configuring Frame Lock and Genlock">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;28.&nbsp;Configuring
+SLI and Multi-GPU FrameRendering</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"nvidia-persistenced.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"framelock.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="sli" id=
+"sli"></a>Chapter&nbsp;28.&nbsp;Configuring SLI and Multi-GPU
+FrameRendering</h2>
+</div>
+</div>
+</div>
+<p>The NVIDIA Linux driver contains support for NVIDIA SLI
+FrameRendering and NVIDIA Multi-GPU FrameRendering. Both of these
+technologies allow an OpenGL application to take advantage of
+multiple GPUs to improve visual performance.</p>
+<p>The distinction between SLI and Multi-GPU is straightforward.
+SLI is used to leverage the processing power of GPUs across two or
+more graphics cards, while Multi-GPU is used to leverage the
+processing power of two GPUs colocated on the same graphics card.
+If you want to link together separate graphics cards, you should
+use the "SLI" X config option. Likewise, if you want to link
+together GPUs on the same graphics card, you should use the
+"MultiGPU" X config option. If you have two cards, each with two
+GPUs, and you wish to link them all together, you should use the
+"SLI" option.</p>
+<h3>Rendering Modes</h3>
+<p>In Linux, with two GPUs SLI and Multi-GPU can both operate in
+one of three modes: Alternate Frame Rendering (AFR), Split Frame
+Rendering (SFR), and Antialiasing (AA). When AFR mode is active,
+one GPU draws the next frame while the other one works on the frame
+after that. In SFR mode, each frame is split horizontally into two
+pieces, with one GPU rendering each piece. The split line is
+adjusted to balance the load between the two GPUs. AA mode splits
+antialiasing work between the two GPUs. Both GPUs work on the same
+scene and the result is blended together to produce the final
+frame. This mode is useful for applications that spend most of
+their time processing with the CPU and cannot benefit from AFR.</p>
+<p>With four GPUs, the same options are applicable. AFR mode cycles
+through all four GPUs, each GPU rendering a frame in turn. SFR mode
+splits the frame horizontally into four pieces. AA mode splits the
+work between the four GPUs, allowing antialiasing up to 64x. With
+four GPUs SLI can also operate in an additional mode, Alternate
+Frame Rendering of Antialiasing. (AFR of AA). With AFR of AA, pairs
+of GPUs render alternate frames, each GPU in a pair doing half of
+the antialiasing work. Note that these scenarios apply whether you
+have four separate cards or you have two cards, each with two
+GPUs.</p>
+<p>With some GPU configurations, there is in addition a special SLI
+Mosaic Mode to extend a single X screen transparently across all of
+the available display outputs on each GPU. See below for the exact
+set of configurations which can be used with SLI Mosaic Mode.</p>
+<h3>Enabling Multi-GPU</h3>
+<p>Multi-GPU is enabled by setting the "MultiGPU" option in the X
+configuration file; see <a href="xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a> for details about the "MultiGPU" option.</p>
+<p>The nvidia-xconfig utility can be used to set the "MultiGPU"
+option, rather than modifying the X configuration file by hand. For
+example:</p>
+<pre class="screen">
+    % nvidia-xconfig --multigpu=on
+</pre>
+<p></p>
+<h3>Enabling SLI</h3>
+<p>SLI is enabled by setting the "SLI" option in the X
+configuration file; see <a href="xconfigoptions.html" title=
+"Appendix&nbsp;B.&nbsp;X Config Options">Appendix&nbsp;B, <i>X
+Config Options</i></a> for details about the SLI option.</p>
+<p>The nvidia-xconfig utility can be used to set the SLI option,
+rather than modifying the X configuration file by hand. For
+example:</p>
+<pre class="screen">
+    % nvidia-xconfig --sli=on
+</pre>
+<p></p>
+<h3>Enabling SLI Mosaic Mode</h3>
+<p>The simplest way to configure SLI Mosaic Mode using a grid of
+monitors is to use <span><strong class=
+"command">nvidia-settings</strong></span> (see <a href=
+"nvidiasettings.html" title=
+"Chapter&nbsp;23.&nbsp;Using the nvidia-settings Utility">Chapter&nbsp;23,
+<i>Using the nvidia-settings Utility</i></a>). The steps to perform
+this configuration are as follows:</p>
+<div class="orderedlist">
+<ol type="1">
+<li>
+<p>Connect each of the monitors you would like to use to any
+connector from any GPU used for SLI Mosaic Mode. If you are going
+to use fewer monitors than there are connectors, connect one
+monitor to each GPU before adding a second monitor to any GPUs.</p>
+</li>
+<li>
+<p>Install the NVIDIA display driver set.</p>
+</li>
+<li>
+<p>Configure an X screen to use the "nvidia" driver on at least one
+of the GPUs (see <a href="editxconfig.html" title=
+"Chapter&nbsp;6.&nbsp;Configuring X for the NVIDIA Driver">Chapter&nbsp;6,
+<i>Configuring X for the NVIDIA Driver</i></a> for more
+information).</p>
+</li>
+<li>
+<p>Start X.</p>
+</li>
+<li>
+<p>Run <span><strong class=
+"command">nvidia-settings</strong></span>. You should see a tab in
+the left pane of nvidia-settings labeled "SLI Mosaic Mode
+Settings". Note that you may need to expand the entry for the X
+screen you configured earlier.</p>
+</li>
+<li>
+<p>Check the "Use SLI Mosaic Mode" check box.</p>
+</li>
+<li>
+<p>Select the monitor grid configuration you'd like to use from the
+"display configuration" dropdown.</p>
+</li>
+<li>
+<p>Choose the resolution and refresh rate at which you would like
+to drive each individual monitor.</p>
+</li>
+<li>
+<p>Set any overlap you would like between the displays.</p>
+</li>
+<li>
+<p>Click the "Save to X Configuration File" button. NOTE: If you
+don't have permissions to write to your system's X configuration
+file, you will be prompted to choose a location to save the file.
+After doing so, you <span class="emphasis"><em>must</em></span>
+copy the X configuration file into a location the X server will
+consider upon startup (usually <code class=
+"filename">/etc/X11/xorg.conf</code> for X.Org servers or
+<code class="filename">/etc/X11/XF86Config</code> for XFree86
+servers).</p>
+</li>
+<li>
+<p>Exit nvidia-settings and restart your X server.</p>
+</li>
+</ol>
+</div>
+<p>Alternatively, nvidia-xconfig can be used to configure SLI
+Mosaic Mode via a command like <span><strong class=
+"command">nvidia-xconfig --sli=Mosaic
+--metamodes=METAMODES</strong></span> where the METAMODES string
+specifies the desired grid configuration. For example:</p>
+<pre class="screen">
+    nvidia-xconfig --sli=Mosaic --metamodes="GPU-0.DFP-0: 1920x1024+0+0, GPU-0.DFP-1: 1920x1024+1920+0, GPU-1.DFP-0: 1920x1024+0+1024, GPU-1.DFP-1: 1920x1024+1920+1024"
+</pre>
+<p>will configure four DFPs in a 2x2 configuration, each running at
+1920x1024, with the two DFPs on GPU-0 driving the top two monitors
+of the 2x2 configuration, and the two DFPs on GPU-1 driving the
+bottom two monitors of the 2x2 configuration.</p>
+<p>See the MetaModes X configuration description in details in
+<a href="configtwinview.html" title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+Chapter&nbsp;12, <i>Configuring Multiple Display Devices on One X
+Screen</i></a>. See <a href="displaydevicenames.html" title=
+"Appendix&nbsp;C.&nbsp;Display Device Names">Appendix&nbsp;C,
+<i>Display Device Names</i></a> for further details on GPU and
+Display Device Names.</p>
+<h3>Hardware requirements</h3>
+<p>SLI functionality requires:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Identical PCI Express graphics cards</p>
+</li>
+<li>
+<p>A supported motherboard (with the exception of Quadro Plex)</p>
+</li>
+<li>
+<p>In most cases, a video bridge connecting the two graphics
+cards</p>
+</li>
+<li>
+<p>SLI Mosaic Mode requires NVIDIA Quadro GPUs.</p>
+</li>
+</ul>
+</div>
+<p>For the latest information on supported SLI and Multi-GPU
+configurations, including SLI- and Multi-GPU capable GPUs and
+SLI-capable motherboards, see <a href=
+"http://www.geforce.com/hardware/technology/sli" target=
+"_top">http://www.geforce.com/hardware/technology/sli</a>.</p>
+<h3>Other Notes and Requirements</h3>
+<p>The following other requirements apply to SLI and Multi-GPU:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Mobile GPUs are NOT supported</p>
+</li>
+<li>
+<p>GPUs with ECC enabled may not be used in an SLI
+configuration</p>
+</li>
+<li>
+<p>SLI on Quadro-based graphics cards always requires a video
+bridge</p>
+</li>
+<li>
+<p>TwinView is also not supported with SLI or Multi-GPU. Only one
+display can be used when SLI or Multi-GPU is enabled, with the
+exception of Mosaic.</p>
+</li>
+<li>
+<p>If X is configured to use multiple screens and screen 0 has SLI
+or Multi-GPU enabled, the other screens configured to use the
+nvidia driver will be disabled. Note that if SLI or Multi-GPU is
+enabled, the GPUs used by that configuration will be unavailable
+for single GPU rendering.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<div class="qandaset">
+<table border="0" summary="Q and A Set">
+<col align="left" width="1%">
+<tbody>
+<tr class="qandadiv">
+<td align="left" valign="top" colspan="2"><a name=
+"FrequentlyAskeda1abf" id="FrequentlyAskeda1abf"></a>
+<h3 class="title">28.1. Frequently Asked SLI and Multi-GPU
+Questions</h3>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyIsGlxgearsSlc5df7" id=
+"WhyIsGlxgearsSlc5df7"></a></td>
+<td align="left" valign="top">
+<p><b>Why is glxgears slower when SLI or Multi-GPU is
+enabled?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>When SLI or Multi-GPU is enabled, the NVIDIA driver must
+coordinate the operations of all GPUs when each new frame is
+swapped (made visible). For most applications, this GPU
+synchronization overhead is negligible. However, because glxgears
+renders so many frames per second, the GPU synchronization overhead
+consumes a significant portion of the total time, and the framerate
+is reduced.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyIsDoom3Slowe54030" id=
+"WhyIsDoom3Slowe54030"></a></td>
+<td align="left" valign="top">
+<p><b>Why is Doom 3 slower when SLI or Multi-GPU is
+enabled?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>The NVIDIA Accelerated Linux Graphics Driver does not
+automatically detect the optimal SLI or Multi-GPU settings for
+games such as Doom 3 and Quake 4. To work around this issue, the
+environment variable __GL_DOOM3 can be set to tell OpenGL that Doom
+3's optimal settings should be used. In Bash, this can be done in
+the same command that launches Doom 3 so the environment variable
+does not remain set for other OpenGL applications started in the
+same session:</p>
+<pre class="screen">
+    % __GL_DOOM3=1 doom3
+</pre>
+<p>Doom 3's startup script can also be modified to set this
+environment variable:</p>
+<pre class="screen">
+    #!/bin/sh
+    # Needed to make symlinks/shortcuts work.
+    # the binaries must run with correct working directory
+    cd "/usr/local/games/doom3/"
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+    export __GL_DOOM3=1
+    exec ./doom.x86 "$@"
+</pre>
+<p>This environment variable is temporary and will be removed in
+the future.</p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="WhyDoesSliOrMul28671" id=
+"WhyDoesSliOrMul28671"></a></td>
+<td align="left" valign="top">
+<p><b>Why does SLI or MultiGPU fail to initialize?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>There are several reasons why SLI or MultiGPU may fail to
+initialize. Most of these should be clear from the warning message
+in the X log file; e.g.:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><code class="computeroutput">Unsupported bus type</code></p>
+</li>
+<li>
+<p><code class="computeroutput">The video link was not
+detected</code></p>
+</li>
+<li>
+<p><code class="computeroutput">GPUs do not match</code></p>
+</li>
+<li>
+<p><code class="computeroutput">Unsupported GPU video
+BIOS</code></p>
+</li>
+<li>
+<p><code class="computeroutput">Insufficient PCIe link
+width</code></p>
+</li>
+</ul>
+</div>
+<p>The warning message <code class="computeroutput">'Unsupported
+PCI topology'</code> is likely due to problems with your Linux
+kernel. The NVIDIA driver must have access to the PCI Bridge (often
+called the Root Bridge) that each NVIDIA GPU is connected to in
+order to configure SLI or MultiGPU correctly. There are many
+kernels that do not properly recognize this bridge and, as a
+result, do not allow the NVIDIA driver to access this bridge. See
+the below "How can I determine if my kernel correctly detects my
+PCI Bridge?" FAQ for details.</p>
+<p>Below are some specific troubleshooting steps to help deal with
+SLI and MultiGPU initialization failures.</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Make sure that ACPI is enabled in your kernel. NVIDIA's
+experience has been that ACPI is needed for the kernel to correctly
+recognize the Root Bridge. Note that in some cases, the kernel's
+version of ACPI may still have problems and require an update to a
+newer kernel.</p>
+</li>
+<li>
+<p>Run <span><strong class="command">lspci</strong></span> to check
+that multiple NVIDIA GPUs can be identified by the operating
+system; e.g:</p>
+<pre class="screen">
+    % /sbin/lspci | grep -i nvidia
+</pre>
+<p>If <span><strong class="command">lspci</strong></span> does not
+report all the GPUs that are in your system, then this is a problem
+with your Linux kernel, and it is recommended that you use a
+different kernel.</p>
+<p>Please note: the <span><strong class=
+"command">lspci</strong></span> utility may be installed in a
+location other than <code class="filename">/sbin</code> on your
+system. If the above command fails with the error: <code class=
+"computeroutput">'/sbin/lspci: No such file or directory'</code>,
+please try:</p>
+<pre class="screen">
+    % lspci | grep -i nvidia
+</pre>
+<p>, instead. You may also need to install your distribution's
+<code class="computeroutput">pciutils</code> package.</p>
+</li>
+<li>
+<p>Make sure you have the most recent SBIOS available for your
+motherboard.</p>
+</li>
+<li>
+<p>The PCI Express slots on the motherboard must provide a minimum
+link width. Please make sure that the PCI Express slot(s) on your
+motherboard meet the following requirements and that you have
+connected the graphics board to the correct PCI Express
+slot(s):</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>A dual-GPU board needs a minimum of 8 lanes (i.e. x8 or x16)</p>
+</li>
+<li>
+<p>A pair of single-GPU boards requires one of the following
+supported link width combinations:</p>
+<div class="itemizedlist">
+<ul type="square">
+<li>
+<p>x16 + x16</p>
+</li>
+<li>
+<p>x16 + x8</p>
+</li>
+<li>
+<p>x16 + x4</p>
+</li>
+<li>
+<p>x8 + x8</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p></p>
+</td>
+</tr>
+<tr class="question">
+<td align="left" valign="top"><a name="HowCanIDetermin93bb2" id=
+"HowCanIDetermin93bb2"></a></td>
+<td align="left" valign="top">
+<p><b>How can I determine if my kernel correctly detects my PCI
+Bridge?</b></p>
+</td>
+</tr>
+<tr class="answer">
+<td align="left" valign="top"></td>
+<td align="left" valign="top">
+<p>As discussed above, the NVIDIA driver must have access to the
+PCI Bridge that each NVIDIA GPU is connected to in order to
+configure SLI or MultiGPU correctly. The following steps will
+identify whether the kernel correctly recognizes the PCI
+Bridge:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Identify both NVIDIA GPUs:</p>
+<pre class="screen">
+    % /sbin/lspci | grep -i vga
+
+    0a:00.0 VGA compatible controller: nVidia Corporation [...]
+    81:00.0 VGA compatible controller: nVidia Corporation [...]
+</pre>
+<p></p>
+</li>
+<li>
+<p>Verify that each GPU is connected to a bus connected to the Root
+Bridge (note that the GPUs in the above example are on buses 0a and
+81):</p>
+<pre class="screen">
+    % /sbin/lspci -t
+</pre>
+<p>good:</p>
+<pre class="screen">
+    -+-[0000:80]-+-00.0
+     |           +-01.0
+     |           \-0e.0-[0000:81]----00.0
+    ...
+     \-[0000:00]-+-00.0
+                 +-01.0
+                 +-01.1
+                 +-0e.0-[0000:0a]----00.0
+</pre>
+<p>bad:</p>
+<pre class="screen">
+    -+-[0000:81]---00.0
+    ...
+     \-[0000:00]-+-00.0
+                 +-01.0
+                 +-01.1
+                 +-0e.0-[0000:0a]----00.0
+</pre>
+<p>Note that in the first example, bus 81 is connected to Root
+Bridge 80, but that in the second example there is no Root Bridge
+80 and bus 81 is incorrectly connected at the base of the device
+tree. In the bad case, the only solution is to upgrade your kernel
+to one that properly detects your PCI bus layout.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"nvidia-persistenced.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"framelock.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;27.&nbsp;Using the nvidia-persistenced
+Utility&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;29.&nbsp;Configuring Frame Lock and Genlock</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

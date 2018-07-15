@@ -1,0 +1,933 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Appendix&nbsp;G.&nbsp;VDPAU Support</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="appendices.html" title=
+"Part&nbsp;II.&nbsp;Appendices">
+<link rel="prev" href="i2c.html" title=
+"Appendix&nbsp;F.&nbsp;i2c Bus Support">
+<link rel="next" href="audiosupport.html" title=
+"Appendix&nbsp;H.&nbsp;Audio Support">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Appendix&nbsp;G.&nbsp;VDPAU
+Support</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"i2c.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;II.&nbsp;Appendices</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"audiosupport.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="appendix" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="vdpausupport" id=
+"vdpausupport"></a>Appendix&nbsp;G.&nbsp;VDPAU Support</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits">Implementation
+Limits</a></span></dt>
+<dd>
+<dl>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-video-surface">VdpVideoSurface</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-bitmap-surface">VdpBitmapSurface</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-output-surface">VdpOutputSurface</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-decoder">VdpDecoder</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-video-mixer">VdpVideoMixer</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#vdpau-implementation-limits-presentation-queue">VdpPresentationQueue</a></span></dt>
+</dl>
+</dd>
+<dt><span class="section"><a href=
+"vdpausupport.html#PerformanceLeve85af3">Performance
+Levels</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#GettingTheBestP226a6">Getting the Best
+Performance from the API</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#AdditionalNotescc912">Additional
+Notes</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#DebuggingAndTra6efd2">Debugging and
+Tracing</a></span></dt>
+<dt><span class="section"><a href=
+"vdpausupport.html#Multithreading13bf9">Multi-threading</a></span></dt>
+</dl>
+</div>
+<p>This release includes support for the Video Decode and
+Presentation API for Unix-like systems (VDPAU) on most GeForce 8
+series and newer add-in cards, as well as motherboard chipsets with
+integrated graphics that have PureVideo support based on these
+GPUs.</p>
+<p>Use of VDPAU requires installation of a separate wrapper library
+called libvdpau. Please see your system distributor's documentation
+for information on how to install this library. More information
+can be found at <a href=
+"http://freedesktop.org/wiki/Software/VDPAU/" target=
+"_top">http://freedesktop.org/wiki/Software/VDPAU/</a>.</p>
+<p>VDPAU is only available for X screens with depths 16, 24, or
+30.</p>
+<p>VDPAU supports Xinerama. The following restrictions apply:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Physical X screen 0 must be driven by the NVIDIA driver.</p>
+</li>
+<li>
+<p>VDPAU will only display on physical X screens driven by the
+NVIDIA driver, and which are driven by a GPU both compatible with
+VDPAU, and compatible with the GPU driving physical X screen 0.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Under Xinerama, VDPAU performs all operations other than display
+on a single GPU. By default, the GPU associated with physical X
+screen 0 is used. The environment variable
+VDPAU_NVIDIA_XINERAMA_PHYSICAL_SCREEN may be used to specify a
+physical screen number, and then VDPAU will operate on the GPU
+associated with that physical screen. This variable should be set
+to the integer screen number as configured in the X configuration
+file. The selected physical X screen must be driven by the NVIDIA
+driver.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"vdpau-implementation-limits" id=
+"vdpau-implementation-limits"></a>Implementation Limits</h2>
+</div>
+</div>
+</div>
+<p>VDPAU is specified as a generic API - the choice of which
+features to support, and performance levels of those features, is
+left up to individual implementations. The details of NVIDIA's
+implementation are provided below.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name=
+"vdpau-implementation-limits-video-surface" id=
+"vdpau-implementation-limits-video-surface"></a>VdpVideoSurface</h3>
+</div>
+</div>
+</div>
+<p>The maximum supported resolution is 8192x8192 for GPUs with
+VDPAU feature sets H and I, and 4096x4096 for all other GPUs.</p>
+<p>The following surface formats and get-/put-bits combinations are
+supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_CHROMA_TYPE_420 (Supported get-/put-bits formats are
+VDP_YCBCR_FORMAT_NV12, VDP_YCBCR_FORMAT_YV12)</p>
+</li>
+<li>
+<p>VDP_CHROMA_TYPE_422 (Supported get-/put-bits formats are
+VDP_YCBCR_FORMAT_UYVY, VDP_YCBCR_FORMAT_YUYV)</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name=
+"vdpau-implementation-limits-bitmap-surface" id=
+"vdpau-implementation-limits-bitmap-surface"></a>VdpBitmapSurface</h3>
+</div>
+</div>
+</div>
+<p>The maximum supported resolution is 16384x16384 pixels.</p>
+<p>The following surface formats are supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_RGBA_FORMAT_B8G8R8A8</p>
+</li>
+<li>
+<p>VDP_RGBA_FORMAT_R8G8B8A8</p>
+</li>
+<li>
+<p>VDP_RGBA_FORMAT_B10G10R10A2</p>
+</li>
+<li>
+<p>VDP_RGBA_FORMAT_R10G10B10A2</p>
+</li>
+<li>
+<p>VDP_RGBA_FORMAT_A8</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Note that VdpBitmapSurfaceCreate's frequently_accessed parameter
+directly controls whether the bitmap data will be placed into video
+RAM (VDP_TRUE) or system memory (VDP_FALSE). Note that if the
+bitmap data cannot be placed into video RAM when requested due to
+resource constraints, the implementation will automatically fall
+back to placing the data into system RAM.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name=
+"vdpau-implementation-limits-output-surface" id=
+"vdpau-implementation-limits-output-surface"></a>VdpOutputSurface</h3>
+</div>
+</div>
+</div>
+<p>The maximum supported resolution is 16384x16384 pixels.</p>
+<p>The following surface formats are supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_RGBA_FORMAT_B8G8R8A8</p>
+</li>
+<li>
+<p>VDP_RGBA_FORMAT_R10G10B10A2</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>For all surface formats, the following get-/put-bits indexed
+formats are supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_INDEXED_FORMAT_A4I4</p>
+</li>
+<li>
+<p>VDP_INDEXED_FORMAT_I4A4</p>
+</li>
+<li>
+<p>VDP_INDEXED_FORMAT_A8I8</p>
+</li>
+<li>
+<p>VDP_INDEXED_FORMAT_I8A8</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>For all surface formats, the following get-/put-bits YCbCr
+formats are supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_YCBCR_FORMAT_Y8U8V8A8</p>
+</li>
+<li>
+<p>VDP_YCBCR_FORMAT_V8U8Y8A8</p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="vdpau-implementation-limits-decoder" id=
+"vdpau-implementation-limits-decoder"></a>VdpDecoder</h3>
+</div>
+</div>
+</div>
+<p>In all cases, VdpDecoder objects solely support 8-bit 4:2:0
+streams, and only support writing to VDP_CHROMA_TYPE_420
+surfaces.</p>
+<p>The exact set of supported VdpDecoderProfile values depends on
+the GPU in use. <a href="supportedchips.html" title=
+"Appendix&nbsp;A.&nbsp;Supported NVIDIA GPU Products">Appendix&nbsp;A,
+<i>Supported NVIDIA GPU Products</i></a> lists which GPUs support
+which video feature set. An explanation of each video feature set
+may be found below. When reading these lists, please note that
+VC1_SIMPLE and VC1_MAIN may be referred to as WMV, WMV3, or WMV9 in
+other contexts. Partial acceleration means that VLD (bitstream)
+decoding is performed on the CPU, with the GPU performing IDCT and
+motion compensation. Complete acceleration means that the GPU
+performs all of VLD, IDCT, and motion compensation.</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSetc8dc5" id=
+"VdpauFeatureSetc8dc5"></a>VDPAU Feature Sets A and B</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature sets A and B are not supported by this
+driver.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSet05cbd" id=
+"VdpauFeatureSet05cbd"></a>VDPAU Feature Sets C, D, and E</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature set C, D, or E support at least the
+following VdpDecoderProfile values, and associated limits:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_DECODER_PROFILE_MPEG1, VDP_DECODER_PROFILE_MPEG2_SIMPLE,
+VDP_DECODER_PROFILE_MPEG2_MAIN:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 3 macroblocks (48 pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 128 macroblocks (2048 pixels) for
+feature set C, 252 macroblocks (4032 pixels) wide by 253
+macroblocks (4048 pixels) high for feature set D, 255 macroblocks
+(4080 pixels) for feature set E.</p>
+</li>
+<li>
+<p>Maximum macroblocks: 8192 for feature set C, 65536 for feature
+sets D or E.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+<li>
+<p>VDP_DECODER_PROFILE_H264_MAIN, VDP_DECODER_PROFILE_H264_HIGH,
+VDP_DECODER_PROFILE_H264_CONSTRAINED_BASELINE,
+VDP_DECODER_PROFILE_H264_PROGRESSIVE_HIGH,
+VDP_DECODER_PROFILE_H264_CONSTRAINED_HIGH:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 3 macroblocks (48 pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 128 macroblocks (2048 pixels) for
+feature set C, 252 macroblocks (4032 pixels) wide by 255
+macroblocks (4080 pixels) high for feature set D, 256 macroblocks
+(4096 pixels) for feature set E.</p>
+</li>
+<li>
+<p>Maximum macroblocks: 8192 for feature set C, 65536 for feature
+sets D or E.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+<li>
+<p>VDP_DECODER_PROFILE_H264_BASELINE,
+VDP_DECODER_PROFILE_H264_EXTENDED:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Partial acceleration. The NVIDIA VDPAU implementation does not
+support flexible macroblock ordering, arbitrary slice ordering,
+redundant slices, data partitioning, SI slices, or SP slices.
+Content utilizing these features may decode with visible
+corruption.</p>
+</li>
+<li>
+<p>Minimum width or height: 3 macroblocks (48 pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 128 macroblocks (2048 pixels) for
+feature set C, 252 macroblocks (4032 pixels) wide by 255
+macroblocks (4080 pixels) high for feature set D, 256 macroblocks
+(4096 pixels) for feature set E.</p>
+</li>
+<li>
+<p>Maximum macroblocks: 8192 for feature set C, 65536 for feature
+sets D or E.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+<li>
+<p>VDP_DECODER_PROFILE_VC1_SIMPLE, VDP_DECODER_PROFILE_VC1_MAIN,
+VDP_DECODER_PROFILE_VC1_ADVANCED:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 3 macroblocks (48 pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 128 macroblocks (2048 pixels).</p>
+</li>
+<li>
+<p>Maximum macroblocks: 8190</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+<li>
+<p>VDP_DECODER_PROFILE_MPEG4_PART2_SP,
+VDP_DECODER_PROFILE_MPEG4_PART2_ASP,
+VDP_DECODER_PROFILE_DIVX4_QMOBILE,
+VDP_DECODER_PROFILE_DIVX4_MOBILE,
+VDP_DECODER_PROFILE_DIVX4_HOME_THEATER,
+VDP_DECODER_PROFILE_DIVX4_HD_1080P,
+VDP_DECODER_PROFILE_DIVX5_QMOBILE,
+VDP_DECODER_PROFILE_DIVX5_MOBILE,
+VDP_DECODER_PROFILE_DIVX5_HOME_THEATER,
+VDP_DECODER_PROFILE_DIVX5_HD_1080P</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 3 macroblocks (48 pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 128 macroblocks (2048 pixels).</p>
+</li>
+<li>
+<p>Maximum macroblocks: 8192</p>
+</li>
+</ul>
+</div>
+<p>The following features are currently not supported:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>GMC (Global Motion Compensation)</p>
+</li>
+<li>
+<p>Data partitioning</p>
+</li>
+<li>
+<p>reversible VLC</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>These GPUs also support
+VDP_VIDEO_MIXER_FEATURE_HIGH_QUALITY_SCALING_L1.</p>
+<p>GPUs with VDPAU feature set E support an enhanced error
+concealment mode which provides more robust error handling when
+decoding corrupted video streams. This error concealment is on by
+default, and may have a minor CPU performance impact in certain
+configurations. To disable this, set the environment variable
+VDPAU_NVIDIA_DISABLE_ERROR_CONCEALMENT to 1.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSet2e22b" id=
+"VdpauFeatureSet2e22b"></a>VDPAU Feature Set F</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature set F support all of the same
+VdpDecoderProfile values and other features as VDPAU feature set E.
+Feature set F adds:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_DECODER_PROFILE_HEVC_MAIN:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 128 luma samples (pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 4096 luma samples (pixels) wide by 2304
+luma samples (pixels) tall.</p>
+</li>
+<li>
+<p>Maximum macroblocks: not applicable.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSet3ed95" id=
+"VdpauFeatureSet3ed95"></a>VDPAU Feature Set G</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature set G support all of the same
+VdpDecoderProfile values and other features as VDPAU feature set F.
+In addition, these GPUs have hardware support for the HEVC Main 12
+profile. VDPAU does not currently support the HEVC Main 12
+profile.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSetfc84d" id=
+"VdpauFeatureSetfc84d"></a>VDPAU Feature Set H</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature set H support all of the same
+VdpDecoderProfile values and other features as VDPAU feature set G.
+Feature set H adds:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_DECODER_PROFILE_HEVC_MAIN:</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Complete acceleration.</p>
+</li>
+<li>
+<p>Minimum width or height: 128 luma samples (pixels).</p>
+</li>
+<li>
+<p>Maximum width or height: 8192 luma samples (pixels) wide by 8192
+luma samples (pixels) tall.</p>
+</li>
+<li>
+<p>Maximum macroblocks: not applicable.</p>
+</li>
+</ul>
+</div>
+<p></p>
+</li>
+</ul>
+</div>
+<p></p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="VdpauFeatureSet8f4bb" id=
+"VdpauFeatureSet8f4bb"></a>VDPAU Feature Set I</h4>
+</div>
+</div>
+</div>
+<p>GPUs with VDPAU feature set I support all of the same
+VdpDecoderProfile values and other features as VDPAU feature set
+H.</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="vdpau-implementation-limits-video-mixer"
+id="vdpau-implementation-limits-video-mixer"></a>VdpVideoMixer</h3>
+</div>
+</div>
+</div>
+<p>The maximum supported resolution is 8192x8192 for GPUs with
+VDPAU feature set H, and 4096x4096 for all other GPUs.</p>
+<p>The video mixer supports all video and output surface
+resolutions and formats that the implementation supports.</p>
+<p>The video mixer supports at most 4 auxiliary layers.</p>
+<p>The following features are supported:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL</p>
+</li>
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL_SPATIAL</p>
+</li>
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_INVERSE_TELECINE</p>
+</li>
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_NOISE_REDUCTION</p>
+</li>
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_SHARPNESS</p>
+</li>
+<li>
+<p>VDP_VIDEO_MIXER_FEATURE_LUMA_KEY</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>In order for either VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL
+or VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL_SPATIAL to operate
+correctly, the application must supply at least 2 past and 1 future
+fields to each VdpMixerRender call. If those fields are not
+provided, the VdpMixer will fall back to bob de-interlacing.</p>
+<p>Both regular de-interlacing and half-rate de-interlacing are
+supported. Both have the same requirements in terms of the number
+of past/future fields required. Both modes should produce
+equivalent results.</p>
+<p>In order for VDP_VIDEO_MIXER_FEATURE_INVERSE_TELECINE to have
+any effect, one of VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL or
+VDP_VIDEO_MIXER_FEATURE_DEINTERLACE_TEMPORAL_SPATIAL must be
+requested and enabled. Inverse telecine has the same requirement on
+the minimum number of past/future fields that must be provided.
+Inverse telecine will not operate when "half-rate" de-interlacing
+is used.</p>
+<p>While it is possible to apply de-interlacing algorithms to
+progressive streams using the techniques outlined in the VDPAU
+documentation, NVIDIA does not recommend doing so. One is likely to
+introduce more artifacts due to the inverse telecine process than
+are removed by detection of bad edits etc.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name=
+"vdpau-implementation-limits-presentation-queue" id=
+"vdpau-implementation-limits-presentation-queue"></a>VdpPresentationQueue</h3>
+</div>
+</div>
+</div>
+<p>The resolution of VdpTime is approximately 10 nanoseconds. At
+some arbitrary point during system startup, the initial value of
+this clock is synchronized to the system's real-time clock, as
+represented by nanoseconds since since Jan 1, 1970. However, no
+attempt is made to keep the two time-bases synchronized after this
+point. Divergence can and will occur.</p>
+<p>NVIDIA's VdpPresentationQueue supports two methods for
+displaying surfaces; overlay and blit. The overlay method will be
+used wherever possible, with the blit method acting as a more
+general fallback.</p>
+<p>Whenever a presentation queue is created, the driver determines
+whether the overlay method may ever be used, based on system
+configuration, and whether any other application already owns the
+overlay. If overlay usage is potentially possible, the presentation
+queue is marked as owning the overlay.</p>
+<p>Whenever a surface is displayed, the driver determines whether
+the overlay method may be used for that frame, based on both
+whether the presentation queue owns the overlay, and the set of
+overlay usage limitations below. In other words, the driver may
+switch back and forth between overlay and blit methods dynamically.
+The most likely cause for dynamic switching is when a compositing
+manager is enabled or disabled, and the window becomes redirected
+or unredirected.</p>
+<p>The following conditions or system configurations will prevent
+usage of the overlay path:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Overlay hardware already in use, e.g. by another VDPAU, GL, or
+X11 application, or by SDI output.</p>
+</li>
+<li>
+<p>Desktop rotation enabled on the given X screen.</p>
+</li>
+<li>
+<p>The presentation target window is redirected, due to a
+compositing manager actively running.</p>
+</li>
+<li>
+<p>The environment variable VDPAU_NVIDIA_NO_OVERLAY is set to a
+string representation of a non-zero integer.</p>
+</li>
+<li>
+<p>The driver determines that the performance requirements of
+overlay usage cannot be met by the current hardware
+configuration.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Both the overlay and blit methods sync to VBLANK. The overlay
+path is guaranteed never to tear, whereas the blit method is
+classed as "best effort".</p>
+<p>When TwinView is enabled, the blit method can only sync to one
+of the display devices; this may cause tearing corruption on the
+display device to which VDPAU is not syncing. You can use the
+environment variable VDPAU_NVIDIA_SYNC_DISPLAY_DEVICE to specify
+the display device to which VDPAU should sync. You should set this
+environment variable to the name of a display device, for example
+"CRT-1". Look for the line "Connected display device(s):" in your X
+log file for a list of the display devices present and their names.
+You may also find it useful to review <a href="configtwinview.html"
+title=
+"Chapter&nbsp;12.&nbsp;Configuring Multiple Display Devices on One X Screen">
+Chapter&nbsp;12, <i>Configuring Multiple Display Devices on One X
+Screen</i></a> "Configuring Twinview" and the section on Ensuring
+Identical Mode Timings in <a href="programmingmodes.html" title=
+"Chapter&nbsp;18.&nbsp;Programming Modes">Chapter&nbsp;18,
+<i>Programming Modes</i></a>.</p>
+<p>A VdpPresentationQueue allows a maximum of 8 surfaces to be
+QUEUED or VISIBLE at any one time. This limit is per presentation
+queue. If this limit is exceeded, VdpPresentationQueueDisplay
+blocks until an entry in the presentation queue becomes free.</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"PerformanceLeve85af3" id="PerformanceLeve85af3"></a>Performance
+Levels</h2>
+</div>
+</div>
+</div>
+<p>This documentation describes the capabilities of the NVIDIA
+VDPAU implementation. Hardware performance may vary significantly
+between cards. No guarantees are made, nor implied, that any
+particular combination of system configuration, GPU configuration,
+VDPAU feature set, VDPAU API usage, application, video stream,
+etc., will be able to decode streams at any particular frame
+rate.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"GettingTheBestP226a6" id="GettingTheBestP226a6"></a>Getting the
+Best Performance from the API</h2>
+</div>
+</div>
+</div>
+<p>System performance (raw throughput, latency, and jitter
+tolerance) can be affected by a variety of factors. One of these
+factors is how the client application uses VDPAU; i.e. the number
+of surfaces allocated for buffering, order of operations, etc.</p>
+<p>NVIDIA GPUs typically contain a number of separate hardware
+modules that are capable of performing different parts of the video
+decode, post-processing, and display operations in parallel. To
+obtain the best performance, the client application must attempt to
+keep all these modules busy with work at all times.</p>
+<p>Consider the decoding process. At a bare minimum, the
+application must allocate one video surface for each reference
+frame that the stream can use (2 for MPEG or VC-1, a variable
+stream-dependent number for H.264) plus one surface for the picture
+currently being decoded. However, if this minimum number of
+surfaces is used, performance may be poor. This is because
+back-to-back decodes of non-reference frames will need to be
+written into the same video surface. This will require that decode
+of the second frame wait until decode of the first has completed; a
+pipeline stall.</p>
+<p>Further, if the video surfaces are being read by the video mixer
+for post-processing, and eventual display, this will "lock" the
+surfaces for even longer, since the video mixer needs to read the
+data from the surface, which prevents any subsequent decode
+operations from writing to the surface. Recall that when advanced
+de-interlacing techniques are used, a history of video surfaces
+must be provided to the video mixer, thus necessitating that even
+more video surfaces be allocated.</p>
+<p>For this reason, NVIDIA recommends the following number of video
+surfaces be allocated:</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>(num_ref + 3) for progressive content, and no
+de-interlacing.</p>
+</li>
+<li>
+<p>(num_ref + 5) for interlaced content using advanced
+de-interlacing.</p>
+</li>
+</ul>
+</div>
+<p></p>
+<p>Next, consider the display path via the presentation queue. This
+portion of the pipeline requires at least 2 output surfaces; one
+that is being actively displayed by the presentation queue, and one
+being rendered to for subsequent display. As before, using this
+minimum number of surfaces may not be optimal. For some video
+streams, the hardware may only achieve real-time decoding on
+average, not for each individual frame. Using compositing APIs to
+render on-screen displays, graphical user interfaces, etc., may
+introduce extra jitter and latency into the pipeline. Similarly,
+system level issues such as scheduler algorithms and system load
+may prevent the CPU portion of the driver from operating for short
+periods of time. All of these potential issues may be solved by
+allocating more output surfaces, and queuing more than one
+outstanding output surface into the presentation queue.</p>
+<p>The reason for using more than the minimum number of video
+surfaces is to ensure that the decoding and post-processing
+pipeline is not stalled, and hence is kept busy for the maximum
+amount of time possible. In contrast, the reason for using more
+than the minimum number of output surfaces is to hide jitter and
+latency in various GPU and CPU operations.</p>
+<p>The choice of exactly how many surfaces to allocate is a
+resource usage v.s. performance trade-off; Allocating more than the
+minimum number of surfaces will increase performance, but use
+proportionally more video RAM. This may cause allocations to fail.
+This could be particularly problematic on systems with a small
+amount of video RAM. A stellar application would automatically
+adjust to this by initially allocating the bare minimum number of
+surfaces (failures being fatal), then attempting to allocate more
+and more surfaces, provided the allocations kept succeeding, up to
+the suggested limits above.</p>
+<p>The video decoder's memory usage is also proportional to the
+maximum number of reference frames specified at creation time.
+Requesting a larger number of reference frames can significantly
+increase memory usage. Hence it is best for applications that
+decode H.264 to request only the actual number of reference frames
+specified in the stream, rather than e.g. hard-coding a limit of
+16, or even the maximum number of surfaces allowable by some
+specific H.264 level at the stream's resolution.</p>
+<p>Note that the NVIDIA implementation correctly implements all
+required interlocks between the various pipelined hardware modules.
+Applications never need worry about correctness (providing their
+API usage is legal and sensible), but simply have to worry about
+performance.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"AdditionalNotescc912" id="AdditionalNotescc912"></a>Additional
+Notes</h2>
+</div>
+</div>
+</div>
+<p>Note that output and bitmap surfaces are not cleared to any
+specific value upon allocation. It is the application's
+responsibility to initialize all surfaces prior to using them as
+input to any function. Video surfaces are cleared to black upon
+allocation.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"DebuggingAndTra6efd2" id="DebuggingAndTra6efd2"></a>Debugging and
+Tracing</h2>
+</div>
+</div>
+</div>
+<p>The VDPAU wrapper library supports tracing VDPAU function calls,
+and their parameters. This tracing is controlled by the following
+environment variables:</p>
+<div class="variablelist">
+<dl>
+<dt><span class="term">VDPAU_TRACE</span></dt>
+<dd>
+<p>Enables tracing. Set to 1 to trace function calls. Set to 2 to
+trace all arguments passed to the function.</p>
+</dd>
+<dt><span class="term">VDPAU_TRACE_FILE</span></dt>
+<dd>
+<p>Filename to write traces to. By default, traces are sent to
+stderr. This variable may either contain a plain filename, or a
+reference to an existing open file-descriptor in the format
+"&amp;N" where N is the file descriptor number.</p>
+</dd>
+</dl>
+</div>
+<p></p>
+<p>The VDPAU wrapper library is responsible for determining which
+vendor-specific driver to load for a given X11 display/screen. At
+present, it hard-codes "nvidia" as the driver. The environment
+variable VDPAU_DRIVER may be set to override this default. The
+actual library loaded will be libvdpau_${VDPAU_DRIVER}.so. Setting
+VDPAU_DRIVER to "trace" is not advised.</p>
+<p>The NVIDIA VDPAU driver can emit some diagnostic information
+when an error occurs. To enable this, set the environment variable
+VDPAU_NVIDIA_DEBUG. A value of 1 will request a small diagnostic
+that will enable NVIDIA engineers to locate the source of the
+problem. A value of 3 will request that a complete stack backtrace
+be printed, which provide NVIDIA engineers with more detailed
+information, which may be needed to diagnose some problems.</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name="Multithreading13bf9"
+id="Multithreading13bf9"></a>Multi-threading</h2>
+</div>
+</div>
+</div>
+<p>VDPAU supports multiple threads actively executing within the
+driver, subject to certain limitations.</p>
+<p>If any object is being created or destroyed, the VDPAU driver
+will become single-threaded. This includes object destruction
+during preemption cleanup.</p>
+<p>Otherwise, up to one thread may actively execute
+VdpDecoderRender per VdpDecoder object, and up to one thread may
+actively execute any other rendering API per VdpDevice (or child)
+object. Note that the driver enforces these restrictions
+internally; applications are not required to implement the rules
+outlined above.</p>
+<p>Finally, some of the "query" or "get" APIs may actively execute
+irrespective of the number of rendering threads currently
+executing.</p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"i2c.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"appendices.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"audiosupport.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">Appendix&nbsp;F.&nbsp;i2c
+Bus Support&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Appendix&nbsp;H.&nbsp;Audio Support</td>
+</tr>
+</table>
+</div>
+</body>
+</html>

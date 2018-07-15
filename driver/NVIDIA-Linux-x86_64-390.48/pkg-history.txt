@@ -1,0 +1,6 @@
+Package history for NVIDIA-Linux-x86_64-390.48-internal:
+
+NVIDIA-Linux-x86_64-390.48-internal: Initial package
+
+NVIDIA-Linux-x86_64-390.48: Added 32 bit compatibility libraries
+

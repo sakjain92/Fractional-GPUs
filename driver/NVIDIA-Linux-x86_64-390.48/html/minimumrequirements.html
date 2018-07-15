@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>Chapter&nbsp;2.&nbsp;Minimum Requirements</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title=
+"NVIDIA Accelerated Linux Graphics Driver README and Installation Guide">
+<link rel="up" href="installationandconfiguration.html" title=
+"Part&nbsp;I.&nbsp;Installation and Configuration Instructions">
+<link rel="prev" href="introduction.html" title=
+"Chapter&nbsp;1.&nbsp;Introduction">
+<link rel="next" href="selectdriver.html" title=
+"Chapter&nbsp;3.&nbsp;Selecting and Downloading the NVIDIA Packages for Your System">
+</head>
+<body>
+<div class="navheader">
+<table width="100%" summary="Navigation header">
+<tr>
+<th colspan="3" align="center">Chapter&nbsp;2.&nbsp;Minimum
+Requirements</th>
+</tr>
+<tr>
+<td width="20%" align="left"><a accesskey="p" href=
+"introduction.html">Prev</a>&nbsp;</td>
+<th width="60%" align="center">Part&nbsp;I.&nbsp;Installation and
+Configuration Instructions</th>
+<td width="20%" align="right">&nbsp;<a accesskey="n" href=
+"selectdriver.html">Next</a></td>
+</tr>
+</table>
+<hr></div>
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title"><a name="minimumrequirements" id=
+"minimumrequirements"></a>Chapter&nbsp;2.&nbsp;Minimum
+Requirements</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl>
+<dt><span class="section"><a href=
+"minimumrequirements.html#MinimumSoftware2486a">Minimum Software
+Requirements</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both"><a name=
+"MinimumSoftware2486a" id="MinimumSoftware2486a"></a>Minimum
+Software Requirements</h2>
+</div>
+</div>
+</div>
+<p></p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Software Element</th>
+<th>Supported versions</th>
+<th>Check With...</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux kernel</td>
+<td>2.6.9* and newer</td>
+<td><strong class="userinput"><code>cat
+/proc/version</code></strong></td>
+</tr>
+<tr>
+<td>XFree86**</td>
+<td>4.0.1 and newer</td>
+<td><strong class="userinput"><code>XFree86
+-version</code></strong></td>
+</tr>
+<tr>
+<td>X.Org**</td>
+<td>1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11,
+1.12, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18, 1.19</td>
+<td><strong class="userinput"><code>Xorg
+-version</code></strong></td>
+</tr>
+<tr>
+<td>Kernel modutils</td>
+<td>2.1.121 and newer</td>
+<td><strong class="userinput"><code>insmod
+--version</code></strong></td>
+</tr>
+<tr>
+<td>glibc</td>
+<td>2.0</td>
+<td><strong class="userinput"><code>ls
+/lib/libc.so.*</code></strong> &gt; 6</td>
+</tr>
+<tr>
+<td>libvdpau ***</td>
+<td>0.2</td>
+<td><strong class="userinput"><code>pkg-config --modversion
+vdpau</code></strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>* The nvidia-uvm.ko kernel module, which provides Unified
+Virtual Memory (UVM) functionality to the CUDA driver, requires a
+2.6.32 or newer Linux kernel. On systems with older kernels, UVM
+functionality will not be available to CUDA.</p>
+<p>** It is only required that you have one of XFree86 or X.Org,
+not both.</p>
+<p>*** Required for hardware-accelerated video playback. See
+<a href="vdpausupport.html" title=
+"Appendix&nbsp;G.&nbsp;VDPAU Support">Appendix&nbsp;G, <i>VDPAU
+Support</i></a> for more information.</p>
+<p>Please see <a href="faq.html#xversions">&ldquo;How do I
+interpret X server version numbers?&rdquo;</a> for a note about X
+server version numbers.</p>
+<p>If you need to build the NVIDIA kernel module:</p>
+<div class="informaltable">
+<table summary="(no summary available)" border="0">
+<colgroup>
+<col>
+<col>
+<col></colgroup>
+<thead>
+<tr>
+<th>Software Element</th>
+<th>Min Requirement</th>
+<th>Check With...</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>binutils</td>
+<td>2.9.5</td>
+<td><strong class="userinput"><code>size
+--version</code></strong></td>
+</tr>
+<tr>
+<td>GNU make</td>
+<td>3.77</td>
+<td><strong class="userinput"><code>make
+--version</code></strong></td>
+</tr>
+<tr>
+<td>gcc</td>
+<td>2.91.66</td>
+<td><strong class="userinput"><code>gcc
+--version</code></strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+<p>All official stable kernel releases from 2.6.9 and up are
+supported; pre-release versions, such as 2.6.23-rc1, are not
+supported. The Linux kernel can be downloaded from <a href=
+"http://www.kernel.org" target="_top">http://www.kernel.org</a> or
+one of its mirrors.</p>
+<p>binutils and gcc can be retrieved from <a href=
+"http://www.gnu.org" target="_top">http://www.gnu.org</a> or one of
+its mirrors.</p>
+<p>If you are using XFree86, but do not have a file <code class=
+"filename">/var/log/XFree86.0.log</code>, then you probably have a
+3.x version of XFree86 and must upgrade.</p>
+<p>Sometimes very recent X server versions are not supported
+immediately following release, but we aim to support all new
+versions as soon as possible. Support is not added for new X server
+versions until after the video driver ABI is frozen, which usually
+happens at the release candidate stage. Prerelease versions that
+are not release candidates, such as "1.10.99.1", are not
+supported.</p>
+<p>If you are setting up the X Window System for the first time, it
+is often easier to begin with one of the open source drivers that
+ships with XFree86 and X.Org (either "vga", "vesa", or "fbdev").
+Once your system is operating properly with the open source driver,
+you may then switch to the NVIDIA driver.</p>
+<p>These software packages may also be available through your Linux
+distributor.</p>
+</div>
+</div>
+<div class="navfooter">
+<hr>
+<table width="100%" summary="Navigation footer">
+<tr>
+<td width="40%" align="left"><a accesskey="p" href=
+"introduction.html">Prev</a>&nbsp;</td>
+<td width="20%" align="center"><a accesskey="u" href=
+"installationandconfiguration.html">Up</a></td>
+<td width="40%" align="right">&nbsp;<a accesskey="n" href=
+"selectdriver.html">Next</a></td>
+</tr>
+<tr>
+<td width="40%" align="left" valign="top">
+Chapter&nbsp;1.&nbsp;Introduction&nbsp;</td>
+<td width="20%" align="center"><a accesskey="h" href=
+"index.html">Home</a></td>
+<td width="40%" align="right" valign="top">
+&nbsp;Chapter&nbsp;3.&nbsp;Selecting and Downloading the NVIDIA
+Packages for Your System</td>
+</tr>
+</table>
+</div>
+</body>
+</html>
