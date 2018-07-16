@@ -211,7 +211,9 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
    // Execute the kernel
     int nIter = 10000;
     double start, total;
+    pstats_t stats;
 
+    // Warmup
     for (int i = 0; i < nIter; i++) {
 
         start = dtime_usec(0);
@@ -230,9 +232,13 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
         printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
 
+    // Actual
+    pstats_init(&stats);
     start = dtime_usec(0);
     for (int j = 0; j < nIter; j++)
     {
+        double sub_start = dtime_usec(0);
+
         if (block_size == 16)
         {
             matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
@@ -241,10 +247,14 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
         {
             matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
+        cudaDeviceSynchronize();
+        pstats_add_observation(&stats, dtime_usec(sub_start));
     }
     
     cudaDeviceSynchronize();
     total = dtime_usec(start);
+
+    pstats_print(&stats);
 
     // Compute and print the performance
     double msecPerMatrixMul = total / nIter / 1000;
@@ -256,6 +266,22 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
         msecPerMatrixMul,
         flopsPerMatrixMul,
         threads.x * threads.y);
+
+    // Termination - To allow other color's application to overlap in time
+    for (int i = 0; i < nIter; i++) {
+
+        // Performs warmup operation using matrixMul CUDA kernel
+        if (block_size == 16)
+        {
+            matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+        else
+        {
+            matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+
+        cudaDeviceSynchronize();
+    }
 
     // Copy result from device to host
     error = cudaMemcpy(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost);

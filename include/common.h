@@ -59,4 +59,32 @@ inline double dtime_usec(unsigned long long start)
 /* Assumes size of power of 2 */
 #define ROUND_UP(a, size) (((a) + (size) - 1) & ~((size) - 1))
 
+/* For benchmarking applications */
+typedef struct pstats {
+    double sum;
+    double min;
+    double max;
+    double count;
+} pstats_t;
+
+inline void pstats_init(pstats_t *stats)
+{
+    stats->min = LONG_MAX;
+    stats->max = LONG_MIN;
+    stats->count = stats->sum = 0;
+}
+
+inline void pstats_add_observation(pstats_t *stats, double time)
+{
+    stats->max = time > stats->max ? time : stats->max;
+    stats->min = time < stats->min ? time : stats->min;
+    stats->count++;
+    stats->sum += time;
+}
+
+inline void pstats_print(pstats_t *stats)
+{
+    printf("STATS: Min:%f, Max:%f, Avg:%f, Count:%f\n",
+            stats->min, stats->max, stats->sum / stats->count, stats->count);
+}
 #endif /* COMMON_H */

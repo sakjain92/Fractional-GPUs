@@ -210,8 +210,9 @@ int matrixMultiply(int color)
 
     int ret;
     double start, total;
+    pstats_t stats;
 
-
+    // Init
     for (int j = 0; j < nIter; j++)
     {
         start = dtime_usec(0);
@@ -235,9 +236,11 @@ int matrixMultiply(int color)
         printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
 
+    pstats_init(&stats);
     start = dtime_usec(0);
     for (int j = 0; j < nIter; j++)
     {
+        double sub_start = dtime_usec(0);
         if (block_size == 16)
         {
             ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
@@ -248,6 +251,7 @@ int matrixMultiply(int color)
         }
         if (ret < 0)
             return ret;
+        pstats_add_observation(&stats, dtime_usec(sub_start));
     }
 
     ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
@@ -255,7 +259,8 @@ int matrixMultiply(int color)
         return ret;
 
     total = dtime_usec(start);
-    
+    pstats_print(&stats);
+
     // Compute and print the performance
     double msecPerMatrixMul = total / nIter / 1000;
     double flopsPerMatrixMul = 2.0 * (double)dimsA.x * (double)dimsA.y * (double)dimsB.x;
@@ -266,6 +271,27 @@ int matrixMultiply(int color)
         msecPerMatrixMul,
         flopsPerMatrixMul,
         threads.x * threads.y);
+
+    // Terminate - To overlap wth application running in other color for benchmarking
+    for (int j = 0; j < nIter; j++)
+    {
+
+        if (block_size == 16)
+        {
+            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+        else
+        {
+            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+        }
+        if (ret < 0)
+            return ret;
+
+	    ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+    	if (ret < 0)
+        	return ret;
+
+    }
 
     // Copy result from device to host
     error = cudaMemcpyAsync(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost, stream);
@@ -305,6 +331,7 @@ int matrixMultiply(int color)
     }
 
     printf("%s\n", correct ? "Result = PASS" : "Result = FAIL");
+
     // Clean up memory
     free(h_A);
     free(h_B);

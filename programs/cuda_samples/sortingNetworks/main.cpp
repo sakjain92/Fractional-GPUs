@@ -143,8 +143,58 @@ int main(int argc, char **argv)
 
 
     double start, total;
-    start = dtime_usec(0);
+    pstats_t stats;
+    // Warmup
+    for (uint i = 0; i < numIterations; i++) {
+        start = dtime_usec(0);
+        threadCount = bitonicSort(
+                d_OutputKey,
+                d_OutputVal,
+                d_InputKey,
+                d_InputVal,
+                N / arrayLength,
+                arrayLength,
+                DIR
+                );
 
+        error = cudaDeviceSynchronize();
+        checkCudaErrors(error);
+        total = dtime_usec(start);
+        printf("Wamup:Array Length: %d, Time:%f us\n", N, total);
+    }
+
+    
+    // Measurements
+    pstats_init(&stats);
+    start = dtime_usec(0);
+    for (uint i = 0; i < numIterations; i++) {
+        double sub_start = dtime_usec(0);
+        threadCount = bitonicSort(
+                d_OutputKey,
+                d_OutputVal,
+                d_InputKey,
+                d_InputVal,
+                N / arrayLength,
+                arrayLength,
+                DIR
+                );
+        cudaDeviceSynchronize();
+        pstats_add_observation(&stats, dtime_usec(sub_start));
+    }
+    error = cudaDeviceSynchronize();
+    checkCudaErrors(error);
+
+    total = dtime_usec(start);
+
+    pstats_print(&stats);
+    printf("Average time: %f ms\n\n", total / numIterations / 1000);
+
+    double dTimeSecs = 1.0e-3 * total / numIterations;
+    printf("sortingNetworks-bitonic, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u elements, NumDevsUsed = %u, Workgroup = %u\n",
+            (1.0e-6 * (double)arrayLength/dTimeSecs), dTimeSecs, arrayLength, 1, threadCount);
+
+
+    // Termination - To overlap with others
     for (uint i = 0; i < numIterations; i++)
         threadCount = bitonicSort(
                 d_OutputKey,
@@ -158,18 +208,6 @@ int main(int argc, char **argv)
 
     error = cudaDeviceSynchronize();
     checkCudaErrors(error);
-
-    total = dtime_usec(start);
-    
-    printf("Average time: %f ms\n\n", total / numIterations / 1000);
-
-
-    if (arrayLength == N)
-    {
-        double dTimeSecs = 1.0e-3 * sdkGetTimerValue(&hTimer) / numIterations;
-        printf("sortingNetworks-bitonic, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u elements, NumDevsUsed = %u, Workgroup = %u\n",
-                (1.0e-6 * (double)arrayLength/dTimeSecs), dTimeSecs, arrayLength, 1, threadCount);
-    }
 
     printf("Shutting down...\n");
     sdkDeleteTimer(&hTimer);
