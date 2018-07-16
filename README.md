@@ -66,7 +66,7 @@ cd build
 make
 ./server                        // Run the server. Server does some initialization and then goes to sleep.
 sudo ../scripts/mps_init.sh     // Starts the MPS server
-./<application>
+<run application>
 ```
 
 In case the server is not properly closed, it might complain the next time it is 
@@ -78,15 +78,9 @@ cd $PROJECT_DIR
 sudo scripts/mps_stop.sh
 ```
 
-## Add new applications
+## Port new applications
 Following steps need to be taken to add support for partitioning in new
-applications. (All applications should be added under programs/ directory.
-Additionally, application which are part of cuda samples (distributed by Nvidia)
-should be kept under programs/cuda_samples/)
-
-### Creation
-* Make directory under programs/ or programs/cuda_samples/
-* Add all code
+applications.
 
 ### Header Files
 * fractional_gpu.h needs to be included in any file calling host side API
@@ -153,7 +147,7 @@ index (of type uint3) to run, one at a time, till no more block index are left.
 The CUDA provided blockIdx __shouldn't__ be used.
 
 ### Adding application to build steps
-There are two methods to build an application
+There are two methods to build an application (you can choose any one of them)
 
 #### Using shared library (currently untested)
 After the build steps are completed, a shared library (libfractional_gpu.so) is
@@ -162,7 +156,8 @@ Remember to include the 'include/' directory in the include path while building
 the application to include the header files.
 
 #### Static Compilation
-Applications can be added to CMakeList.txt to be included in build steps.
+Stati compilation can be used for small applications that don't have their own
+Makefiles. Applications can be added to CMakeList.txt to be included in build steps.
 CMakeList.txt is self explanatory. add_native_target() function should be used
 for application that don't use partitioning feature and add_persistent_target()
 function should be used for application that do use the feature. Both these
