@@ -114,7 +114,7 @@ void constantInit(float *data, int size, float val)
 /**
  * Run a simple test of matrix multiplication using CUDA
  */
-int matrixMultiply(int color)
+int matrixMultiply(void)
 {
     int block_size = 32;
     dim3 dimsA(10 * block_size, 10 * block_size, 1);
@@ -123,15 +123,11 @@ int matrixMultiply(int color)
     // Allocate host memory for matrices A and B
     unsigned int size_A = dimsA.x * dimsA.y;
     unsigned int mem_size_A = sizeof(float) * size_A;
-    float *h_A = (float *)malloc(mem_size_A);
     unsigned int size_B = dimsB.x * dimsB.y;
     unsigned int mem_size_B = sizeof(float) * size_B;
-    float *h_B = (float *)malloc(mem_size_B);
 
     // Initialize host memory
     const float valB = 0.01f;
-    constantInit(h_A, size_A, 1.0f);
-    constantInit(h_B, size_B, valB);
 
     // Allocate device memory
     float *d_A, *d_B, *d_C;
@@ -139,57 +135,53 @@ int matrixMultiply(int color)
     // Allocate host matrix C
     dim3 dimsC(dimsB.x, dimsA.y, 1);
     unsigned int mem_size_C = dimsC.x * dimsC.y * sizeof(float);
-    float *h_C = (float *) malloc(mem_size_C);
-
-    if (h_C == NULL)
-    {
-        fprintf(stderr, "Failed to allocate host matrix C!\n");
-        exit(EXIT_FAILURE);
-    }
 
     cudaError_t error;
 
-    error = cudaMalloc((void **) &d_A, mem_size_A);
+    error = cudaMallocManaged((void **) &d_A, mem_size_A);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMalloc d_A returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMallocManaged d_A returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMalloc((void **) &d_B, mem_size_B);
+    error = cudaMallocManaged((void **) &d_B, mem_size_B);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMalloc d_B returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMallocManaged d_B returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMalloc((void **) &d_C, mem_size_C);
+    error = cudaMallocManaged((void **) &d_C, mem_size_C);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMalloc d_C returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMallocManaged d_C returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
+
+    constantInit(d_A, size_A, 1.0f);
+    constantInit(d_B, size_B, valB);
 
     cudaStream_t stream; 
     gpuErrAssert(cudaStreamCreate(&stream));
 
     // copy host memory to device
-    error = cudaMemcpyAsync(d_A, h_A, mem_size_A, cudaMemcpyHostToDevice, stream);
+    error = cudaMemPrefetchAsync(d_A, mem_size_A, 0, stream);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMemcpy (d_A,h_A) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMemPrefetch (d_A) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMemcpyAsync(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice, stream);
+    error = cudaMemPrefetchAsync(d_B, mem_size_B, 0, stream);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMemcpy (d_B,h_B) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMemPrefetch (d_B) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -197,7 +189,7 @@ int matrixMultiply(int color)
     error = cudaStreamSynchronize(stream);
     if (error != cudaSuccess)
     {
-        printf("cudaMemcpy (d_B,h_B) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaStreamSynchronize returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -219,16 +211,16 @@ int matrixMultiply(int color)
 
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;
 
-	    ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+	    ret = gpuErrCheck(fgpu_color_stream_synchronize());
     	if (ret < 0)
         	return ret;
 
@@ -243,18 +235,18 @@ int matrixMultiply(int color)
         double sub_start = dtime_usec(0);
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;
         pstats_add_observation(&stats, dtime_usec(sub_start));
     }
 
-    ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+    ret = gpuErrCheck(fgpu_color_stream_synchronize());
     if (ret < 0)
         return ret;
 
@@ -278,34 +270,34 @@ int matrixMultiply(int color)
 
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(color, grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;
 
-	    ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+	    ret = gpuErrCheck(fgpu_color_stream_synchronize());
     	if (ret < 0)
         	return ret;
 
     }
 
     // Copy result from device to host
-    error = cudaMemcpyAsync(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost, stream);
+    error = cudaMemPrefetchAsync(d_C, mem_size_C, CU_DEVICE_CPU, stream);
 
     if (error != cudaSuccess)
     {
-        printf("cudaMemcpy (h_C,d_C) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaMemprefetch (d_C) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
     error = cudaStreamSynchronize(stream);
     if (error != cudaSuccess)
     {
-        printf("cudaMemcpy (d_B,h_B) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("cudaStreamSynchronize returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -318,14 +310,14 @@ int matrixMultiply(int color)
 
     for (int i = 0; i < (int)(dimsC.x * dimsC.y); i++)
     {
-        double abs_err = fabs(h_C[i] - (dimsA.x * valB));
+        double abs_err = fabs(d_C[i] - (dimsA.x * valB));
         double dot_length = dimsA.x;
-        double abs_val = fabs(h_C[i]);
+        double abs_val = fabs(d_C[i]);
         double rel_err = abs_err/abs_val/dot_length ;
 
         if (rel_err > eps)
         {
-            printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, h_C[i], dimsA.x*valB, eps);
+            printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, d_C[i], dimsA.x*valB, eps);
             correct = false;
         }
     }
@@ -333,9 +325,6 @@ int matrixMultiply(int color)
     printf("%s\n", correct ? "Result = PASS" : "Result = FAIL");
 
     // Clean up memory
-    free(h_A);
-    free(h_B);
-    free(h_C);
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
@@ -370,7 +359,11 @@ int main(int argc, char *argv[])
     if (ret < 0)
         return ret;
 
-    ret = matrixMultiply(color);
+    ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
+    if (ret < 0)
+        return ret;
+
+    ret = matrixMultiply();
     if (ret < 0)
         return ret;
 

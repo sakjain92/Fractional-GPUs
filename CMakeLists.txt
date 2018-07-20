@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
 
+option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
+
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Release)
@@ -13,8 +15,14 @@ find_package(CUDA  REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
 include_directories(include)
 include_directories(programs/cuda_samples/common/inc)
+include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/)
+include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/)
 
 string(APPEND CMAKE_CUDA_FLAGS " -arch=${TARGET}")
+
+if(FGPU_MEM_COLORING_ENABLED)
+    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_MEM_COLORING_ENABLED")
+endif()
 
 # Add programs to be built using persistent threads model
 # First arg is target name
@@ -22,9 +30,9 @@ string(APPEND CMAKE_CUDA_FLAGS " -arch=${TARGET}")
 # Rest of the args are the files to be compiled into target
 function(add_persistent_target target include_dir)
 
-    add_executable(${target} persistent/persistent.cu ${ARGN})
+    add_executable(${target} persistent/persistent.cu persistent/memory.cu ${ARGN})
     target_compile_features(${target} PUBLIC cxx_std_11)
-    target_link_libraries(${target} cuda)
+    target_link_libraries(${target} cuda cudart nvidia-ml)
     target_include_directories(${target}  PUBLIC ${include_dir})
 
 endfunction(add_persistent_target)
@@ -44,6 +52,7 @@ endfunction(add_native_target)
 # Library
 add_library(fractional_gpu SHARED
     persistent/persistent.cu
+    persistent/memory.cu
 )
 set_property(TARGET fractional_gpu PROPERTY VERSION ${PROJECT_VERSION})
 set_property(TARGET fractional_gpu PROPERTY PUBLIC_HEADER
@@ -52,7 +61,7 @@ set_property(TARGET fractional_gpu PROPERTY PUBLIC_HEADER
 target_include_directories(fractional_gpu PRIVATE include)
 target_include_directories(fractional_gpu PRIVATE persistent)
 target_compile_features(fractional_gpu PUBLIC cxx_std_11)
-target_link_libraries(fractional_gpu cuda)
+target_link_libraries(fractional_gpu cuda cudart nvidia-ml)
 
 #server
 add_persistent_target(server programs programs/server.cu)

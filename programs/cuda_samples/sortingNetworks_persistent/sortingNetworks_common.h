@@ -52,8 +52,7 @@ extern "C" uint bitonicSort(
     uint *d_SrcVal,
     uint batchSize,
     uint arrayLength,
-    uint dir,
-    uint color
+    uint dir
 );
 
 extern "C" void oddEvenMergeSort(

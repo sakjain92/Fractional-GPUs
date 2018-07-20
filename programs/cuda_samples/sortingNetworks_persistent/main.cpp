@@ -60,7 +60,10 @@ int main(int argc, char **argv)
     if (ret < 0)
         return ret;
 
-    uint *h_InputKey, *h_InputVal, *h_OutputKeyGPU, *h_OutputValGPU;
+    ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
+    if (ret < 0)
+         return ret;
+
     uint *d_InputKey, *d_InputVal,    *d_OutputKey,    *d_OutputVal;
     StopWatchInterface *hTimer = NULL;
 
@@ -71,30 +74,33 @@ int main(int argc, char **argv)
 
     printf("Allocating and initializing host arrays...\n\n");
     sdkCreateTimer(&hTimer);
-    h_InputKey     = (uint *)malloc(N * sizeof(uint));
-    h_InputVal     = (uint *)malloc(N * sizeof(uint));
-    h_OutputKeyGPU = (uint *)malloc(N * sizeof(uint));
-    h_OutputValGPU = (uint *)malloc(N * sizeof(uint));
     srand(2001);
+
+    printf("Allocating and initializing CUDA arrays...\n\n");
+    error = cudaMallocManaged((void **)&d_InputKey,  N * sizeof(uint));
+    checkCudaErrors(error);
+    error = cudaMallocManaged((void **)&d_InputVal,  N * sizeof(uint));
+    checkCudaErrors(error);
+    error = cudaMallocManaged((void **)&d_OutputKey, N * sizeof(uint));
+    checkCudaErrors(error);
+    error = cudaMallocManaged((void **)&d_OutputVal, N * sizeof(uint));
+    checkCudaErrors(error);
 
     for (uint i = 0; i < N; i++)
     {
-        h_InputKey[i] = rand() % numValues;
-        h_InputVal[i] = i;
+        d_InputKey[i] = rand() % numValues;
+        d_InputVal[i] = i;
     }
 
-    printf("Allocating and initializing CUDA arrays...\n\n");
-    error = cudaMalloc((void **)&d_InputKey,  N * sizeof(uint));
+    error = cudaMemPrefetchAsync(d_InputKey,  N * sizeof(uint), 0);
     checkCudaErrors(error);
-    error = cudaMalloc((void **)&d_InputVal,  N * sizeof(uint));
+    error = cudaMemPrefetchAsync(d_InputVal,  N * sizeof(uint), 0);
     checkCudaErrors(error);
-    error = cudaMalloc((void **)&d_OutputKey, N * sizeof(uint));
+    error = cudaMemPrefetchAsync(d_OutputKey, N * sizeof(uint), 0);
     checkCudaErrors(error);
-    error = cudaMalloc((void **)&d_OutputVal, N * sizeof(uint));
+    error = cudaMemPrefetchAsync(d_OutputVal, N * sizeof(uint), 0);
     checkCudaErrors(error);
-    error = cudaMemcpy(d_InputKey, h_InputKey, N * sizeof(uint), cudaMemcpyHostToDevice);
-    checkCudaErrors(error);
-    error = cudaMemcpy(d_InputVal, h_InputVal, N * sizeof(uint), cudaMemcpyHostToDevice);
+    error = cudaDeviceSynchronize();
     checkCudaErrors(error);
 
     int flag = 1;
@@ -117,8 +123,7 @@ int main(int argc, char **argv)
                               d_InputVal,
                               N / arrayLength,
                               arrayLength,
-                              DIR,
-			                  color
+                              DIR
                           );
 
         error = cudaDeviceSynchronize();
@@ -136,13 +141,17 @@ int main(int argc, char **argv)
 
         printf("\nValidating the results...\n");
         printf("...reading back GPU results\n");
-        error = cudaMemcpy(h_OutputKeyGPU, d_OutputKey, N * sizeof(uint), cudaMemcpyDeviceToHost);
+        error = cudaMemPrefetchAsync(d_InputKey, N * sizeof(uint), CU_DEVICE_CPU);
         checkCudaErrors(error);
-        error = cudaMemcpy(h_OutputValGPU, d_OutputVal, N * sizeof(uint), cudaMemcpyDeviceToHost);
+        error = cudaMemPrefetchAsync(d_OutputKey, N * sizeof(uint), CU_DEVICE_CPU);
+        checkCudaErrors(error);
+        error = cudaMemPrefetchAsync(d_OutputVal, N * sizeof(uint), CU_DEVICE_CPU);
+        checkCudaErrors(error);
+        error = cudaDeviceSynchronize();
         checkCudaErrors(error);
 
-        int keysFlag = validateSortedKeys(h_OutputKeyGPU, h_InputKey, N / arrayLength, arrayLength, numValues, DIR);
-        int valuesFlag = validateValues(h_OutputKeyGPU, h_OutputValGPU, h_InputKey, N / arrayLength, arrayLength);
+        int keysFlag = validateSortedKeys(d_OutputKey, d_InputKey, N / arrayLength, arrayLength, numValues, DIR);
+        int valuesFlag = validateValues(d_OutputKey, d_OutputVal, d_InputKey, N / arrayLength, arrayLength);
         flag = flag && keysFlag && valuesFlag;
 
         printf("\n");
@@ -168,10 +177,9 @@ int main(int argc, char **argv)
                 d_InputVal,
                 N / arrayLength,
                 arrayLength,
-                DIR,
-                color
+                DIR
                 );
-        ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+        ret = gpuErrCheck(fgpu_color_stream_synchronize());
         if (ret < 0)
             return ret;
         total = dtime_usec(start);
@@ -190,10 +198,9 @@ int main(int argc, char **argv)
                 d_InputVal,
                 N / arrayLength,
                 arrayLength,
-                DIR,
-                color
+                DIR
                 );
-        ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+        ret = gpuErrCheck(fgpu_color_stream_synchronize());
     	if (ret < 0)
         	return ret;
         pstats_add_observation(&stats, dtime_usec(sub_start));
@@ -217,10 +224,9 @@ int main(int argc, char **argv)
                 d_InputVal,
                 N / arrayLength,
                 arrayLength,
-                DIR,
-                color
+                DIR
                 );
-     ret = gpuErrCheck(fgpu_color_stream_synchronize(color));
+     ret = gpuErrCheck(fgpu_color_stream_synchronize());
     if (ret < 0)
         return ret;
 
@@ -230,10 +236,6 @@ int main(int argc, char **argv)
     cudaFree(d_OutputKey);
     cudaFree(d_InputVal);
     cudaFree(d_InputKey);
-    free(h_OutputValGPU);
-    free(h_OutputKeyGPU);
-    free(h_InputVal);
-    free(h_InputKey);
 
     fgpu_deinit();
 

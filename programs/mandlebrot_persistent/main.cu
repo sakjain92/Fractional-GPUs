@@ -50,7 +50,7 @@ FGPU_DEFINE_KERNEL(render, char *out, int width, int height) {
   } FGPU_FOR_EACH_END 
 }
 
-void runCUDA(int color, int width, int height)
+void runCUDA(int width, int height)
 {
   // Multiply by 3 here, since we need red, green and blue for each pixel
   size_t buffer_size = sizeof(char) * width * height * 3;
@@ -67,8 +67,8 @@ void runCUDA(int color, int width, int height)
   dim3 gridDim(width / blockDim.x, height / blockDim.y, 1);
   
   start = dtime_usec(0);
-  FGPU_LAUNCH_KERNEL(color, gridDim, blockDim, 0, render, image, width, height);
-  gpuErrAssert(fgpu_color_stream_synchronize(color));
+  FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, image, width, height);
+  gpuErrAssert(fgpu_color_stream_synchronize());
   total = dtime_usec(start);
 
   printf("Time:%f us\n", total);
@@ -76,10 +76,10 @@ void runCUDA(int color, int width, int height)
 
   start = dtime_usec(0);
   for (int i = 0; i < nIter; i++) {
-    FGPU_LAUNCH_KERNEL(color, gridDim, blockDim, 0, render, image, width, height);
+    FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, image, width, height);
 
   }
-  gpuErrAssert(fgpu_color_stream_synchronize(color));
+  gpuErrAssert(fgpu_color_stream_synchronize());
 
   total = dtime_usec(start);
 
@@ -109,7 +109,11 @@ int main(int argc, const char * argv[]) {
   color = atoi(argv[1]);
   printf("Color selected:%d\n", color);
 
-  runCUDA(color, 4096, 4096);
+  ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
+  if (ret < 0)
+    return ret;
+
+  runCUDA(4096, 4096);
   
   fgpu_deinit();
   

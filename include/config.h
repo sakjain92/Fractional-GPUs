@@ -2,6 +2,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include <g_nvconfig.h>
+
 /* Cache line size on GPU. Needed for performance improvement. */
 #define FGPU_DEVICE_CACHELINE_SIZE      32
 
@@ -16,5 +18,8 @@
 
 /* Maximum number of pending CUDA tasks */
 #define FGPU_MAX_PENDING_TASKS          100
+
+/* Can be set to -1 if no preference. Preference is like a hint */
+#define FGPU_PREFERRED_NUM_COLORS	2
 
 #endif /* CONFIG_H */

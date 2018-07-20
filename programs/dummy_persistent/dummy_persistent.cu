@@ -50,11 +50,15 @@ int main()
     if (ret < 0)
         return ret;
 
-    tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, info, 100);
+    ret = fgpu_set_color_prop(0, 128 * 1024 * 1024);
+    if (ret < 0)
+        return ret;
+
+    tag = FGPU_LAUNCH_KERNEL(grid, threads, 0, info, 100);
     if (tag < 0)
         return tag;
 
-    ret = gpuErrCheck(fgpu_color_stream_synchronize(0));
+    ret = gpuErrCheck(fgpu_color_stream_synchronize());
     if (ret < 0)
         return ret;
 
@@ -68,12 +72,12 @@ int main()
     }
 */
     uint32_t *d_out;
-    gpuErrAssert(cudaMalloc(&d_out, 32 * 32 * sizeof(uint3)));
+    gpuErrAssert(cudaMallocManaged(&d_out, 32 * 32 * sizeof(uint3)));
     for (int i = 0; i < 10000; i++) {
         start = dtime_usec(0);
-        tag = FGPU_LAUNCH_KERNEL(0, grid, threads, 0, simple, d_out);
-        assert(tag);
-	gpuErrAssert(fgpu_color_stream_synchronize(0));
+        tag = FGPU_LAUNCH_KERNEL(grid, threads, 0, simple, d_out);
+        assert(tag == 0);
+    	gpuErrAssert(fgpu_color_stream_synchronize());
         printf("Simple Time:%f\n", dtime_usec(start));
     }
     

@@ -11,12 +11,16 @@
 #include <unistd.h>
 
 #include <map>
+#include <string>
 
 #include <cuda.h>
 
 #include <common.h>
 #include <fractional_gpu.h>
+#include <memory.h>
 #include <persistent.h>
+
+/* TODO: Add support for multithreaded applications */
 
 /* Name of the shared files */
 #define FGPU_SHMEM_NAME             "fgpu_shmem"
@@ -32,12 +36,17 @@
 /* Currently only the very first device is used */
 #define FGPU_DEVICE_NUMBER  0
 
+#define FGPU_INVALID_COLOR -1
+
+/* List of supported GPUs */
+static std::string supported_gpus[] = {"GeForce GTX 1070"};
+
 /* Look into cuMemHostRegister and cuMemHostGetFlags and cuInit*/
 /*sysconf(_SC_THREAD_PROCESS_SHARED), pthread_mutexattr_setpshared
  pthread_condattr_setpshared */
 
-/* Can't share streams between process - As limitation by CUDA library/driver */
-cudaStream_t streams[FGPU_MAX_NUM_COLORS];
+/* Stream used for all operations. NULL stream is not used */
+cudaStream_t color_stream;
 
 /* Each process maps host pinned memory individually in it's addr space */
 static volatile fgpu_indicators_t *h_indicators;
@@ -85,6 +94,9 @@ static fgpu_host_ctx_t *g_host_ctx;
 /* Shared memories file descriptor */
 static int shmem_fd = -1;
 static int shmem_host_fd = -1;
+
+/* The set color for the process */
+static int g_color = FGPU_INVALID_COLOR;
 
 /* Checks if MPS is enabled */
 static bool is_mps_enabled(void)
@@ -163,34 +175,59 @@ static int init_shared_condvar(pthread_cond_t *cond)
 }
 
 /* Sets color info per device */
-static int init_color_info(fgpu_host_ctx_t *host_ctx,
+static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
         const cudaDeviceProp *device_prop)
 {
     int num_colors;
     int num_sm = device_prop->multiProcessorCount;
     int sm_per_color;
+    int supported = false;
+   
+    /* Check device is supported */
+    for (int i = 0; i < sizeof(supported_gpus)/sizeof(supported_gpus[0]); i++) {
+        if (supported_gpus[i].compare(device_prop->name) == 0) {
+            supported = true;
+            break;
+        }
+    }
 
-    /* 
-     * Colors depends on the memory hieracy on device and limitations of
-     * coloing. Presently only 2 colors are supported in case of userspace
-     * coloring.
-     */
-    if (strcmp(device_prop->name, "GeForce GTX 1070") == 0) {
-        
-        num_colors = 2;
-        host_ctx->num_colors = num_colors;
-
-    } else {
-        /* All CUDA devices are not currently supported */
+    if (!supported) {
         fprintf(stderr, "Unknown CUDA device\n");
         return -1;
     }
 
-    assert(FGPU_MAX_NUM_COLORS >= num_colors);
+    /* 
+     * Since each color needs atleast one SM, so this is the upper bound.
+     * From there, we find the lower bound
+     */
+    num_colors = num_sm;
+
+    num_colors = FGPU_MAX_NUM_COLORS < num_colors ? FGPU_MAX_NUM_COLORS : num_colors;
+
+    if (FGPU_PREFERRED_NUM_COLORS > 0) {
+        num_colors = FGPU_PREFERRED_NUM_COLORS < num_colors ? FGPU_PREFERRED_NUM_COLORS : num_colors;
+    }
+
+#ifdef FGPU_MEM_COLORING_ENABLED
+    /* If memory coloring is enabled, take the minimum of the colors */
+    int mem_colors;
+    int ret = fgpu_device_get_num_memory_colors(device, &mem_colors, NULL);
+    if (ret < 0)
+        return ret;
+
+    num_colors = mem_colors < num_colors ? mem_colors : num_colors;
+#endif
+
+    if (num_colors <= 0) {
+        fprintf(stderr, "Too less colors for coloring\n");
+        return -1;
+    }
+
+    host_ctx->num_colors  = num_colors;
 
     /*
      * Due to integer division, all colors might not be balanced perfectly
-     * Currently we are treating all colors equally. This is not neccesary
+     * Currently we are treating all colors equally. This is not neccesary.
      */
     sm_per_color = num_sm / num_colors;
 
@@ -263,7 +300,7 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
     host_ctx->num_sm = device_prop.multiProcessorCount;
     host_ctx->max_num_threads_per_sm = device_prop.maxThreadsPerMultiProcessor;
 
-    ret = init_color_info(host_ctx, &device_prop);
+    ret = init_color_info(host_ctx, FGPU_DEVICE_NUMBER, &device_prop);
     if (ret < 0)
         return ret;
     
@@ -516,13 +553,10 @@ int fgpu_init(void)
     if (ret < 0)
         goto err;
 
-
-    /* Create seperate streams for each color */
-    for (int i = 0; i < g_host_ctx->num_colors; i++) {
-        ret = gpuErrCheck(cudaStreamCreateWithFlags(&streams[i], cudaStreamDefault));
-        if (ret < 0)
-            goto err;
-    }
+    /* Create a stream for all operations. Can't use NULL as used by all processes */
+    ret = gpuErrCheck(cudaStreamCreateWithFlags(&color_stream, cudaStreamDefault));
+    if (ret < 0)
+        goto err;
 
     ret = gpuErrCheck(cudaSetDevice(FGPU_DEVICE_NUMBER));
     if (ret < 0)
@@ -533,19 +567,16 @@ int fgpu_init(void)
         goto err;
     }
 
-
     return 0;
 
 err:
-    fgpu_server_deinit();
+    fgpu_deinit();
     return ret;
 }
 
 void fgpu_deinit(void)
 {
-    for (int i = 0; i < g_host_ctx->num_colors; i++) {
-        cudaStreamDestroy(streams[i]);
-    }
+    cudaStreamDestroy(color_stream);
 
     if (d_bindexes)
         gpuErrCheck(cudaIpcCloseMemHandle((void *)d_bindexes));
@@ -561,6 +592,45 @@ void fgpu_deinit(void)
     
     if (shmem_fd > 0)
         close(shmem_fd);
+}
+
+static bool is_initialized(void)
+{
+    return g_host_ctx != NULL;
+}
+
+static bool is_color_set(void)
+{
+    return g_color != FGPU_INVALID_COLOR;
+}
+
+int fgpu_set_color_prop(int color, size_t mem_size)
+{
+    if (!is_initialized()) {
+        fprintf(stderr, "fgpu module not initialized\n");
+        return -1;
+    }
+
+    if (is_color_set()) {
+        fprintf(stderr, "Color can be only set once\n");
+        return -1;
+    }
+
+    if (color >= g_host_ctx->num_colors || color < 0) {
+        fprintf(stderr, "Invalid color\n");
+        return -1;
+    }
+
+#ifdef FGPU_MEM_COLORING_ENABLED
+    size_t length = mem_size;
+
+    int ret = fgpu_process_set_colors_info(FGPU_DEVICE_NUMBER, color, &length);
+    if (ret < 0)
+        return ret;
+#endif
+
+    g_color = color;
+    return 0;
 }
 
 
@@ -600,6 +670,11 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
 {
     int ret;
 
+    if (!is_color_set()) {
+        fprintf(stderr, "Colors not set\n");
+        return -1;
+    }
+
     g_host_ctx->last_color = ctx->color;
     g_host_ctx->last_num_pblocks_launched = ctx->num_pblock;
 
@@ -608,7 +683,7 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
     pthread_cond_signal(&g_host_ctx->launch_cond);
     pthread_mutex_unlock(&g_host_ctx->launch_lock);
 
-    ret = gpuErrCheck(cudaStreamSynchronize(streams[ctx->color]));
+    ret = gpuErrCheck(cudaStreamSynchronize(color_stream));
 
     stream_callback(ctx->color);
 
@@ -635,10 +710,11 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     uint32_t num_blocks;
     uint32_t num_threads;
     uint32_t num_pblocks;
-    int color = ctx->color;
 
-    if (color >= g_host_ctx->num_colors || color < 0)
+    if (!is_color_set()) {
+        fprintf(stderr, "Colors not set\n");
         return -1;
+    }
 
     num_blocks = ctx->gridDim.x * ctx->gridDim.y * ctx->gridDim.z;
     if (num_blocks == 0)
@@ -656,45 +732,60 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     if (num_threads < FGPU_MIN_BLOCKDIMS)
         return -1;
     
-    wait_for_last_complete(color);
+    wait_for_last_complete(g_color);
 
     wait_for_last_start();
 
     num_pblocks =
         (g_host_ctx->num_sm * g_host_ctx->max_num_threads_per_sm) / num_threads;
 
+    ctx->color = g_color;
     ctx->num_pblock = num_pblocks;
     ctx->num_blocks = num_blocks;
-    ctx->index = g_host_ctx->cur_indexes[color];
-    g_host_ctx->cur_indexes[color] ^= 1;   /* Toggle the index */
+    ctx->index = g_host_ctx->cur_indexes[g_color];
+    g_host_ctx->cur_indexes[g_color] ^= 1;   /* Toggle the index */
     ctx->d_host_indicators = d_host_indicators;
     ctx->d_dev_indicators = d_dev_indicators;
     ctx->d_bindex = d_bindexes;
-    ctx->start_sm = g_host_ctx->color_to_sms[color].first;
-    ctx->end_sm = g_host_ctx->color_to_sms[color].second;
+    ctx->start_sm = g_host_ctx->color_to_sms[g_color].first;
+    ctx->end_sm = g_host_ctx->color_to_sms[g_color].second;
 
     _gridDim->x = num_pblocks;
     _gridDim->y = 1;
     _gridDim->z = 1;
-    *stream = &streams[color];
+    *stream = &color_stream;
 
     return 0;
 }
 
-cudaError_t fgpu_color_stream_synchronize(int color)
+cudaError_t fgpu_color_stream_synchronize(void)
 {
-    if (color >= g_host_ctx->num_colors || color < 0)
-        return cudaErrorInvalidValue;
+    if (!is_color_set()) {
+        fprintf(stderr, "Colors not set\n");
+        return cudaErrorInitializationError;
+    }
 
-    return cudaStreamSynchronize(streams[color]);
+    return cudaStreamSynchronize(color_stream);
 }
 
-int fpgpu_num_sm(int color, int *num_sm)
+int fgpu_num_sm(int color, int *num_sm)
 {
-    if (color >= g_host_ctx->num_colors || color < 0)
+    if (!is_initialized()) {
+        fprintf(stderr, "fgpu module not initialized\n");
         return -1;
+    }
 
     *num_sm = g_host_ctx->color_to_sms[color].second - 
         g_host_ctx->color_to_sms[color].first + 1;
     return 0;
+}
+
+int fgpu_num_colors(void)
+{
+    if (!is_initialized()) {
+        fprintf(stderr, "fgpu module not initialized\n");
+        return -1;
+    }
+
+    return g_host_ctx->num_colors;
 }
