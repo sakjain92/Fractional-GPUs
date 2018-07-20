@@ -326,6 +326,11 @@ uvm_chunk_sizes_mask_t uvm_mmu_kernel_chunk_sizes(uvm_gpu_t *gpu);
 
 // Returns a bitmap of allocation sizes for user memory supported by a GPU.
 // PAGE_SIZE is guaranteed to be both present and the smallest size.
+uvm_chunk_sizes_mask_t uvm_mmu_all_user_chunk_sizes(uvm_gpu_t *gpu);
+
+// Returns a bitmap of allocation sizes for user memory supported by a GPU.
+// (except those not supported by colored pages when coloring is enabled)
+// PAGE_SIZE is guaranteed to be both present and the smallest size.
 uvm_chunk_sizes_mask_t uvm_mmu_user_chunk_sizes(uvm_gpu_t *gpu);
 
 // Create the necessary big page identity mappings for the GPU

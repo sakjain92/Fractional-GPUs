@@ -357,7 +357,7 @@ NV_STATUS uvm_pmm_gpu_init(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
 {
     typedef uvm_chunk_sizes_mask_t (*chunk_size_init_func_t)(uvm_gpu_t *gpu);
     static const chunk_size_init_func_t chunk_size_init_func[][UVM_PMM_GPU_MEMORY_TYPE_COUNT] = {
-        {uvm_mmu_user_chunk_sizes, uvm_mmu_kernel_chunk_sizes},
+        {uvm_mmu_all_user_chunk_sizes, uvm_mmu_kernel_chunk_sizes},
         {NULL, uvm_mem_kernel_chunk_sizes},
     };
     NV_STATUS status = NV_OK;
@@ -2445,8 +2445,8 @@ static void free_chunk(uvm_pmm_gpu_t *pmm, uvm_gpu_chunk_t *chunk)
 
     chunk->inject_split_error = false;
 
-    pr_info("Saksham: uvm_gpu_free: size: %d, chunk phy_addr: 0x%llx, color_range:%p\n",
-                uvm_gpu_chunk_get_size(chunk), chunk->address, chunk->color_range);
+//    pr_info("Saksham: uvm_gpu_free: size: %d, chunk phy_addr: 0x%llx, color_range:%p\n",
+//                uvm_gpu_chunk_get_size(chunk), chunk->address, chunk->color_range);
 
     status = try_user_color_free_chunk(pmm, chunk);
     if (status == NV_OK)

@@ -990,6 +990,22 @@ uvm_chunk_sizes_mask_t uvm_mmu_kernel_chunk_sizes(uvm_gpu_t *gpu)
            allocation_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_128K);
 }
 
+uvm_chunk_sizes_mask_t uvm_mmu_all_user_chunk_sizes(uvm_gpu_t *gpu)
+{
+    // TODO: Only use color page size when need to allocate colored page
+    uvm_chunk_sizes_mask_t sizes;
+    
+    sizes = page_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_64K)  |
+                                page_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_128K) |
+                                PAGE_SIZE;
+
+    // Although we may have to map PTEs smaller than PAGE_SIZE, user (managed)
+    // memory is never allocated with granularity smaller than PAGE_SIZE. Force
+    // PAGE_SIZE to be supported and the smallest allowed size so we don't have
+    // to handle allocating multiple chunks per page.
+    return sizes & PAGE_MASK;
+}
+
 uvm_chunk_sizes_mask_t uvm_mmu_user_chunk_sizes(uvm_gpu_t *gpu)
 {
     // TODO: Only use color page size when need to allocate colored page
