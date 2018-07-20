@@ -50,7 +50,7 @@ NVIDIA_UVM_KO = nvidia-uvm/nvidia-uvm.ko
 #
 # Define nvidia-uvm.ko-specific CFLAGS.
 #
-
+NVIDIA_UVM_CFLAGS += -DUVM_USER_MEM_COLORING -DUVM_MEM_COLORING
 ifeq ($(UVM_BUILD_TYPE),debug)
   NVIDIA_UVM_CFLAGS += -DDEBUG $(call cc-option,-Og,-O0) -g
 else

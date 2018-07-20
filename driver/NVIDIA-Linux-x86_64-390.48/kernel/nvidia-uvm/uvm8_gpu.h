@@ -805,24 +805,12 @@ struct uvm_gpu_struct
 #if UVM_IS_CONFIG_HMM()
     uvm_hmm_gpu_t hmm_gpu;
 #endif
+    
+    // This is set to 0 to indicate GPU doesn't support coloring yet.
+    NvU32 num_mem_colors;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // Only valid if num_mem_colors != 0
+    NvU32 colored_chunk_size;
 
     uvm_gpu_link_type_t sysmem_link;
 };
@@ -1029,8 +1017,19 @@ static bool uvm_gpu_is_gk110_plus(uvm_gpu_t *gpu)
 // The GPU must be initialized before calling this function.
 bool uvm_gpu_can_address(uvm_gpu_t *gpu, NvU64 addr);
 
+static bool uvm_gpu_supports_coloring(uvm_gpu_t *gpu)
+{
+    if (gpu->num_mem_colors == 0)
+        return false;
+    return true;
+}
+
 static bool uvm_gpu_supports_eviction(uvm_gpu_t *gpu)
 {
+    // XXX: Restricting eviction for now as it is not working correctly.
+    if (uvm_gpu_supports_coloring(gpu))
+        return false;
+
     // Eviction is supported only if the GPU supports replayable faults
     return gpu->replayable_faults_supported;
 }

@@ -343,11 +343,17 @@ struct uvm_va_range_struct
         uvm_va_range_sked_reflected_t sked_reflected;
         uvm_va_range_semaphore_pool_t semaphore_pool;
     };
+
+    // The tgid of process that created this range
+    NvU32 master_tgid;
 };
 
 // Module load/exit
 NV_STATUS uvm_va_range_init(void);
 void uvm_va_range_exit(void);
+
+// Get the master tgid of the process that created the range
+NvU32 uvm_va_range_get_tgid(uvm_va_range_t *va_range);
 
 static NvU64 uvm_va_range_size(uvm_va_range_t *va_range)
 {

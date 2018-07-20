@@ -173,7 +173,8 @@ static NV_STATUS chunk_alloc_check(uvm_pmm_gpu_t *pmm,
     NV_STATUS status;
     uvm_tracker_t local_tracker = UVM_TRACKER_INIT();
 
-    status = uvm_pmm_gpu_alloc(pmm, num_chunks, chunk_size, mem_type, flags, chunks, &local_tracker);
+    status = uvm_pmm_gpu_alloc(pmm, num_chunks, chunk_size, mem_type, flags, UVM_PMM_INVALID_TGID,
+            chunks, &local_tracker);
     if (status != NV_OK)
         return status;
 
@@ -190,7 +191,8 @@ static NV_STATUS chunk_alloc_user_check(uvm_pmm_gpu_t *pmm,
     NV_STATUS status;
     uvm_tracker_t local_tracker = UVM_TRACKER_INIT();
 
-    status = uvm_pmm_gpu_alloc_user(pmm, num_chunks, chunk_size, flags, chunks, &local_tracker);
+    status = uvm_pmm_gpu_alloc_user(pmm, num_chunks, chunk_size, flags, UVM_PMM_INVALID_TGID,
+            chunks, &local_tracker);
     if (status != NV_OK)
         return status;
 
@@ -1106,6 +1108,7 @@ static NV_STATUS test_indirect_peers(uvm_gpu_t *owning_gpu, uvm_gpu_t *accessing
                                               1,
                                               UVM_CHUNK_SIZE_MAX,
                                               UVM_PMM_ALLOC_FLAGS_EVICT,
+                                              UVM_PMM_INVALID_TGID,
                                               &parent_chunk,
                                               NULL), out);
 

@@ -992,9 +992,16 @@ uvm_chunk_sizes_mask_t uvm_mmu_kernel_chunk_sizes(uvm_gpu_t *gpu)
 
 uvm_chunk_sizes_mask_t uvm_mmu_user_chunk_sizes(uvm_gpu_t *gpu)
 {
-    uvm_chunk_sizes_mask_t sizes = page_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_64K)  |
+    // TODO: Only use color page size when need to allocate colored page
+    uvm_chunk_sizes_mask_t sizes;
+    
+    if (!uvm_gpu_supports_coloring(gpu)) {
+        sizes = page_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_64K)  |
                                    page_sizes_for_big_page_size(gpu, UVM_PAGE_SIZE_128K) |
                                    PAGE_SIZE;
+    } else {
+        sizes = gpu->colored_chunk_size;
+    }
 
     // Although we may have to map PTEs smaller than PAGE_SIZE, user (managed)
     // memory is never allocated with granularity smaller than PAGE_SIZE. Force

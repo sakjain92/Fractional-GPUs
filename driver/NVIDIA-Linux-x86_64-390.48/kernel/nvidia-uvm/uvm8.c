@@ -37,6 +37,13 @@
 #include "uvm8_hmm.h"
 #include "uvm8_mem.h"
 
+// UVM_MEM_COLORING is common define for UVM_USER_MEM_COLORING and 
+// UVM_KERNEL_MEM_COLORING
+#if (defined(UVM_USER_MEM_COLORING) && !defined(UVM_MEM_COLORING)) ||       \
+    (defined(UVM_KERNEL_MEM_COLORING) && !defined(UVM_MEM_COLORING))
+#error "UVM_MEM_COLORING not defined"
+#endif
+
 static struct cdev g_uvm_cdev;
 
 // List of fault service contexts for CPU faults
@@ -758,6 +765,9 @@ static long uvm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned lon
         UVM_ROUTE_CMD_STACK(UVM_TOOLS_FLUSH_EVENTS,             uvm_api_tools_flush_events);
         UVM_ROUTE_CMD_ALLOC(UVM_ALLOC_SEMAPHORE_POOL,           uvm_api_alloc_semaphore_pool);
         UVM_ROUTE_CMD_STACK(UVM_CLEAN_UP_ZOMBIE_RESOURCES,      uvm_api_clean_up_zombie_resources);
+        UVM_ROUTE_CMD_STACK(UVM_GET_DEVICE_COLOR_INFO,          uvm_api_get_device_color_info);
+        UVM_ROUTE_CMD_STACK(UVM_GET_PROCESS_COLOR_INFO,         uvm_api_get_process_color_info);
+        UVM_ROUTE_CMD_STACK(UVM_SET_PROCESS_COLOR_INFO,         uvm_api_set_process_color_info);
     }
 
     // Try the test ioctls if none of the above matched

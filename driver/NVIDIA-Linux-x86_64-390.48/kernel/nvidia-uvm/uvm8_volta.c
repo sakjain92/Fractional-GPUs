@@ -78,4 +78,6 @@ void uvm_hal_volta_arch_init_properties(uvm_gpu_t *gpu)
     gpu->access_counters_supported = true;
 
     gpu->fault_cancel_va_supported = true;
+
+    gpu->num_mem_colors = 0;
 }

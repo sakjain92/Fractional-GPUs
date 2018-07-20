@@ -83,6 +83,7 @@
 #include <linux/errno.h>            /* error codes                      */
 #include <linux/list.h>             /* circular linked list             */
 #include <linux/stddef.h>           /* NULL, offsetof                   */
+#include <linux/hashtable.h>	    /* hash table                       */
 #include <linux/wait.h>             /* wait queues                      */
 #include <linux/string.h>           /* strchr(), strpbrk()              */
 

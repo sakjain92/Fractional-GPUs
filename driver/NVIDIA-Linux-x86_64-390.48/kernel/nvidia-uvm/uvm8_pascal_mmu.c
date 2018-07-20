@@ -377,3 +377,39 @@ void uvm_hal_pascal_mmu_disable_prefetch_faults(uvm_gpu_t *gpu)
     prefetch_control_value = WRITE_HWCONST(prefetch_control_value, _PFB_PRI_MMU_PAGE, FAULT_CTRL, PRF_FILTER, SEND_NONE);
     UVM_WRITE_ONCE(*prefetch_control, prefetch_control_value);
 }
+
+NvU32 uvm_hal_pascal_mmu_phys_addr_to_color(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    int highest_bit = 30;
+    NvU32 color;
+/*
+    Cache Vertically Split
+*/
+    int bit0 = ((phys_addr >> 12) ^ (phys_addr >> 13) ^ (phys_addr >> 18) ^ 
+            (phys_addr >> 19) ^ (phys_addr >> 22) ^ (phys_addr >> 25) ^ 
+            (phys_addr >> 26) ^ (phys_addr >> 27) ^ (phys_addr >> 30)) & 0x1;
+
+    // Making sure any unknown bit is not set in the address
+    // TODO: Find all the bits
+    if (phys_addr >= (1ULL << (highest_bit + 1)))
+        pr_err("Err in allocation: 0x%llx\n", phys_addr);
+
+    color = bit0;
+
+    UVM_ASSERT(color < gpu->num_mem_colors);
+
+    return color;
+
+}
+
+// Returns common address for all the physical page addresses of different colors with
+// same page index
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    return phys_addr & ~((1UL << (PAGE_SHIFT + 1)) - 1);
+}
+
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    return uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(gpu, phys_addr) >>  (PAGE_SHIFT + 1);
+}

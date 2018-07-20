@@ -966,6 +966,59 @@ typedef struct
     NV_STATUS       rmStatus;          // OUT
 } UVM_PAGEABLE_MEM_ACCESS_ON_GPU_PARAMS;
 
+// TODO: Add support for application selecting multiple colors at once.
+
+//
+// Returns the number of colors present on the gpu
+//
+
+//
+// UvmGetDeviceColorInfo
+//
+#define UVM_GET_DEVICE_COLOR_INFO                                   UVM_IOCTL_BASE(2044)
+typedef struct
+{
+    NvProcessorUuid destinationUuid;     // IN
+    NvU32           numColors;           // OUT
+    NvU64           maxLength;           // OUT
+    NV_STATUS       rmStatus;            // OUT
+} UVM_GET_DEVICE_COLOR_INFO_PARAMS;
+
+
+//
+// Returns the information about color setting of process on a device.
+//
+
+//
+// UvmGetProcessColorInfo
+//
+#define UVM_GET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2045)
+typedef struct
+{
+    NvProcessorUuid destinationUuid;                            // IN
+    NvU32           color;                                      // OUT
+    NvU64           length;                                     // OUT
+    NvU64           address;                                    // OUT
+    NV_STATUS       rmStatus;                                   // OUT
+} UVM_GET_PROCESS_COLOR_INFO_PARAMS;
+
+//
+// Configures current process's setting for a device.
+//
+
+//
+// UvmSetProcessColorInfo
+//
+#define UVM_SET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2046)
+typedef struct
+{
+    NvProcessorUuid destinationUuid;                            // IN
+    NvU32           color;                                      // IN
+    NvU64           length;                                     // IN/OUT
+    NvU64           address;                                    // OUT
+    NV_STATUS       rmStatus;                                   // OUT
+} UVM_SET_PROCESS_COLOR_INFO_PARAMS;
+
 //
 // Temporary ioctls which should be removed before UVM 8 release
 // Number backwards from 2047 - highest custom ioctl function number

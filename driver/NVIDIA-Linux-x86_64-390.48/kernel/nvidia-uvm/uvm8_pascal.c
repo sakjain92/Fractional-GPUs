@@ -85,4 +85,11 @@ void uvm_hal_pascal_arch_init_properties(uvm_gpu_t *gpu)
     gpu->access_counters_supported = false;
 
     gpu->fault_cancel_va_supported = false;
+
+#if defined(UVM_MEM_COLORING)
+    gpu->num_mem_colors = 2;
+    gpu->colored_chunk_size = PAGE_SIZE;
+#else
+    gpu->num_mem_colors = 0;
+#endif
 }

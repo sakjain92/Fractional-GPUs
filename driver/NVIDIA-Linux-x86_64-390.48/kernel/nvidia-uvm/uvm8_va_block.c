@@ -801,7 +801,8 @@ static NV_STATUS block_alloc_gpu_chunk(uvm_va_block_t *block,
         }
         else {
             // Try allocating a new one without eviction
-            status = uvm_pmm_gpu_alloc_user(&gpu->pmm, 1, size, UVM_PMM_ALLOC_FLAGS_NONE, &gpu_chunk, &retry->tracker);
+            status = uvm_pmm_gpu_alloc_user(&gpu->pmm, 1, size, UVM_PMM_ALLOC_FLAGS_NONE,
+                    uvm_va_range_get_tgid(block->va_range), &gpu_chunk, &retry->tracker);
         }
 
         if (status == NV_ERR_NO_MEMORY) {
@@ -810,7 +811,8 @@ static NV_STATUS block_alloc_gpu_chunk(uvm_va_block_t *block,
             // be restarted.
             uvm_mutex_unlock(&block->lock);
 
-            status = uvm_pmm_gpu_alloc_user(&gpu->pmm, 1, size, UVM_PMM_ALLOC_FLAGS_EVICT, &gpu_chunk, &retry->tracker);
+            status = uvm_pmm_gpu_alloc_user(&gpu->pmm, 1, size, UVM_PMM_ALLOC_FLAGS_EVICT,
+                    uvm_va_range_get_tgid(block->va_range), &gpu_chunk, &retry->tracker);
             if (status == NV_OK) {
                 block_retry_add_free_chunk(retry, gpu, gpu_chunk);
                 status = NV_ERR_MORE_PROCESSING_REQUIRED;
@@ -5166,6 +5168,13 @@ static void block_gpu_compute_new_pte_state(uvm_va_block_t *block,
 
     if (gpu_state->force_4k_ptes)
         return;
+
+#ifdef UVM_MEM_COLORING
+    // XXX: Should this be turned on? Might make faster?
+    // XXX: So the issue is that of trying to merge PTEs into 64K PTEs.
+    // Try to understand how this code works.
+    return;
+#endif
 
     UVM_ASSERT(uvm_page_mask_subset(pages_changing, page_mask_after));
 

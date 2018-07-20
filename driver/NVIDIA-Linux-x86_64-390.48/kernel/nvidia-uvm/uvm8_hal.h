@@ -217,6 +217,9 @@ void uvm_hal_volta_arch_init_properties(uvm_gpu_t *gpu);
 typedef uvm_mmu_mode_hal_t *(*uvm_hal_lookup_mode_hal_t)(NvU32 big_page_size);
 typedef void (*uvm_hal_mmu_enable_prefetch_faults_t)(uvm_gpu_t *gpu);
 typedef void (*uvm_hal_mmu_disable_prefetch_faults_t)(uvm_gpu_t *gpu);
+typedef NvU32 (*uvm_hal_mmu_phys_addr_to_color)(uvm_gpu_t *gpu, NvU64 phys_addr);
+typedef NvU64 (*uvm_hal_mmu_phys_addr_to_base_color_addr)(uvm_gpu_t *gpu, NvU64 phys_addr);
+typedef NvU64 (*uvm_hal_mmu_phys_addr_to_color_idx)(uvm_gpu_t *gpu, NvU64 phys_addr);
 uvm_mmu_mode_hal_t *uvm_hal_mmu_mode_kepler(NvU32 big_page_size);
 uvm_mmu_mode_hal_t *uvm_hal_mmu_mode_pascal(NvU32 big_page_size);
 uvm_mmu_mode_hal_t *uvm_hal_mmu_mode_volta(NvU32 big_page_size);
@@ -225,8 +228,14 @@ uvm_mmu_mode_hal_t *uvm_hal_mmu_mode_volta(NvU32 big_page_size);
 
 void uvm_hal_kepler_mmu_enable_prefetch_faults_unsupported(uvm_gpu_t *gpu);
 void uvm_hal_kepler_mmu_disable_prefetch_faults_unsupported(uvm_gpu_t *gpu);
+NvU32 uvm_hal_kepler_mmu_phys_addr_to_color_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_kepler_mmu_phys_addr_to_base_color_addr_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_kepler_mmu_phys_addr_to_color_idx_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr);
 void uvm_hal_pascal_mmu_enable_prefetch_faults(uvm_gpu_t *gpu);
 void uvm_hal_pascal_mmu_disable_prefetch_faults(uvm_gpu_t *gpu);
+NvU32 uvm_hal_pascal_mmu_phys_addr_to_color(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr);
 
 // Replayable faults
 typedef void (*uvm_hal_enable_replayable_faults_t)(uvm_gpu_t *gpu);
@@ -385,6 +394,9 @@ struct uvm_arch_hal_struct
     uvm_hal_lookup_mode_hal_t mmu_mode_hal;
     uvm_hal_mmu_enable_prefetch_faults_t enable_prefetch_faults;
     uvm_hal_mmu_disable_prefetch_faults_t disable_prefetch_faults;
+    uvm_hal_mmu_phys_addr_to_color phys_addr_to_color;
+    uvm_hal_mmu_phys_addr_to_base_color_addr phys_addr_to_base_color_addr;
+    uvm_hal_mmu_phys_addr_to_color_idx phys_addr_to_color_idx;
 };
 
 struct uvm_fault_buffer_hal_struct
