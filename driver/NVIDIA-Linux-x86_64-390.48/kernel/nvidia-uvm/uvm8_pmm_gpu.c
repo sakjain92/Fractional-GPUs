@@ -3061,12 +3061,15 @@ static void free_reserved_color_memory(uvm_pmm_gpu_t *pmm)
 static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm, 
         uvm_gpu_color_range_t *range, NvU32 color, NvU64 memSize, NvU64 *start_phys_addr)
 {
+    uvm_gpu_t *gpu = pmm->gpu;
     struct list_head *nr, *tr;
     struct list_head *nc, *tc;
     uvm_gpu_color_range_t *nrange;
     uvm_gpu_chunk_t *chunk;
-    NvU64 num_chunks = memSize / pmm->gpu->colored_chunk_size;
+    NvU64 chunk_size = pmm->gpu->colored_chunk_size;
+    NvU64 num_chunks = memSize / chunk_size;
     NvU64 num_chunks_allocated = 0;
+    NvU64 start_addr, cur_addr = 0;
 
     range->start_phys_addr = range->end_phys_addr = 0;
     range->total_num_chunks = range->left_num_chunks = 0;
@@ -3085,11 +3088,17 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
                 chunk = list_entry(nc, uvm_gpu_chunk_t, list);
                 list_move_tail(&chunk->list, &range->free_chunks);
                 
-                if (range->start_phys_addr == 0)
+                if (range->start_phys_addr == 0) {
                     range->start_phys_addr = chunk->address;
-                
+                    start_addr = gpu->arch_hal->phys_addr_to_base_color_addr(gpu, range->start_phys_addr);
+                    cur_addr = start_addr;
+                }
+
                 if (range->end_phys_addr == 0)
                     range->end_phys_addr = chunk->address;
+
+                chunk->colored_address = cur_addr;
+                cur_addr += chunk_size;
 
                 num_chunks_allocated++;
                 if (num_chunks_allocated == num_chunks)
@@ -3114,7 +3123,7 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
         return NV_ERR_NO_MEMORY;
 
     if (start_phys_addr)
-        *start_phys_addr = range->start_phys_addr;
+        *start_phys_addr = start_addr;
 
     return NV_OK;
 }

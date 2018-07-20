@@ -263,6 +263,9 @@ struct uvm_gpu_chunk_struct
 
     // Range of colored chunks of same process to which this chunk
     uvm_gpu_color_range_t *color_range;
+
+    // Virtual address (colored)
+    NvU64 colored_address;
 };
 
 typedef struct uvm_gpu_root_chunk_struct
