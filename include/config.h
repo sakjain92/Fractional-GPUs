@@ -22,4 +22,9 @@
 /* Can be set to -1 if no preference. Preference is like a hint */
 #define FGPU_PREFERRED_NUM_COLORS	2
 
+/* When userspace coloring is enabled, coloring must be enabled */
+#if defined(FGPU_USER_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED)
+#error "FGPU_USER_MEM_COLORING_ENABLED defined but FGPU_MEM_COLORING_ENABLED not defined"
+#endif
+
 #endif /* CONFIG_H */

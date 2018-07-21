@@ -576,6 +576,11 @@ err:
 
 void fgpu_deinit(void)
 {
+
+#if defined(FGPU_MEM_COLORING_ENABLED)
+    fgpu_memory_deinit();
+#endif
+
     cudaStreamDestroy(color_stream);
 
     if (d_bindexes)
@@ -622,9 +627,7 @@ int fgpu_set_color_prop(int color, size_t mem_size)
     }
 
 #ifdef FGPU_MEM_COLORING_ENABLED
-    size_t length = mem_size;
-
-    int ret = fgpu_process_set_colors_info(FGPU_DEVICE_NUMBER, color, &length);
+    int ret = fgpu_process_set_colors_info(FGPU_DEVICE_NUMBER, color, mem_size);
     if (ret < 0)
         return ret;
 #endif
@@ -750,6 +753,12 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     ctx->start_sm = g_host_ctx->color_to_sms[g_color].first;
     ctx->end_sm = g_host_ctx->color_to_sms[g_color].second;
 
+#if defined(FGPU_MEM_COLORING_ENABLED)
+    int ret = fgpu_get_memory_info(&ctx->start_virt_addr, &ctx->start_idx);
+    if (ret < 0)
+        return ret;
+#endif
+
     _gridDim->x = num_pblocks;
     _gridDim->y = 1;
     _gridDim->z = 1;
@@ -758,14 +767,14 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     return 0;
 }
 
-cudaError_t fgpu_color_stream_synchronize(void)
+int fgpu_color_stream_synchronize(void)
 {
     if (!is_color_set()) {
         fprintf(stderr, "Colors not set\n");
-        return cudaErrorInitializationError;
+        return -1;
     }
 
-    return cudaStreamSynchronize(color_stream);
+    return gpuErrCheck(cudaStreamSynchronize(color_stream));
 }
 
 int fgpu_num_sm(int color, int *num_sm)
@@ -788,4 +797,14 @@ int fgpu_num_colors(void)
     }
 
     return g_host_ctx->num_colors;
+}
+
+int fgpu_memory_prefetch_to_device_async(void *p, size_t len)
+{
+    return gpuErrCheck(cudaMemPrefetchAsync(p, len, FGPU_DEVICE_NUMBER, color_stream));
+}
+
+int fgpu_memory_prefetch_from_device_async(void *p, size_t len)
+{
+    return gpuErrCheck(cudaMemPrefetchAsync(p, len, CU_DEVICE_CPU, color_stream));
 }

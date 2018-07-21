@@ -8,6 +8,16 @@
 
 /* TODO: Use better error codes */
 /* TODO: Half of colored memory is being wasted. Need to resolve this issue */
+/* 
+ * TODO: Make PTEs on GPU consistent (on memprefetch to CPU they are invidated
+ * for uvm to work). But make sure data migrates when data changes (When user 
+ * explicitly requests)
+ */
+/* 
+ * TODO: There shouldn't be need to memprefetch incase data hasn't changed
+ * between CPU and GPU. This should work when GPU TLBs are made persistent.
+ * Check what happens currently.
+ */
 
 #ifdef FGPU_MEM_COLORING_ENABLED
 
@@ -36,6 +46,7 @@
 #include <uvm_minimal_init.h>
 
 #include <fractional_gpu.h>
+#include <fractional_gpu_cuda.cuh>
 #include <memory.h>
 
 #define NVIDIA_UVM_DEVICE_PATH  "/dev/" NVIDIA_UVM_DEVICE_NAME
@@ -62,7 +73,7 @@ pthread_once_t g_post_init_once = PTHREAD_ONCE_INIT;
 bool g_init_failed;
 
 /* All information needed for tracking memory */
-typedef struct {
+struct {
     bool is_initialized;
 
     /* Start physical address of allocation */
@@ -73,6 +84,13 @@ typedef struct {
 
     /* Actual memory allocation */
     void *base_addr;
+
+    /* 
+     * TODO: Use better data structures for memory management
+     * TODO: Support alignment etc.
+     */
+    uintptr_t cur_addr;
+    size_t left;
 
 } g_memory_ctx;
 
@@ -365,16 +383,12 @@ static int set_process_color_info(int device, int color, size_t req_length)
         return ret;
     }
 
-    /* Fetch to CPU */
-    ret = gpuErrCheck(cudaMemPrefetchAsync(g_memory_ctx.base_addr, actual_length, CU_DEVICE_CPU));
-    if (ret < 0) {
-        cudaFree(g_memory_ctx.base_addr);
-        return ret;
-    }
-
     g_memory_ctx.is_initialized = true;
-    g_memory_ctx.base_phy_addr = params.address;
-    g_memory_ctx.reserved_length = req_length;
+    g_memory_ctx.base_phy_addr = (void *)params.address;
+    g_memory_ctx.reserved_len = req_length;
+
+    g_memory_ctx.cur_addr = (uintptr_t)g_memory_ctx.base_addr;
+    g_memory_ctx.left = req_length;
 
     return 0;
 }
@@ -406,15 +420,61 @@ void fgpu_memory_deinit(void)
 
 int fgpu_memory_allocate(void **p, size_t len)
 {
-    
+    if (!g_memory_ctx.is_initialized)
+        return -1;
+
+    if (g_memory_ctx.left < len)
+        return -1;
+
+    *p = (void *)g_memory_ctx.cur_addr;
+    g_memory_ctx.cur_addr += len;
+    g_memory_ctx.left -= len;
+    return 0;
 }
 
 int fgpu_memory_free(void *p)
 {
+    if (!g_memory_ctx.is_initialized)
+        return -1;
 
+    return 0;
 }
 
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
 {
+    if (!g_memory_ctx.is_initialized)
+        return -1;
+
+    *d_p = (void *)((uintptr_t)h_p - (uintptr_t)g_memory_ctx.base_addr);
+    return 0;
+}
+
+int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx)
+{
+    if (!g_memory_ctx.is_initialized)
+        return -1;
+
+    *start_virt_addr = (uintptr_t)g_memory_ctx.base_addr;
+    *start_idx = ((uintptr_t)g_memory_ctx.base_phy_addr) >> FGPU_DEVICE_COLOR_SHIFT;
+
+    return 0;
+}
+
+#else /* FGPU_MEM_COLORING_ENABLED */
+
+int fgpu_memory_allocate(void **p, size_t len)
+{
+    return gpuErrCheck(cudaMallocManaged(p, len));
+}
+
+int fgpu_memory_free(void *p)
+{
+    return gpuErrCheck(cudaFree(p));
+}
+
+int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
+{
+    *d_p = h_p;
+    return 0;
 }
 #endif /* FGPU_MEM_COLORING_ENABLED */

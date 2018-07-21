@@ -21,6 +21,12 @@ typedef struct fgpu_dev_ctx {
     int start_sm;
     int end_sm;
     int _blockIdx;
+
+#if defined(FGPU_MEM_COLORING_ENABLED)
+    uint64_t start_virt_addr;
+    uint64_t start_idx;
+#endif
+
 } fgpu_dev_ctx_t;
 
 int fgpu_server_init(void);
@@ -30,9 +36,16 @@ void fgpu_deinit(void);
 int fgpu_set_color_prop(int color, size_t mem_size);
 int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream);
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
-cudaError_t fgpu_color_stream_synchronize(void);
+int fgpu_color_stream_synchronize(void);
 int fpgpu_num_sm(int color, int *num_sm);
 int fgpu_num_colors(void);
+
+int fgpu_memory_allocate(void **p, size_t len);
+int fgpu_memory_free(void *p);
+int fgpu_memory_get_device_pointer(void **d_p, void *h_p);
+
+int fgpu_memory_prefetch_to_device_async(void *p, size_t len);
+int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
 
 /* Macro to launch kernel - Returns a tag - Negative if error */
 #define FGPU_LAUNCH_KERNEL(_gridDim, _blockDim, sharedMem, func, ...)       \

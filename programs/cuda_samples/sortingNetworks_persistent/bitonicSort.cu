@@ -39,8 +39,10 @@ FGPU_DEFINE_KERNEL(bitonicSortShared,
     uint dir
 )
 {
-    FGPU_DEVICE_INIT();
+    fgpu_dev_ctx_t *ctx;
    	uint3 _blockIdx;
+    
+    ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 
@@ -60,10 +62,10 @@ FGPU_DEFINE_KERNEL(bitonicSortShared,
 		d_SrcVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 		d_DstKey += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 		d_DstVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
-		s_key[threadIdx.x +                       0] = d_SrcKey[                      0];
-		s_val[threadIdx.x +                       0] = d_SrcVal[                      0];
-		s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcKey[(SHARED_SIZE_LIMIT / 2)];
-		s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcVal[(SHARED_SIZE_LIMIT / 2)];
+		s_key[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[                      0]);
+		s_val[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[                      0]);
+		s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[(SHARED_SIZE_LIMIT / 2)]);
+		s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[(SHARED_SIZE_LIMIT / 2)]);
 
 		for (uint size = 2; size < arrayLength; size <<= 1)
 		{
@@ -101,10 +103,10 @@ FGPU_DEFINE_KERNEL(bitonicSortShared,
 
 		//cg::sync(cta);
         __syncthreads();
-		d_DstKey[                      0] = s_key[threadIdx.x +                       0];
-		d_DstVal[                      0] = s_val[threadIdx.x +                       0];
-		d_DstKey[(SHARED_SIZE_LIMIT / 2)] = s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
-		d_DstVal[(SHARED_SIZE_LIMIT / 2)] = s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
+		FGPU_COLOR_STORE(ctx, &d_DstKey[                      0], s_key[threadIdx.x +                       0]);
+		FGPU_COLOR_STORE(ctx, &d_DstVal[                      0], s_val[threadIdx.x +                       0]);
+		FGPU_COLOR_STORE(ctx, &d_DstKey[(SHARED_SIZE_LIMIT / 2)], s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
+		FGPU_COLOR_STORE(ctx, &d_DstVal[(SHARED_SIZE_LIMIT / 2)], s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
     } FGPU_FOR_EACH_END
 }
 
@@ -126,8 +128,9 @@ FGPU_DEFINE_KERNEL(bitonicSortShared1,
     uint *c_d_SrcVal
 )
 {
-	FGPU_DEVICE_INIT();
+    fgpu_dev_ctx_t *ctx;
    	uint3 _blockIdx;
+	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 
@@ -147,10 +150,10 @@ FGPU_DEFINE_KERNEL(bitonicSortShared1,
 		d_SrcVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 		d_DstKey += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 		d_DstVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
-		s_key[threadIdx.x +                       0] = d_SrcKey[                      0];
-		s_val[threadIdx.x +                       0] = d_SrcVal[                      0];
-		s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcKey[(SHARED_SIZE_LIMIT / 2)];
-		s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcVal[(SHARED_SIZE_LIMIT / 2)];
+		s_key[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[                      0]);
+		s_val[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[                      0]);
+		s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[(SHARED_SIZE_LIMIT / 2)]);
+		s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[(SHARED_SIZE_LIMIT / 2)]);
 
 		for (uint size = 2; size < SHARED_SIZE_LIMIT; size <<= 1)
 		{
@@ -187,10 +190,10 @@ FGPU_DEFINE_KERNEL(bitonicSortShared1,
 
 
 		cg::sync(cta);
-		d_DstKey[                      0] = s_key[threadIdx.x +                       0];
-		d_DstVal[                      0] = s_val[threadIdx.x +                       0];
-		d_DstKey[(SHARED_SIZE_LIMIT / 2)] = s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
-		d_DstVal[(SHARED_SIZE_LIMIT / 2)] = s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
+		FGPU_COLOR_STORE(ctx, &d_DstKey[                      0], s_key[threadIdx.x +                       0]);
+		FGPU_COLOR_STORE(ctx, &d_DstVal[                      0], s_val[threadIdx.x +                       0]);
+		FGPU_COLOR_STORE(ctx, &d_DstKey[(SHARED_SIZE_LIMIT / 2)], s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
+		FGPU_COLOR_STORE(ctx, &d_DstVal[(SHARED_SIZE_LIMIT / 2)], s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
 	} FGPU_FOR_EACH_END
 }
 
@@ -207,8 +210,9 @@ FGPU_DEFINE_KERNEL(bitonicMergeGlobal,
     uint dir
 )
 {
-	FGPU_DEVICE_INIT();
+    fgpu_dev_ctx_t *ctx;
    	uint3 _blockIdx;
+	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 
@@ -224,10 +228,10 @@ FGPU_DEFINE_KERNEL(bitonicMergeGlobal,
 	    uint ddd = dir ^ ((comparatorI & (size / 2)) != 0);
 	    uint pos = 2 * global_comparatorI - (global_comparatorI & (stride - 1));
 
-	    uint keyA = d_SrcKey[pos +      0];
-	    uint valA = d_SrcVal[pos +      0];
-	    uint keyB = d_SrcKey[pos + stride];
-	    uint valB = d_SrcVal[pos + stride];
+	    uint keyA = FGPU_COLOR_LOAD(ctx, &d_SrcKey[pos +      0]);
+	    uint valA = FGPU_COLOR_LOAD(ctx, &d_SrcVal[pos +      0]);
+	    uint keyB = FGPU_COLOR_LOAD(ctx, &d_SrcKey[pos + stride]);
+	    uint valB = FGPU_COLOR_LOAD(ctx, &d_SrcVal[pos + stride]);
 
 	    Comparator(
 		keyA, valA,
@@ -235,10 +239,10 @@ FGPU_DEFINE_KERNEL(bitonicMergeGlobal,
 		ddd
 	    );
 
-	    d_DstKey[pos +      0] = keyA;
-	    d_DstVal[pos +      0] = valA;
-	    d_DstKey[pos + stride] = keyB;
-	    d_DstVal[pos + stride] = valB;
+	    FGPU_COLOR_STORE(ctx, &d_DstKey[pos +      0], keyA);
+	    FGPU_COLOR_STORE(ctx, &d_DstVal[pos +      0], valA);
+	    FGPU_COLOR_STORE(ctx, &d_DstKey[pos + stride], keyB);
+	    FGPU_COLOR_STORE(ctx, &d_DstVal[pos + stride], valB);
 	} FGPU_FOR_EACH_END
 }
 
@@ -255,8 +259,9 @@ FGPU_DEFINE_KERNEL(bitonicMergeShared,
     uint dir
 )
 {
-	FGPU_DEVICE_INIT();
+    fgpu_dev_ctx_t *ctx;
    	uint3 _blockIdx;
+	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 
@@ -275,10 +280,10 @@ FGPU_DEFINE_KERNEL(bitonicMergeShared,
 	    d_SrcVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 	    d_DstKey += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
 	    d_DstVal += _blockIdx.x * SHARED_SIZE_LIMIT + threadIdx.x;
-	    s_key[threadIdx.x +                       0] = d_SrcKey[                      0];
-	    s_val[threadIdx.x +                       0] = d_SrcVal[                      0];
-	    s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcKey[(SHARED_SIZE_LIMIT / 2)];
-	    s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = d_SrcVal[(SHARED_SIZE_LIMIT / 2)];
+	    s_key[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[                      0]);
+	    s_val[threadIdx.x +                       0] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[                      0]);
+	    s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcKey[(SHARED_SIZE_LIMIT / 2)]);
+	    s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)] = FGPU_COLOR_LOAD(ctx, &d_SrcVal[(SHARED_SIZE_LIMIT / 2)]);
 
 	    //Bitonic merge
 	    uint comparatorI = UMAD(_blockIdx.x, blockDim.x, threadIdx.x) & ((arrayLength / 2) - 1);
@@ -296,10 +301,10 @@ FGPU_DEFINE_KERNEL(bitonicMergeShared,
 	    }
 
 	    cg::sync(cta);
-	    d_DstKey[                      0] = s_key[threadIdx.x +                       0];
-	    d_DstVal[                      0] = s_val[threadIdx.x +                       0];
-	    d_DstKey[(SHARED_SIZE_LIMIT / 2)] = s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
-	    d_DstVal[(SHARED_SIZE_LIMIT / 2)] = s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
+	    FGPU_COLOR_STORE(ctx, &d_DstKey[                      0], s_key[threadIdx.x +                       0]);
+	    FGPU_COLOR_STORE(ctx, &d_DstVal[                      0], s_val[threadIdx.x +                       0]);
+	    FGPU_COLOR_STORE(ctx, &d_DstKey[(SHARED_SIZE_LIMIT / 2)], s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
+	    FGPU_COLOR_STORE(ctx, &d_DstVal[(SHARED_SIZE_LIMIT / 2)], s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)]);
 	} FGPU_FOR_EACH_END
 }
 

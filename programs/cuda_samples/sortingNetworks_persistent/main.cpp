@@ -31,6 +31,8 @@
 
 #include "sortingNetworks_common.h"
 
+#include <assert.h>
+
 #include <common.h>
 #include <fractional_gpu.h>
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +41,6 @@
 int main(int argc, char **argv)
 {
     int ret, color;
-    cudaError_t error;
     uint arrayLength;
     uint threadCount;
 
@@ -64,6 +65,7 @@ int main(int argc, char **argv)
     if (ret < 0)
          return ret;
 
+    uint *h_InputKey, *h_InputVal,    *h_OutputKey,    *h_OutputVal;
     uint *d_InputKey, *d_InputVal,    *d_OutputKey,    *d_OutputVal;
     StopWatchInterface *hTimer = NULL;
 
@@ -77,40 +79,50 @@ int main(int argc, char **argv)
     srand(2001);
 
     printf("Allocating and initializing CUDA arrays...\n\n");
-    error = cudaMallocManaged((void **)&d_InputKey,  N * sizeof(uint));
-    checkCudaErrors(error);
-    error = cudaMallocManaged((void **)&d_InputVal,  N * sizeof(uint));
-    checkCudaErrors(error);
-    error = cudaMallocManaged((void **)&d_OutputKey, N * sizeof(uint));
-    checkCudaErrors(error);
-    error = cudaMallocManaged((void **)&d_OutputVal, N * sizeof(uint));
-    checkCudaErrors(error);
+    ret = fgpu_memory_allocate((void **)&h_InputKey,  N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_allocate((void **)&h_InputVal,  N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_allocate((void **)&h_OutputKey, N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_allocate((void **)&h_OutputVal, N * sizeof(uint));
+    assert(ret == 0);
+
+    ret = fgpu_memory_get_device_pointer((void **)&d_InputKey, h_InputKey);
+    assert(ret == 0);
+    ret = fgpu_memory_get_device_pointer((void **)&d_InputVal, h_InputVal);
+    assert(ret == 0);
+    ret = fgpu_memory_get_device_pointer((void **)&d_OutputKey, h_OutputKey);
+    assert(ret == 0);
+    ret = fgpu_memory_get_device_pointer((void **)&d_OutputVal, h_OutputVal);
+    assert(ret == 0);
 
     for (uint i = 0; i < N; i++)
     {
-        d_InputKey[i] = rand() % numValues;
-        d_InputVal[i] = i;
+        h_InputKey[i] = rand() % numValues;
+        h_InputVal[i] = i;
     }
 
-    error = cudaMemPrefetchAsync(d_InputKey,  N * sizeof(uint), 0);
-    checkCudaErrors(error);
-    error = cudaMemPrefetchAsync(d_InputVal,  N * sizeof(uint), 0);
-    checkCudaErrors(error);
-    error = cudaMemPrefetchAsync(d_OutputKey, N * sizeof(uint), 0);
-    checkCudaErrors(error);
-    error = cudaMemPrefetchAsync(d_OutputVal, N * sizeof(uint), 0);
-    checkCudaErrors(error);
-    error = cudaDeviceSynchronize();
-    checkCudaErrors(error);
+    ret = fgpu_memory_prefetch_to_device_async(h_InputKey,  N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_prefetch_to_device_async(h_InputVal,  N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_prefetch_to_device_async(h_OutputKey, N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_memory_prefetch_to_device_async(h_OutputVal, N * sizeof(uint));
+    assert(ret == 0);
+    ret = fgpu_color_stream_synchronize();
+    assert(ret == 0);
 
     int flag = 1;
     printf("Running GPU bitonic sort (%u identical iterations)...\n\n", numIterations);
 
+
     for (arrayLength = 64; arrayLength <= N; arrayLength *= 2)
     {
         printf("Testing array length %u (%u arrays per batch)...\n", arrayLength, N / arrayLength);
-        error = cudaDeviceSynchronize();
-        checkCudaErrors(error);
+        ret = fgpu_color_stream_synchronize();
+        assert(ret == 0);
 
         sdkResetTimer(&hTimer);
         sdkStartTimer(&hTimer);
@@ -126,8 +138,8 @@ int main(int argc, char **argv)
                               DIR
                           );
 
-        error = cudaDeviceSynchronize();
-        checkCudaErrors(error);
+        ret = fgpu_color_stream_synchronize();
+        assert(ret == 0);
 
         sdkStopTimer(&hTimer);
         printf("Average time: %f ms\n\n", sdkGetTimerValue(&hTimer) / numIterations);
@@ -141,18 +153,29 @@ int main(int argc, char **argv)
 
         printf("\nValidating the results...\n");
         printf("...reading back GPU results\n");
-        error = cudaMemPrefetchAsync(d_InputKey, N * sizeof(uint), CU_DEVICE_CPU);
-        checkCudaErrors(error);
-        error = cudaMemPrefetchAsync(d_OutputKey, N * sizeof(uint), CU_DEVICE_CPU);
-        checkCudaErrors(error);
-        error = cudaMemPrefetchAsync(d_OutputVal, N * sizeof(uint), CU_DEVICE_CPU);
-        checkCudaErrors(error);
-        error = cudaDeviceSynchronize();
-        checkCudaErrors(error);
 
-        int keysFlag = validateSortedKeys(d_OutputKey, d_InputKey, N / arrayLength, arrayLength, numValues, DIR);
-        int valuesFlag = validateValues(d_OutputKey, d_OutputVal, d_InputKey, N / arrayLength, arrayLength);
+
+        ret = fgpu_memory_prefetch_from_device_async(h_InputKey, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_memory_prefetch_from_device_async(h_OutputKey, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_memory_prefetch_from_device_async(h_OutputVal, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_color_stream_synchronize();
+        assert(ret == 0);
+
+        int keysFlag = validateSortedKeys(h_OutputKey, h_InputKey, N / arrayLength, arrayLength, numValues, DIR);
+        int valuesFlag = validateValues(h_OutputKey, h_OutputVal, h_InputKey, N / arrayLength, arrayLength);
         flag = flag && keysFlag && valuesFlag;
+
+        ret = fgpu_memory_prefetch_to_device_async(h_InputKey, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_memory_prefetch_to_device_async(h_OutputKey, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_memory_prefetch_to_device_async(h_OutputVal, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_color_stream_synchronize();
+        assert(ret == 0);
 
         printf("\n");
     }
@@ -161,8 +184,8 @@ int main(int argc, char **argv)
     arrayLength = N;
     numIterations = 10000;
     printf("Testing array length %u (%u arrays per batch)...\n", arrayLength, N / arrayLength);
-    error = cudaDeviceSynchronize();
-    checkCudaErrors(error);
+    ret = fgpu_color_stream_synchronize();
+    assert(ret == 0);
 
 
     double start, total;
@@ -179,7 +202,7 @@ int main(int argc, char **argv)
                 arrayLength,
                 DIR
                 );
-        ret = gpuErrCheck(fgpu_color_stream_synchronize());
+        ret = fgpu_color_stream_synchronize();
         if (ret < 0)
             return ret;
         total = dtime_usec(start);
@@ -200,7 +223,7 @@ int main(int argc, char **argv)
                 arrayLength,
                 DIR
                 );
-        ret = gpuErrCheck(fgpu_color_stream_synchronize());
+        ret = fgpu_color_stream_synchronize();
     	if (ret < 0)
         	return ret;
         pstats_add_observation(&stats, dtime_usec(sub_start));
@@ -226,16 +249,16 @@ int main(int argc, char **argv)
                 arrayLength,
                 DIR
                 );
-     ret = gpuErrCheck(fgpu_color_stream_synchronize());
+    ret = fgpu_color_stream_synchronize();
     if (ret < 0)
         return ret;
 
     printf("Shutting down...\n");
     sdkDeleteTimer(&hTimer);
-    cudaFree(d_OutputVal);
-    cudaFree(d_OutputKey);
-    cudaFree(d_InputVal);
-    cudaFree(d_InputKey);
+    fgpu_memory_free(h_OutputVal);
+    fgpu_memory_free(h_OutputKey);
+    fgpu_memory_free(h_InputVal);
+    fgpu_memory_free(h_InputKey);
 
     fgpu_deinit();
 

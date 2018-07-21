@@ -6,9 +6,18 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
 
 option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
+option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
+
+if(FGPU_MEM_COLORING_ENABLED)
+    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_MEM_COLORING_ENABLED")
+endif()
+
+if(FGPU_USER_MEM_COLORING_ENABLED)
+    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_USER_MEM_COLORING_ENABLED")
+endif()
 
 #set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Release)
 
 find_package(CUDA  REQUIRED)
@@ -19,10 +28,6 @@ include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/)
 
 string(APPEND CMAKE_CUDA_FLAGS " -arch=${TARGET}")
-
-if(FGPU_MEM_COLORING_ENABLED)
-    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_MEM_COLORING_ENABLED")
-endif()
 
 # Add programs to be built using persistent threads model
 # First arg is target name

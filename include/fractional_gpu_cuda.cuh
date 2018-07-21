@@ -85,13 +85,62 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
 ({                                                                          \
     if (fgpu_device_init(&dev_fctx) < 0)                                    \
         return;                                                             \
-    dev_fctx.gridDim;                                                       \
+    &dev_fctx;                                                              \
  })
+
+#define FGPU_GET_GRIDDIM(ctx)                                               \
+    ctx->gridDim
 
 #define FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx)                               \
     for (; fgpu_device_get_blockIdx(&dev_fctx, &_blockIdx) == 0;)
 
 #define FGPU_FOR_EACH_END
+
+#if defined(FGPU_MEM_COLORING_ENABLED)
+
+// TODO: This should be per GPU based
+#define FGPU_DEVICE_COLOR_SHIFT	            12
+#define FGPU_DEVICE_COLOR_PATTERN           0x4e4c3		// Split cache vertically
+
+#define FGPU_COLOR_LOAD(ctx, addr)              \
+({                                              \
+    void *ptr = fgpu_color_load(ctx, addr);     \
+    *(typeof(addr))ptr;                         \
+})
+
+#define FGPU_COLOR_STORE(ctx, addr, value)      \
+({                                              \
+    void *ptr = fgpu_color_load(ctx, addr);     \
+    *(typeof(addr))ptr = value;                 \
+})
+
+__device__ __forceinline__
+void *fgpu_color_load(const fgpu_dev_ctx_t *ctx, const void *virt_offset)
+{
+    uint64_t true_virt_addr;
+	uint64_t c_virt_offset = (uint64_t)virt_offset;
+	uint64_t idx = ((c_virt_offset >> FGPU_DEVICE_COLOR_SHIFT) << 1);
+	uint32_t pattern = (idx + ctx->start_idx) & FGPU_DEVICE_COLOR_PATTERN;
+	uint8_t parity = __popc(pattern) & 0x1;
+	idx += (parity != ctx->color);
+	true_virt_addr = ctx->start_virt_addr + (idx << FGPU_DEVICE_COLOR_SHIFT) + (c_virt_offset & 0xFFF);
+	return  (void *)true_virt_addr;
+
+}
+
+#else /* FGPU_MEM_COLORING_ENABLED */
+
+#define FGPU_COLOR_LOAD(ctx, addr)              \
+({                                              \
+    *(typeof(addr))addr;                        \
+})
+
+#define FGPU_COLOR_STORE(ctx, addr, value)      \
+({                                              \
+    *(typeof(addr))addr = value;                \
+})
+
+#endif /* FGPU_MEM_COLORING_ENABLED */
 
 
 #endif /* __FRACTIONAL_GPU_CUDA_H__ */

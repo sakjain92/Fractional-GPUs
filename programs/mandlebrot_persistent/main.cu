@@ -15,7 +15,8 @@
 __global__
 FGPU_DEFINE_KERNEL(render, char *out, int width, int height) {
   
-  FGPU_DEVICE_INIT();
+  fgpu_dev_ctx_t *ctx;
+  ctx = FGPU_DEVICE_INIT();
   uint3 _blockIdx;
 
   FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
@@ -39,36 +40,52 @@ FGPU_DEFINE_KERNEL(render, char *out, int width, int height) {
     }
 
     if(iteration == max_iteration) {
-      out[index] = 0;
-      out[index + 1] = 0;
-      out[index + 2] = 0;
+      FGPU_COLOR_STORE(ctx, &out[index], 0);
+      FGPU_COLOR_STORE(ctx, &out[index + 1], 0);
+      FGPU_COLOR_STORE(ctx, &out[index + 2], 0);
     } else {
-      out[index] = iteration;
-      out[index + 1] = iteration;
-      out[index + 2] = iteration;
+      FGPU_COLOR_STORE(ctx, &out[index], iteration);
+      FGPU_COLOR_STORE(ctx, &out[index + 1], iteration);
+      FGPU_COLOR_STORE(ctx, &out[index + 2], iteration);
     }
   } FGPU_FOR_EACH_END 
 }
 
-void runCUDA(int width, int height)
+int runCUDA(int width, int height)
 {
   // Multiply by 3 here, since we need red, green and blue for each pixel
   size_t buffer_size = sizeof(char) * width * height * 3;
 
-  char *image;
+  int ret;
   int nIter = 10000;
   double start, total;
 
-  cudaMalloc((void **) &image, buffer_size);
 
-  char *host_image = (char *) malloc(buffer_size);
+  char *host_image, *device_image;
+
+  ret = fgpu_memory_allocate((void **)&host_image, buffer_size);
+  if (ret < 0)
+    return ret;
+  ret = fgpu_memory_get_device_pointer((void **)&device_image, host_image);
+  if (ret < 0)
+    return ret;
+
+  ret = fgpu_memory_prefetch_to_device_async(host_image, buffer_size);
+  if (ret < 0)
+    return ret;
+  ret = fgpu_color_stream_synchronize();
+  if (ret < 0)
+    return ret;
+
 
   dim3 blockDim(16, 16, 1);
   dim3 gridDim(width / blockDim.x, height / blockDim.y, 1);
   
   start = dtime_usec(0);
-  FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, image, width, height);
-  gpuErrAssert(fgpu_color_stream_synchronize());
+  FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, device_image, width, height);
+  ret = fgpu_color_stream_synchronize();
+  if (ret < 0)
+      return ret;
   total = dtime_usec(start);
 
   printf("Time:%f us\n", total);
@@ -76,22 +93,34 @@ void runCUDA(int width, int height)
 
   start = dtime_usec(0);
   for (int i = 0; i < nIter; i++) {
-    FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, image, width, height);
-
+    start = dtime_usec(0);
+    FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, device_image, width, height);
+    ret = fgpu_color_stream_synchronize();
+    if (ret < 0)
+        return ret;
+    total = dtime_usec(start);
+    printf("Time:%f us\n", total);
   }
-  gpuErrAssert(fgpu_color_stream_synchronize());
+  ret = fgpu_color_stream_synchronize();
+  if (ret < 0)
+    return ret;
 
   total = dtime_usec(start);
 
   printf("Avg Time:%f us\n", total / nIter);
 
-  cudaMemcpy(host_image, image, buffer_size, cudaMemcpyDeviceToHost);
+  ret = fgpu_memory_prefetch_from_device_async(host_image, buffer_size);
+  if (ret < 0)
+    return ret;
+  ret = fgpu_color_stream_synchronize();
+  if (ret < 0)
+    return ret;
 
   // Now write the file
   write_bmp("output.bmp", width, height, host_image);
 
-  cudaFree(image);
-  free(host_image);
+  fgpu_memory_free(host_image);
+  return 0;
 }
 
 int main(int argc, const char * argv[]) {
@@ -113,8 +142,10 @@ int main(int argc, const char * argv[]) {
   if (ret < 0)
     return ret;
 
-  runCUDA(4096, 4096);
-  
+  ret = runCUDA(4096, 4096);
+  if (ret < 0)
+      return ret;
+
   fgpu_deinit();
   
   return 0;

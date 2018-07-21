@@ -7,6 +7,8 @@
 
 #include <cuda.h>
 
+#include <config.h>
+
 /* Compile time assertion */
 #define COMPILE_ASSERT(val) typedef char assertion_typedef[(val) * 2 - 1];
 

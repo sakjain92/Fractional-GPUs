@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 
 #include <common.h>
 #include <fractional_gpu.h>
@@ -11,20 +12,11 @@
 template <int BLOCK_SIZE> 
 FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
 {
-    FGPU_DEVICE_INIT();
+    fgpu_dev_ctx_t *ctx;
     uint3 _blockIdx;
+    ctx = FGPU_DEVICE_INIT();
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
-//#pragma unroll 1    
-//    for (int idx = blockIdx.x; idx < 200; idx += 30) {
-
-//        _blockIdx.y = idx / 20;
-//        _blockIdx.x = idx - _blockIdx.y * 20;
-#if 0
-        C[32 * blockIdx.x + _blockIdx.x + 1] = _blockIdx.x;
-        C[32 * blockIdx.x + _blockIdx.x + 2] = _blockIdx.y;
-        C[32 * blockIdx.x + _blockIdx.x + 3] = _blockIdx.z;
-#else
         // Block index
         int bx = _blockIdx.x;
         int by = _blockIdx.y;
@@ -70,8 +62,8 @@ FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
             // Load the matrices from device memory
             // to shared memory; each thread loads
             // one element of each matrix
-            As[ty][tx] = A[a + wA * ty + tx];
-            Bs[ty][tx] = B[b + wB * ty + tx];
+            As[ty][tx] = FGPU_COLOR_LOAD(ctx, &A[a + wA * ty + tx]);
+            Bs[ty][tx] = FGPU_COLOR_LOAD(ctx, &B[b + wB * ty + tx]);
 
             // Synchronize to make sure the matrices are loaded
             __syncthreads();
@@ -95,8 +87,7 @@ FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
         // Write the block sub-matrix to device memory;
         // each thread writes one element
         int c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
-        C[c + wB * ty + tx] = Csub;
-#endif   
+        FGPU_COLOR_STORE(ctx, &C[c + wB * ty + tx], Csub);
     } FGPU_FOR_EACH_END;
 }
 
@@ -130,66 +121,82 @@ int matrixMultiply(void)
     const float valB = 0.01f;
 
     // Allocate device memory
+    float *h_A, *h_B, *h_C;
     float *d_A, *d_B, *d_C;
 
     // Allocate host matrix C
     dim3 dimsC(dimsB.x, dimsA.y, 1);
     unsigned int mem_size_C = dimsC.x * dimsC.y * sizeof(float);
 
-    cudaError_t error;
+    int ret;
+    
+    ret = fgpu_memory_allocate((void **) &h_A, mem_size_A);
 
-    error = cudaMallocManaged((void **) &d_A, mem_size_A);
-
-    if (error != cudaSuccess)
+    if (ret < 0)
     {
-        printf("cudaMallocManaged d_A returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_allocate h_A returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMallocManaged((void **) &d_B, mem_size_B);
+    ret = fgpu_memory_allocate((void **) &h_B, mem_size_B);
 
-    if (error != cudaSuccess)
+    if (ret < 0)
     {
-        printf("cudaMallocManaged d_B returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_allocate h_B returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMallocManaged((void **) &d_C, mem_size_C);
+    ret = fgpu_memory_allocate((void **) &h_C, mem_size_C);
 
-    if (error != cudaSuccess)
+    if (ret < 0)
     {
-        printf("cudaMallocManaged d_C returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_allocate h_C returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    constantInit(d_A, size_A, 1.0f);
-    constantInit(d_B, size_B, valB);
-
-    cudaStream_t stream; 
-    gpuErrAssert(cudaStreamCreate(&stream));
+    constantInit(h_A, size_A, 1.0f);
+    constantInit(h_B, size_B, valB);
 
     // copy host memory to device
-    error = cudaMemPrefetchAsync(d_A, mem_size_A, 0, stream);
+    ret = fgpu_memory_prefetch_to_device_async(h_A, mem_size_A);
 
-    if (error != cudaSuccess)
+    if (ret < 0)
     {
-        printf("cudaMemPrefetch (d_A) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_prefetch_to_device_async (h_A) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaMemPrefetchAsync(d_B, mem_size_B, 0, stream);
+    ret = fgpu_memory_prefetch_to_device_async(h_B, mem_size_B);
 
-    if (error != cudaSuccess)
+    if (ret < 0)
     {
-        printf("cudaMemPrefetch (d_B) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_prefetch_to_device_async (h_B) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-
-    error = cudaStreamSynchronize(stream);
-    if (error != cudaSuccess)
+    ret = fgpu_color_stream_synchronize();
+    if (ret < 0)
     {
-        printf("cudaStreamSynchronize returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_color_stream_synchronize returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Get the device pointers */
+    ret = fgpu_memory_get_device_pointer((void **)&d_A, h_A);
+    if (ret < 0) {
+        printf("fgpu_memory_get_device_pointer (d_A) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
+    ret = fgpu_memory_get_device_pointer((void **)&d_B, h_B);
+    if (ret < 0) {
+        printf("fgpu_memory_get_device_pointer (d_B) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
+    ret = fgpu_memory_get_device_pointer((void **)&d_C, h_C);
+    if (ret < 0) {
+        printf("fgpu_memory_get_device_pointer (d_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -200,7 +207,6 @@ int matrixMultiply(void)
     // Execute the kernel
     int nIter = 10000;
 
-    int ret;
     double start, total;
     pstats_t stats;
 
@@ -220,7 +226,7 @@ int matrixMultiply(void)
         if (ret < 0)
             return ret;
 
-	    ret = gpuErrCheck(fgpu_color_stream_synchronize());
+	    ret = fgpu_color_stream_synchronize();
     	if (ret < 0)
         	return ret;
 
@@ -246,7 +252,7 @@ int matrixMultiply(void)
         pstats_add_observation(&stats, dtime_usec(sub_start));
     }
 
-    ret = gpuErrCheck(fgpu_color_stream_synchronize());
+    ret = fgpu_color_stream_synchronize();
     if (ret < 0)
         return ret;
 
@@ -279,26 +285,25 @@ int matrixMultiply(void)
         if (ret < 0)
             return ret;
 
-	    ret = gpuErrCheck(fgpu_color_stream_synchronize());
+	    ret = fgpu_color_stream_synchronize();
     	if (ret < 0)
         	return ret;
 
     }
 
     // Copy result from device to host
-    error = cudaMemPrefetchAsync(d_C, mem_size_C, CU_DEVICE_CPU, stream);
-
-    if (error != cudaSuccess)
+    ret = fgpu_memory_prefetch_from_device_async(h_C, mem_size_C);
+    if (ret < 0)
     {
-        printf("cudaMemprefetch (d_C) returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
+        printf("fgpu_memory_prefetch_from_device_async (h_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    error = cudaStreamSynchronize(stream);
-    if (error != cudaSuccess)
+    ret = fgpu_color_stream_synchronize();
+    if (ret < 0)
     {
-        printf("cudaStreamSynchronize returned error %s (code %d), line(%d)\n", cudaGetErrorString(error), error, __LINE__);
-        exit(EXIT_FAILURE);
+        printf("fgpu_color_stream_synchronize returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+        exit(EXIT_FAILURE        );
     }
 
     printf("Checking computed result for correctness: ");
@@ -310,14 +315,14 @@ int matrixMultiply(void)
 
     for (int i = 0; i < (int)(dimsC.x * dimsC.y); i++)
     {
-        double abs_err = fabs(d_C[i] - (dimsA.x * valB));
+        double abs_err = fabs(h_C[i] - (dimsA.x * valB));
         double dot_length = dimsA.x;
-        double abs_val = fabs(d_C[i]);
+        double abs_val = fabs(h_C[i]);
         double rel_err = abs_err/abs_val/dot_length ;
 
         if (rel_err > eps)
         {
-            printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, d_C[i], dimsA.x*valB, eps);
+            printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, h_C[i], dimsA.x*valB, eps);
             correct = false;
         }
     }
@@ -325,9 +330,9 @@ int matrixMultiply(void)
     printf("%s\n", correct ? "Result = PASS" : "Result = FAIL");
 
     // Clean up memory
-    cudaFree(d_A);
-    cudaFree(d_B);
-    cudaFree(d_C);
+    fgpu_memory_free(h_A);
+    fgpu_memory_free(h_B);
+    fgpu_memory_free(h_C);
 
     printf("\nNOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.\n");
 
