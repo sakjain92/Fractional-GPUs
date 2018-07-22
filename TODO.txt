@@ -1,0 +1,38 @@
+Add proper licence (RTML/NVIDIA for cuda samples)
+Add proper testing framework to test deadlock
+Add performance testing framework
+1) Command such as these might work suitably:
+(`./matrixMul_persistent 0 &> /tmp/a.out` &)  && (`./matrixMul_persistent 1 &> /tmp/b.out` &) 
+
+
+Find reasons for overheads
+1) Few us overhead is because of using MPS (about 10us) with
+atleast one other process existing (launch server and keep it idle)
+
+
+Limitations
+1) Only launch one at a time - This has some inteference with each other - SortingNetworks - Multiple kernels launched one after another - So smaller the kernels runtime, more contention (Try to see if possible to eleminate this need of launch one at a time)
+2) Requires MPS (Try to see if possible to eliminate need for this)
+3) Nvidia driver (for atleast dicrete GPUs) is not real time (I think for non-real GPUs kernel code is not publicily available). Kernel driver uses background threads which might have latency issues.
+4) For embedded GPUs probably memory hierachy is completely different. Might require CPU memory coloring.
+5) Power management on GPUs is an issue (on discrete GPUs)
+6) Functional memory isolation is not present (limitation of MPS and the way we semi-bypass TLB). Crash in one application cause crash in another (limitation of MPS, even if MPS bypassed, still this remains an issue)
+7) Half of memory is being wasted (This limitation can be removed)
+8) Application code needs to be modified (Maybe can be done at compiler level - But requires knowledge of which address is shared/contant and which is global)
+9) Requires root permission for insertion of kernel module and also for starting MPS
+10) Application might need to be compiled seperately for each different GPU (as hash function probably changes with GPUs and that function is inline. Can use 'switch-case' but will be slower in that case) - Is there a way to have multiple different kernels, one for each genarch?
+11) Only single GPU supported currently. Maybe multiple GPU might be possible (Each of same type?)
+
+Advantages
+1) Flexible SM partitioning
+2) Almost full interference free - Works best for large kernels
+
+TODO
+1) If kernel occupancy is low, than a deadlock might happen. To avoid this, there is an API that tells how many blocks can fit in a SM. Use that.
+2) Test with large real applications
+3) Find 31st and 32nd bit of the memory hash function
+4) Run experiments on a GPU with even number of SM (e.g. GTX 1080)
+5) Find how memory heirachy/hash function changes with the GPU
+6) Try MPS on voltas and find it's limitation
+7) Cleanup code - Better error codes, better API - Specially how to cleanly do memory transfer between CPU - GPU
+8) Make PTEs persistent on GPU - Though this will make UVM transparent migration unavailable as a feature - But cleaner method. Also avoids double copy when just want to read data (so don't want to invalidate TLBs)
