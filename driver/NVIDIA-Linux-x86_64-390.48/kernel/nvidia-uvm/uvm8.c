@@ -37,10 +37,8 @@
 #include "uvm8_hmm.h"
 #include "uvm8_mem.h"
 
-// UVM_MEM_COLORING is common define for UVM_USER_MEM_COLORING and 
-// UVM_KERNEL_MEM_COLORING
-#if (defined(UVM_USER_MEM_COLORING) && !defined(UVM_MEM_COLORING)) ||       \
-    (defined(UVM_KERNEL_MEM_COLORING) && !defined(UVM_MEM_COLORING))
+// UVM_MEM_COLORING must be defined for UVM_USER_MEM_COLORING 
+#if (defined(UVM_USER_MEM_COLORING) && !defined(UVM_MEM_COLORING))
 #error "UVM_MEM_COLORING not defined"
 #endif
 

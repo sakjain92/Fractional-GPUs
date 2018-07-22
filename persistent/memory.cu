@@ -19,8 +19,6 @@
  * Check what happens currently.
  */
 
-#ifdef FGPU_MEM_COLORING_ENABLED
-
 #include <assert.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -48,6 +46,8 @@
 #include <fractional_gpu.h>
 #include <fractional_gpu_cuda.cuh>
 #include <memory.h>
+
+#ifdef FGPU_MEM_COLORING_ENABLED
 
 #define NVIDIA_UVM_DEVICE_PATH  "/dev/" NVIDIA_UVM_DEVICE_NAME
 /* TODO: This path can be changed via environment variable */

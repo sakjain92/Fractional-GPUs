@@ -174,6 +174,14 @@ int matrixMultiply(void)
         exit(EXIT_FAILURE);
     }
 
+    ret = fgpu_memory_prefetch_to_device_async(h_C, mem_size_C);
+
+    if (ret < 0)
+    {
+        printf("fgpu_memory_prefetch_to_device_async (h_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
     ret = fgpu_color_stream_synchronize();
     if (ret < 0)
     {

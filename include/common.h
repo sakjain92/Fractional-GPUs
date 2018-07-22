@@ -86,7 +86,7 @@ inline void pstats_add_observation(pstats_t *stats, double time)
 
 inline void pstats_print(pstats_t *stats)
 {
-    printf("STATS: Min:%f, Max:%f, Avg:%f, Count:%f\n",
-            stats->min, stats->max, stats->sum / stats->count, stats->count);
+    printf("STATS: Avg:%f, Min:%f, Max:%f, Count:%f\n",
+            stats->sum / stats->count, stats->min, stats->max, stats->count);
 }
 #endif /* COMMON_H */

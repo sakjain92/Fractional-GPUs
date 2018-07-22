@@ -130,6 +130,8 @@ void *fgpu_color_load(const fgpu_dev_ctx_t *ctx, const void *virt_offset)
 
 #else /* FGPU_MEM_COLORING_ENABLED */
 
+/* TODO: Here as ctx is not being used, we get warning from compiler */
+
 #define FGPU_COLOR_LOAD(ctx, addr)              \
 ({                                              \
     *(typeof(addr))addr;                        \

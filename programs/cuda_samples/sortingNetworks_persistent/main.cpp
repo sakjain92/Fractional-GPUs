@@ -157,6 +157,8 @@ int main(int argc, char **argv)
 
         ret = fgpu_memory_prefetch_from_device_async(h_InputKey, N * sizeof(uint));
         assert(ret == 0);
+        ret = fgpu_memory_prefetch_from_device_async(h_InputVal, N * sizeof(uint));
+        assert(ret == 0);
         ret = fgpu_memory_prefetch_from_device_async(h_OutputKey, N * sizeof(uint));
         assert(ret == 0);
         ret = fgpu_memory_prefetch_from_device_async(h_OutputVal, N * sizeof(uint));
@@ -169,6 +171,8 @@ int main(int argc, char **argv)
         flag = flag && keysFlag && valuesFlag;
 
         ret = fgpu_memory_prefetch_to_device_async(h_InputKey, N * sizeof(uint));
+        assert(ret == 0);
+        ret = fgpu_memory_prefetch_to_device_async(h_InputVal, N * sizeof(uint));
         assert(ret == 0);
         ret = fgpu_memory_prefetch_to_device_async(h_OutputKey, N * sizeof(uint));
         assert(ret == 0);
