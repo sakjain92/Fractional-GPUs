@@ -23,9 +23,10 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
     uint sm;
     asm("mov.u32 %0, %smid;" : "=r"(sm));
     if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-       
-        /* Prepare for the next function */
-        dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+
+        /* Note: This is the most time taking process */
+        dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
+
         dev_ctx->d_dev_indicators->indicators[blockIdx.x].started = true;
 
         /* Pblocks launched on wrong SM have to wait for all other pblocks to be launched */
@@ -36,9 +37,9 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
             for (int i = 0; i < blockIdx.x; i++)
                 while(!dev_ctx->d_dev_indicators->indicators[i].started);
         }
-
-        /* Note: This is the most time taking process */
-        dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
+ 
+        /* Prepare for the next function */
+        dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
     }
   
     if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
