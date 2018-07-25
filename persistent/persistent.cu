@@ -487,6 +487,7 @@ void fgpu_server_deinit(void)
     if (shmem_fd > 0)
         close(shmem_fd);
 
+    /* TODO: Check errors here also */
     /* Remove links so that can be reused */
     shm_unlink(FGPU_SHMEM_HOST_NAME);
     shm_unlink(FGPU_SHMEM_NAME);

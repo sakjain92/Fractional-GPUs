@@ -17,7 +17,7 @@ if(FGPU_USER_MEM_COLORING_ENABLED)
 endif()
 
 #set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Release)
 
 find_package(CUDA  REQUIRED)
@@ -101,6 +101,12 @@ add_native_target(mandlebrot programs/mandlebrot
 
 add_persistent_target(mandlebrot_persistent programs/mandlebrot_persistent
     programs/mandlebrot_persistent/main.cu programs/mandlebrot_persistent/bmp.cpp)
+
+# Vector Add
+add_native_target(vector_add programs/vector_add
+    programs/vector_add/main.cu)
+add_persistent_target(vector_add_persistent programs/vector_add_persistent
+    programs/vector_add_persistent/main.cu)
 
 # conjugateGradientMultiBlockCG
 #add_native_target(conjugateGradientMultiBlockCG programs/cuda_samples/conjugateGradientMultiBlockCG
