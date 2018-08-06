@@ -75,6 +75,7 @@ typedef struct fgpu_host_ctx {
     pthread_cond_t launch_cond;
     bool is_lauchpad_free;
     bool cur_indexes[FGPU_MAX_NUM_COLORS];
+    int cur_launch_index;
     int last_color;
     int last_num_pblocks_launched;
 
@@ -212,8 +213,10 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
     /* If memory coloring is enabled, take the minimum of the colors */
     int mem_colors;
     int ret = fgpu_device_get_num_memory_colors(device, &mem_colors, NULL);
-    if (ret < 0)
-        return ret;
+    if (ret < 0) {
+        fprintf(stderr, "Memory coloring enabled but can't set colors in kernel driver\n");
+	return ret;
+    }
 
     num_colors = mem_colors < num_colors ? mem_colors : num_colors;
 #endif
@@ -544,6 +547,7 @@ int fgpu_init(void)
     if (ret < 0)
         goto err;
 
+    shmem_size = ROUND_UP(sizeof(fgpu_indicators_t), page_size);
     ret = gpuDriverErrCheck(cuMemHostRegister((void *)h_indicators, shmem_size,
                 CU_MEMHOSTREGISTER_PORTABLE | CU_MEMHOSTREGISTER_DEVICEMAP));
     if (ret < 0)
@@ -589,7 +593,7 @@ void fgpu_deinit(void)
 
     if (d_dev_indicators)
         gpuErrCheck(cudaIpcCloseMemHandle((void *)d_dev_indicators)); 
-    
+
     if (h_indicators != NULL)
         cuMemHostUnregister((void *)h_indicators);
 
@@ -735,7 +739,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
 
     if (num_threads < FGPU_MIN_BLOCKDIMS)
         return -1;
-    
+   
     wait_for_last_complete(g_color);
 
     wait_for_last_start();
@@ -747,7 +751,9 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     ctx->num_pblock = num_pblocks;
     ctx->num_blocks = num_blocks;
     ctx->index = g_host_ctx->cur_indexes[g_color];
+    ctx->launch_index = g_host_ctx->cur_launch_index + 1;
     g_host_ctx->cur_indexes[g_color] ^= 1;   /* Toggle the index */
+    g_host_ctx->cur_launch_index++;
     ctx->d_host_indicators = d_host_indicators;
     ctx->d_dev_indicators = d_dev_indicators;
     ctx->d_bindex = d_bindexes;

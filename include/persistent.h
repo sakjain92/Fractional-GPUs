@@ -14,7 +14,7 @@ typedef struct fgpu_bindexes {
 } fgpu_bindexes_t;
 
 struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_indicator {
-    bool started;
+    int started;
 };
 
 /* Memory where persistent kernel indicates to host that it successfully launched */

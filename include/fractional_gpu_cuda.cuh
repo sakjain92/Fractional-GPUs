@@ -25,24 +25,26 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
     if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
 
         /* Note: This is the most time taking process */
-        dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
+	dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
 
-        dev_ctx->d_dev_indicators->indicators[blockIdx.x].started = true;
+        dev_ctx->d_dev_indicators->indicators[blockIdx.x].started = dev_ctx->launch_index;
 
         /* Pblocks launched on wrong SM have to wait for all other pblocks to be launched */
         if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
             /* Poll in round robin fashion to avoid all reading same data at once */
             for (int i = blockIdx.x + 1; i < dev_ctx->num_pblock; i++)
-                while(!dev_ctx->d_dev_indicators->indicators[i].started)
+                while(dev_ctx->d_dev_indicators->indicators[i].started !=  dev_ctx->launch_index)
+
             for (int i = 0; i < blockIdx.x; i++)
-                while(!dev_ctx->d_dev_indicators->indicators[i].started);
+                while(dev_ctx->d_dev_indicators->indicators[i].started !=  dev_ctx->launch_index);
+
         }
- 
+
         /* Prepare for the next function */
         dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
-    }
-  
-    if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
+   }
+
+   if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
         __syncthreads();
         return -1;
     }
