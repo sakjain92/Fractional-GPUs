@@ -114,6 +114,12 @@ add_native_target(saxpy programs/saxpy
 add_persistent_target(saxpy_persistent programs/saxpy_persistent
     programs/saxpy_persistent/saxpy.cu)
 
+# Membench
+add_native_target(membench programs/membench
+    programs/membench/membench.cu)
+add_persistent_target(membench_persistent programs/membench_persistent
+    programs/membench_persistent/membench.cu)
+
 # conjugateGradientMultiBlockCG
 #add_native_target(conjugateGradientMultiBlockCG programs/cuda_samples/conjugateGradientMultiBlockCG
 #    programs/cuda_samples/conjugateGradientMultiBlockCG/conjugateGradientMultiBlockCG.cu)
