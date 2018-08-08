@@ -108,6 +108,12 @@ add_native_target(vector_add programs/vector_add
 add_persistent_target(vector_add_persistent programs/vector_add_persistent
     programs/vector_add_persistent/main.cu)
 
+# Saxpy
+add_native_target(saxpy programs/saxpy
+    programs/saxpy/saxpy.cu)
+add_persistent_target(saxpy_persistent programs/saxpy_persistent
+    programs/saxpy_persistent/saxpy.cu)
+
 # conjugateGradientMultiBlockCG
 #add_native_target(conjugateGradientMultiBlockCG programs/cuda_samples/conjugateGradientMultiBlockCG
 #    programs/cuda_samples/conjugateGradientMultiBlockCG/conjugateGradientMultiBlockCG.cu)

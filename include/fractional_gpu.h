@@ -32,6 +32,11 @@ typedef struct fgpu_dev_ctx {
 
 } fgpu_dev_ctx_t;
 
+enum fgpu_memory_copy_type {
+    FGPU_COPY_CPU_TO_GPU,
+    FGPU_COPY_GPU_TO_CPU,
+};
+
 int fgpu_server_init(void);
 void fgpu_server_deinit(void);
 int fgpu_init(void);
@@ -49,6 +54,8 @@ int fgpu_memory_get_device_pointer(void **d_p, void *h_p);
 
 int fgpu_memory_prefetch_to_device_async(void *p, size_t len);
 int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
+int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
+                           enum fgpu_memory_copy_type type);
 
 /* Macro to launch kernel - Returns a tag - Negative if error */
 #define FGPU_LAUNCH_KERNEL(_gridDim, _blockDim, sharedMem, func, ...)       \
@@ -87,5 +94,6 @@ int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
                                                                             \
     ret;                                                                    \
 })
+
 
 #endif /* FRACTIONAL_GPU */

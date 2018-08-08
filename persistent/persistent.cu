@@ -815,3 +815,9 @@ int fgpu_memory_prefetch_from_device_async(void *p, size_t len)
 {
     return gpuErrCheck(cudaMemPrefetchAsync(p, len, CU_DEVICE_CPU, color_stream));
 }
+
+int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
+                           enum fgpu_memory_copy_type type)
+{
+    return fgpu_memory_copy_async_internal(dst, src, count, type, color_stream);
+}

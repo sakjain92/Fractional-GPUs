@@ -103,6 +103,8 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
 
 // TODO: This should be per GPU based
 #define FGPU_DEVICE_COLOR_SHIFT	            12
+#define FGPU_DEVICE_PAGE_SIZE               (1 << FGPU_DEVICE_COLOR_SHIFT)
+#define FGPU_DEVICE_PAGE_MASK               (~(FGPU_DEVICE_PAGE_SIZE - 1))
 #define FGPU_DEVICE_COLOR_PATTERN           0x4e4c3		// Split cache vertically
 
 #define FGPU_COLOR_LOAD(ctx, addr)              \
@@ -129,6 +131,23 @@ void *fgpu_color_load(const fgpu_dev_ctx_t *ctx, const void *virt_offset)
 	true_virt_addr = ctx->start_virt_addr + (idx << FGPU_DEVICE_COLOR_SHIFT) + (c_virt_offset & 0xFFF);
 	return  (void *)true_virt_addr;
 
+}
+
+/* For host side */
+inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr, 
+                                              uint64_t start_phy_addr,
+                                              int color,
+                                              const void *virt_addr)
+{
+    uint64_t true_virt_addr;
+    uint64_t start_idx = start_phy_addr >> FGPU_DEVICE_COLOR_SHIFT;
+	uint64_t c_virt_offset = (uint64_t)virt_addr - start_virt_addr;
+	uint64_t idx = ((c_virt_offset >> FGPU_DEVICE_COLOR_SHIFT) << 1);
+	uint32_t pattern = (idx + start_idx) & FGPU_DEVICE_COLOR_PATTERN;
+	uint8_t parity = __builtin_popcount(pattern) & 0x1;
+	idx += (parity != color);
+	true_virt_addr = start_virt_addr + (idx << FGPU_DEVICE_COLOR_SHIFT) + (c_virt_offset & 0xFFF);
+	return  (void *)true_virt_addr;
 }
 
 #else /* FGPU_MEM_COLORING_ENABLED */

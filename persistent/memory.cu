@@ -85,6 +85,8 @@ struct {
     /* Actual memory allocation */
     void *base_addr;
 
+    int color;
+
     /* 
      * TODO: Use better data structures for memory management
      * TODO: Support alignment etc.
@@ -386,6 +388,7 @@ static int set_process_color_info(int device, int color, size_t req_length)
     g_memory_ctx.is_initialized = true;
     g_memory_ctx.base_phy_addr = (void *)params.address;
     g_memory_ctx.reserved_len = req_length;
+    g_memory_ctx.color = color;
 
     g_memory_ctx.cur_addr = (uintptr_t)g_memory_ctx.base_addr;
     g_memory_ctx.left = req_length;
@@ -460,6 +463,80 @@ int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx)
     return 0;
 }
 
+/* 
+ * TODO: This might be slower to loop in userspace. Doing this inside kernel
+ * might be faster. So measure the reduction in bandwidth and if substantial,
+ * do inside kernel
+ */
+int fgpu_memory_copy_async_to_device_internal(void *dst, const void *src, 
+                                                size_t count, cudaStream_t stream)
+{
+    size_t left = count;
+    int ret;
+
+    while (left) {
+        uintptr_t base = (uintptr_t)dst & FGPU_DEVICE_PAGE_MASK;
+        uintptr_t offset = (uintptr_t)dst - base;
+        size_t transfer = min(min(left, (size_t)FGPU_DEVICE_PAGE_SIZE), 
+                (size_t)FGPU_DEVICE_PAGE_SIZE - (size_t)offset);
+        void *true_virt_addr_dest = fgpu_color_device_true_virt_addr((uint64_t)g_memory_ctx.base_addr,
+                                                                     (uint64_t)g_memory_ctx.base_phy_addr,
+                                                                     g_memory_ctx.color,
+                                                                     dst);
+
+        ret = gpuErrCheck(cudaMemcpyAsync(true_virt_addr_dest, src, transfer, cudaMemcpyHostToDevice, stream));
+        if (ret < 0)
+            return ret;
+        dst = (void *)((uintptr_t)dst + transfer);
+        src = (void *)((uintptr_t)src + transfer);
+        left -= transfer;
+    }
+    return 0;
+}
+
+int fgpu_memory_copy_async_to_host_internal(void *dst, const void *src, 
+                                                size_t count, cudaStream_t stream)
+{
+    size_t left = count;
+    int ret;
+
+    while (left) {
+        uintptr_t base = (uintptr_t)src & FGPU_DEVICE_PAGE_MASK;
+        uintptr_t offset = (uintptr_t)src - base;
+        size_t transfer = min(min(left, (size_t)FGPU_DEVICE_PAGE_SIZE), 
+                (size_t)FGPU_DEVICE_PAGE_SIZE - (size_t)offset);
+        void *true_virt_addr_src = fgpu_color_device_true_virt_addr((uint64_t)g_memory_ctx.base_addr,
+                                                                    (uint64_t)g_memory_ctx.base_phy_addr,
+                                                                    g_memory_ctx.color,
+                                                                    src);
+
+        ret = gpuErrCheck(cudaMemcpyAsync(dst, true_virt_addr_src, transfer, cudaMemcpyDeviceToHost, stream));
+        if (ret < 0)
+            return ret;
+        dst = (void *)((uintptr_t)dst + transfer);
+        src = (void *)((uintptr_t)src + transfer);
+        left -= transfer;
+    }
+
+    return 0;
+}
+
+int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
+                                    enum fgpu_memory_copy_type type,
+                                    cudaStream_t stream)
+{
+
+    switch (type) {
+    case FGPU_COPY_CPU_TO_GPU:
+        return fgpu_memory_copy_async_to_device_internal(dst, src, count, stream);
+    case FGPU_COPY_GPU_TO_CPU:
+        return fgpu_memory_copy_async_to_host_internal(dst, src, count, stream);
+    default:
+        return -1;
+    }   
+}
+
+
 #else /* FGPU_MEM_COLORING_ENABLED */
 
 int fgpu_memory_allocate(void **p, size_t len)
@@ -476,5 +553,17 @@ int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
 {
     *d_p = h_p;
     return 0;
+}
+
+int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, enum fgpu_memory_copy_type type, cudaStream_t stream)
+{
+    switch (type) {
+    case FGPU_COPY_CPU_TO_GPU:
+        return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToDevice, stream));
+    case FGPU_COPY_GPU_TO_CPU:
+        return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToHost, stream));
+    default:
+        return -1;
+    }   
 }
 #endif /* FGPU_MEM_COLORING_ENABLED */
