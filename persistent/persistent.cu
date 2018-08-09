@@ -760,7 +760,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_
     ctx->start_sm = g_host_ctx->color_to_sms[g_color].first;
     ctx->end_sm = g_host_ctx->color_to_sms[g_color].second;
 
-#if defined(FGPU_MEM_COLORING_ENABLED)
+#if defined(FGPU_USER_MEM_COLORING_ENABLED)
     int ret = fgpu_get_memory_info(&ctx->start_virt_addr, &ctx->start_idx);
     if (ret < 0)
         return ret;

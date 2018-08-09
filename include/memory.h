@@ -9,10 +9,14 @@
 int fgpu_device_get_num_memory_colors(int device, int *num_colors, size_t *max_len);
 int fgpu_process_set_colors_info(int device, int color, size_t length);
 void fgpu_memory_deinit(void);
-int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx);
 int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
                                     enum fgpu_memory_copy_type type,
                                     cudaStream_t stream);
+
+#if defined(FGPU_USER_MEM_COLORING_ENABLED)
+int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx);
+#endif /* FGPU_USER_MEM_COLORING_ENABLED */
+
 #endif /* FGPU_MEM_COLORING_ENABLED */
 
 #endif /* __MEMORY_H__ */

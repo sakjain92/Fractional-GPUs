@@ -378,6 +378,24 @@ void uvm_hal_pascal_mmu_disable_prefetch_faults(uvm_gpu_t *gpu)
     UVM_WRITE_ONCE(*prefetch_control, prefetch_control_value);
 }
 
+#if defined(UVM_TEST_MEM_COLORING)
+NvU32 uvm_hal_pascal_mmu_phys_addr_to_color(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    return 0;
+}
+
+// Returns common address for all the physical page addresses of different colors with
+// same page index
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    return phys_addr;
+}
+
+NvU64 uvm_hal_pascal_mmu_phys_addr_to_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    return uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(gpu, phys_addr) >>  (order_base_2(UVM_PAGE_SIZE_2M));
+}
+#else /* UVM_TEST_MEM_COLORING */
 NvU32 uvm_hal_pascal_mmu_phys_addr_to_color(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
     int highest_bit = 30;
@@ -406,10 +424,11 @@ NvU32 uvm_hal_pascal_mmu_phys_addr_to_color(uvm_gpu_t *gpu, NvU64 phys_addr)
 // same page index
 NvU64 uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
-    return phys_addr & ~((1UL << (PAGE_SHIFT + 1)) - 1);
+    return phys_addr & ~((1UL << (order_base_2(UVM_PAGE_SIZE_4K) + 1)) - 1);
 }
 
 NvU64 uvm_hal_pascal_mmu_phys_addr_to_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
-    return uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(gpu, phys_addr) >>  (PAGE_SHIFT + 1);
+    return uvm_hal_pascal_mmu_phys_addr_to_base_color_addr(gpu, phys_addr) >>  (order_base_2(UVM_PAGE_SIZE_4K) + 1);
 }
+#endif /* UVM_TEST_MEM_COLORING */

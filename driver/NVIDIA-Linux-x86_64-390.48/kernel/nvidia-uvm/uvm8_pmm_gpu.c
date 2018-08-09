@@ -3069,7 +3069,7 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
     NvU64 chunk_size = pmm->gpu->colored_chunk_size;
     NvU64 num_chunks = memSize / chunk_size;
     NvU64 num_chunks_allocated = 0;
-    NvU64 start_addr, cur_addr = 0;
+    NvU64 start_addr = 0, cur_addr = 0;
 
     range->start_phys_addr = range->end_phys_addr = 0;
     range->total_num_chunks = range->left_num_chunks = 0;

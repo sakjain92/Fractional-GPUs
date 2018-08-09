@@ -21,6 +21,7 @@
 
 *******************************************************************************/
 
+#include "nv_uvm_types.h"
 #include "uvm8_hal.h"
 #include "uvm8_gpu.h"
 #include "uvm8_mem.h"
@@ -87,8 +88,15 @@ void uvm_hal_pascal_arch_init_properties(uvm_gpu_t *gpu)
     gpu->fault_cancel_va_supported = false;
 
 #if defined(UVM_MEM_COLORING)
+
+#if defined(UVM_TEST_MEM_COLORING)
+    gpu->num_mem_colors = 1;
+    gpu->colored_chunk_size = UVM_PAGE_SIZE_2M;
+#else
     gpu->num_mem_colors = 2;
-    gpu->colored_chunk_size = PAGE_SIZE;
+    gpu->colored_chunk_size = UVM_PAGE_SIZE_4K;
+#endif
+
 #else
     gpu->num_mem_colors = 0;
 #endif

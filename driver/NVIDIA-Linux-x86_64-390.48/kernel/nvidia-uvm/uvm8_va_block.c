@@ -5220,7 +5220,7 @@ static void block_gpu_compute_new_pte_state(uvm_va_block_t *block,
     if (gpu_state->force_4k_ptes)
         return;
 
-#if defined(UVM_MEM_COLORING) && !defined(UVM_USER_MEM_COLORING)
+#if defined(UVM_MEM_COLORING) && !defined(UVM_USER_MEM_COLORING) && !defined(UVM_TEST_MEM_COLORING)
     // XXX: Should this be turned on? Might make faster?
     // XXX: So the issue is that of trying to merge PTEs into 64K PTEs.
     // Try to understand how this code works.

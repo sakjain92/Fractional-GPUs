@@ -37,9 +37,16 @@
 #include "uvm8_hmm.h"
 #include "uvm8_mem.h"
 
-// UVM_MEM_COLORING must be defined for UVM_USER_MEM_COLORING 
-#if (defined(UVM_USER_MEM_COLORING) && !defined(UVM_MEM_COLORING))
+// UVM_MEM_COLORING must be defined for UVM_USER_MEM_COLORING and 
+// UVM_TEST_MEM_COLORING
+#if (defined(UVM_USER_MEM_COLORING) && !defined(UVM_MEM_COLORING)) ||       \
+    (defined(UVM_TEST_MEM_COLORING) && !defined(UVM_MEM_COLORING))
 #error "UVM_MEM_COLORING not defined"
+#endif
+
+// Only one can be selected at a time
+#if defined(UVM_USER_MEM_COLORING) && defined(UVM_TEST_MEM_COLORING)
+#error "Both UVM_USER_MEM_COLORING and UVM_TEST_MEM_COLORING defined"
 #endif
 
 static struct cdev g_uvm_cdev;

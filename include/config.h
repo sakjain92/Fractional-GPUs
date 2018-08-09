@@ -23,8 +23,14 @@
 #define FGPU_PREFERRED_NUM_COLORS	2
 
 /* When userspace coloring is enabled, coloring must be enabled */
-#if defined(FGPU_USER_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED)
-#error "FGPU_USER_MEM_COLORING_ENABLED defined but FGPU_MEM_COLORING_ENABLED not defined"
+#if defined(FGPU_USER_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED) || \
+    defined(FGPU_TEST_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED) 
+#error "FGPU_MEM_COLORING_ENABLED not defined"
+#endif
+
+/* Only one can be selected at a time */
+#if defined(FGPU_USER_MEM_COLORING_ENABLED) && defined(FGPU_TEST_MEM_COLORING_ENABLED)
+#error "Both FGPU_USER_MEM_COLORING_ENABLED and FGPU_TEST_MEM_COLORING_ENABLED defined"
 #endif
 
 #endif /* CONFIG_H */

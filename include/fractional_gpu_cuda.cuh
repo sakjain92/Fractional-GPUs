@@ -99,7 +99,7 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
 
 #define FGPU_FOR_EACH_END
 
-#if defined(FGPU_MEM_COLORING_ENABLED)
+#if defined(FGPU_USER_MEM_COLORING_ENABLED)
 
 // TODO: This should be per GPU based
 #define FGPU_DEVICE_COLOR_SHIFT	            12
@@ -150,7 +150,7 @@ inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr,
 	return  (void *)true_virt_addr;
 }
 
-#else /* FGPU_MEM_COLORING_ENABLED */
+#else /* FGPU_USER_MEM_COLORING_ENABLED */
 
 /* TODO: Here as ctx is not being used, we get warning from compiler */
 
@@ -164,7 +164,7 @@ inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr,
     *(typeof(addr))addr = value;                \
 })
 
-#endif /* FGPU_MEM_COLORING_ENABLED */
+#endif /* FGPU_USER_MEM_COLORING_ENABLED */
 
 
 #endif /* __FRACTIONAL_GPU_CUDA_H__ */

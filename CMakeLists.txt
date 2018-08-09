@@ -7,6 +7,7 @@ project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU i
 
 option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
 option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
+option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
 
 if(FGPU_MEM_COLORING_ENABLED)
     string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_MEM_COLORING_ENABLED")
@@ -14,6 +15,10 @@ endif()
 
 if(FGPU_USER_MEM_COLORING_ENABLED)
     string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_USER_MEM_COLORING_ENABLED")
+endif()
+
+if(FGPU_TEST_MEM_COLORING_ENABLED)
+    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_TEST_MEM_COLORING_ENABLED")
 endif()
 
 #set(CMAKE_BUILD_TYPE Debug)
