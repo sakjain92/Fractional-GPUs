@@ -60,8 +60,8 @@ typedef unsigned long long UvmStream;
 
 #define UVM_MAX_MEM_COLORS      NV_MAX_MEM_COLORS
 
-// Max memory reserved upfront per gpu for coloring.
-#define UVM_MAX_COLOR_MEM_RESV  (1UL << 30)
+// Max memory reserved upfront per gpu for coloring in percentage
+#define UVM_MAX_COLOR_MEM_RESV_PERCENTAGE  (80)
 
 // TODO: Bug 1938881: Remove the old flag when CUDA switches to DISABLE_HMM
 #define UVM_INIT_FLAGS_DISABLE_HMM                       ((NvU64)0x1)
