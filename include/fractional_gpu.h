@@ -52,7 +52,7 @@ int fgpu_memory_allocate(void **p, size_t len);
 int fgpu_memory_free(void *p);
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p);
 
-void *fgpu_memory_get_base_phy_address(void);
+void *fgpu_memory_get_phy_address(void *addr);
 
 int fgpu_memory_prefetch_to_device_async(void *p, size_t len);
 int fgpu_memory_prefetch_from_device_async(void *p, size_t len);

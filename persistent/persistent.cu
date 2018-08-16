@@ -212,7 +212,7 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
 #ifdef FGPU_MEM_COLORING_ENABLED
     /* If memory coloring is enabled, take the minimum of the colors */
     int mem_colors;
-    int ret = fgpu_device_get_num_memory_colors(device, &mem_colors, NULL);
+    int ret = fgpu_memory_get_num_device_colors(device, &mem_colors, NULL);
     if (ret < 0) {
         fprintf(stderr, "Memory coloring enabled but can't set colors in kernel driver\n");
 	return ret;
@@ -632,7 +632,8 @@ int fgpu_set_color_prop(int color, size_t mem_size)
     }
 
 #ifdef FGPU_MEM_COLORING_ENABLED
-    int ret = fgpu_process_set_colors_info(FGPU_DEVICE_NUMBER, color, mem_size);
+    int ret = fgpu_memory_set_colors_info(FGPU_DEVICE_NUMBER, color,
+            mem_size, color_stream);
     if (ret < 0)
         return ret;
 #endif

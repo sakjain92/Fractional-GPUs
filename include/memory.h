@@ -6,8 +6,8 @@
 
 #ifdef FGPU_MEM_COLORING_ENABLED
 
-int fgpu_device_get_num_memory_colors(int device, int *num_colors, size_t *max_len);
-int fgpu_process_set_colors_info(int device, int color, size_t length);
+int fgpu_memory_get_num_device_colors(int device, int *num_colors, size_t *max_len);
+int fgpu_memory_set_colors_info(int device, int color, size_t length, cudaStream_t stream);
 void fgpu_memory_deinit(void);
 int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
                                     enum fgpu_memory_copy_type type,

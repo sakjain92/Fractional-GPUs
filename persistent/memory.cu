@@ -283,7 +283,7 @@ static int get_device_color_info(int device, int *num_colors, size_t *max_len)
 }
 
 /* Get the numbers of colors supported by the memory and maximum memory that can be reserved */
-int fgpu_device_get_num_memory_colors(int device, int *num_colors, size_t *max_len)
+int fgpu_memory_get_num_device_colors(int device, int *num_colors, size_t *max_len)
 {
     int ret;
 
@@ -341,7 +341,8 @@ int fgpu_process_get_colors_info(int device, int *color, size_t *length)
 }
 
 /* Set memory color and also reserve memory */
-static int set_process_color_info(int device, int color, size_t req_length)
+static int set_process_color_info(int device, int color, size_t req_length,
+        cudaStream_t stream)
 {
     UVM_SET_PROCESS_COLOR_INFO_PARAMS params;
     size_t actual_length = req_length;
@@ -379,9 +380,16 @@ static int set_process_color_info(int device, int color, size_t req_length)
         return ret;
 
     /* Do the actual allocation on device */
-    ret = gpuErrCheck(cudaMemPrefetchAsync(g_memory_ctx.base_addr, actual_length, device));
+    ret = gpuErrCheck(cudaMemPrefetchAsync(g_memory_ctx.base_addr, actual_length,
+                device, stream));
     if (ret < 0) {
         cudaFree(g_memory_ctx.base_addr);
+        return ret;
+    }
+
+    ret = gpuErrCheck(cudaStreamSynchronize(stream));
+    if (ret < 0) {
+    	cudaFree(g_memory_ctx.base_addr);
         return ret;
     }
 
@@ -397,7 +405,8 @@ static int set_process_color_info(int device, int color, size_t req_length)
 }
 
 /* Indicates the color set currently for the process and the length reserved */
-int fgpu_process_set_colors_info(int device, int color, size_t length)
+int fgpu_memory_set_colors_info(int device, int color, size_t length,
+        cudaStream_t stream)
 {
     int ret;
 
@@ -408,7 +417,7 @@ int fgpu_process_set_colors_info(int device, int color, size_t length)
     if (g_uvm_fd < 0)
         return -EBADF;
 
-    return set_process_color_info(device, color, length);
+    return set_process_color_info(device, color, length, stream);
 }
 
 void fgpu_memory_deinit(void)
@@ -574,7 +583,11 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */
 
 
-void *fgpu_memory_get_base_phy_address(void)
+void *fgpu_memory_get_phy_address(void *addr)
 {
-    return g_memory_ctx.base_phy_addr;
+    if (!g_memory_ctx.base_phy_addr)
+        return NULL;
+
+    return (void *)((uintptr_t)g_memory_ctx.base_phy_addr + 
+            (uintptr_t)addr - (uintptr_t)g_memory_ctx.base_addr);
 }
