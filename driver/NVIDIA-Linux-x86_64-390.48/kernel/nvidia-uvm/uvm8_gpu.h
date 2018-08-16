@@ -810,7 +810,7 @@ struct uvm_gpu_struct
     NvU32 num_mem_colors;
 
     // Only valid if num_mem_colors != 0
-    NvU32 colored_chunk_size;
+    NvU64 colored_chunk_size;
 
     uvm_gpu_link_type_t sysmem_link;
 };
