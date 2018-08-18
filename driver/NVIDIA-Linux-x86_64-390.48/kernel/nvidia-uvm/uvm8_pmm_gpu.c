@@ -2962,6 +2962,15 @@ NvU32 uvm_pmm_gpu_phys_to_virt(uvm_pmm_gpu_t *pmm, NvU64 phys_addr, NvU64 region
     return num_mappings;
 }
 
+static size_t max_reserve_color_memory_size(uvm_gpu_t *gpu)
+{
+    size_t s = ((UVM_MAX_COLOR_MEM_RESV_PERCENTAGE) * 
+        gpu->vidmem_max_allocatable_address) / 100;
+    /* Round down according to the chunk size */
+    s &= ~(gpu->colored_chunk_size - 1);
+    return s;
+}
+
 static NV_STATUS reserve_color_memory(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
 {
     int i;
@@ -2993,8 +3002,7 @@ static NV_STATUS reserve_color_memory(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
         list_add_tail(&range->list, &pmm->color_ranges_list[i]);
     }
 
-    resv_mem = ((UVM_MAX_COLOR_MEM_RESV_PERCENTAGE) * 
-		gpu->vidmem_max_allocatable_address) / 100;
+    resv_mem = max_reserve_color_memory_size(gpu);
     
     // Reserve chunks from the GPU
     for (allocated = 0; allocated < resv_mem;
@@ -3282,8 +3290,7 @@ static NV_STATUS get_device_color_info(uvm_pmm_gpu_t *pmm, NvU32 *num_colors, Nv
         *num_colors = pmm->gpu->num_mem_colors;
     
     if (maxLength)
-        *maxLength = ((UVM_MAX_COLOR_MEM_RESV_PERCENTAGE) * 
-		pmm->gpu->vidmem_max_allocatable_address) / 100;
+        *maxLength = max_reserve_color_memory_size(pmm->gpu);
 
     return NV_OK;
 }
