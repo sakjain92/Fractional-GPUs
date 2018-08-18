@@ -8,6 +8,9 @@
 
 #include <common.h>
 
+/* Currently only the very first device is used */
+#define FGPU_DEVICE_NUMBER  0
+
 /* This structure is context that is handed over to kernel by host */
 typedef struct fgpu_dev_ctx {
     volatile fgpu_indicators_t *d_host_indicators;  /* Used to indicate launch completion to host */
@@ -47,6 +50,8 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
 int fgpu_color_stream_synchronize(void);
 int fpgpu_num_sm(int color, int *num_sm);
 int fgpu_num_colors(void);
+
+int fgpu_memory_get_device_info(int *num_colors, size_t *max_len);
 
 int fgpu_memory_allocate(void **p, size_t len);
 int fgpu_memory_free(void *p);

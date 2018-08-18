@@ -283,7 +283,7 @@ static int get_device_color_info(int device, int *num_colors, size_t *max_len)
 }
 
 /* Get the numbers of colors supported by the memory and maximum memory that can be reserved */
-int fgpu_memory_get_num_device_colors(int device, int *num_colors, size_t *max_len)
+int fgpu_memory_get_device_info(int *num_colors, size_t *max_len)
 {
     int ret;
 
@@ -294,7 +294,7 @@ int fgpu_memory_get_num_device_colors(int device, int *num_colors, size_t *max_l
     if (g_uvm_fd < 0)
         return -EBADF;
 
-    return get_device_color_info(device, num_colors, max_len);
+    return get_device_color_info(FGPU_DEVICE_NUMBER, num_colors, max_len);
 
 }
 

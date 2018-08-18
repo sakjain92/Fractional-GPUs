@@ -33,9 +33,6 @@
 /* TODO: Add proper logging mechanism */
 /* TODO: Use CudaIPC to share device memory pointer to be safe */
 
-/* Currently only the very first device is used */
-#define FGPU_DEVICE_NUMBER  0
-
 #define FGPU_INVALID_COLOR -1
 
 /* List of supported GPUs */
@@ -212,7 +209,7 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
 #ifdef FGPU_MEM_COLORING_ENABLED
     /* If memory coloring is enabled, take the minimum of the colors */
     int mem_colors;
-    int ret = fgpu_memory_get_num_device_colors(device, &mem_colors, NULL);
+    int ret = fgpu_memory_get_device_info(&mem_colors, NULL);
     if (ret < 0) {
         fprintf(stderr, "Memory coloring enabled but can't set colors in kernel driver\n");
 	return ret;
