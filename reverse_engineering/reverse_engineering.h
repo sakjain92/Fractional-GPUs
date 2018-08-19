@@ -19,16 +19,6 @@
 /* The number of time a measurment is done to get better averages */
 #define GPU_MAX_OUTER_LOOP                  10
 
-/* The maximum and minimum physical address bit that forms part of hash function */
-/* 
- * The max bit's upper limit is set by amount of gpu physical memory.
- * It can be lower. In such case, upper bits are not considered in hash function
- * that is reversed engineered.
- * The min bit can be found by trial and error.
- */
-#define GPU_MAX_BIT                         (32)
-#define GPU_MIN_BIT                         (10)
-
 /* 
  * The word size of L2 cache size.
  * Found via online nvidia forums.
@@ -50,14 +40,6 @@
 #define GPU_OUTLIER_PERCENTAGE              10
 
 /****************************** COMMON DEFINES *******************************/
-#define MAX_CONTIGUOUS_ALLOC                (1ULL << (GPU_MAX_BIT + 1))
-#define MIN_BANK_SIZE                       (1ULL << GPU_MIN_BIT)
-
-#define NUM_ENTRIES                         (MAX_CONTIGUOUS_ALLOC / MIN_BANK_SIZE)
-
-#define MIN_BIT                             (GPU_MIN_BIT)
-#define MAX_BIT                             (GPU_MAX_BIT)
-
 #define OUTLIER_PERCENTAGE                  GPU_OUTLIER_PERCENTAGE
 /* 
  * For CPU, any values above THRESHOLD_MULTIPLIER * avg is ignored (as might have
@@ -67,12 +49,25 @@
 #define THRESHOLD_MULTIPLIER                5
 
 /* Sample size to find out the threshold */
-#define THRESHOLD_SAMPLE_SIZE               100
+#define THRESHOLD_SAMPLE_SIZE               1000
 
 /***************************** FUNCTION DECLARATIONS **************************/
 void *device_allocate_contigous(size_t contiguous_size, void **phy_start_p);
 double device_find_dram_read_time(void *_a, void *_b, double threshold);
 int device_init(size_t req_reserved_size, size_t *reserved_size);
 size_t device_allocation_overhead(void);
+int device_max_physical_bit(void);
+int device_min_physical_bit(void);
+
+
+inline int ilog2(unsigned int x)
+{
+    return sizeof(unsigned int) * 8 - __builtin_clz(x) - 1;
+}
+
+inline int ilog2(unsigned long long x)
+{
+    return sizeof(unsigned long long ) * 8 - __builtin_clzll(x) - 1;
+}
 
 #endif /* __REVERSE_ENGINEERING_H__ */

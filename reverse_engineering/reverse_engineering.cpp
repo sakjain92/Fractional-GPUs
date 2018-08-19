@@ -31,16 +31,21 @@ typedef struct cb_arg {
     double running_threshold;
 } cb_arg_t;
 
-bool check_dram_partition_pair(void *addr1, void *addr2, void *arg)
+bool is_power_of_2(size_t x)
+{
+    return !(x & (x - 1));
+}
+
+bool check_dram_partition_pair(void *phy_addr1, void *phy_addr2, void *arg)
 {
     cb_arg_t *data = (cb_arg_t *)arg;
     uintptr_t a, b;
 
-    a = (uintptr_t)addr1 - data->phy_start + data->virt_start;
-    b = (uintptr_t)addr2 - data->phy_start + data->virt_start;
+    a = (uintptr_t)phy_addr1 - data->phy_start + data->virt_start;
+    b = (uintptr_t)phy_addr2 - data->phy_start + data->virt_start;
 
     dprintf("Reading Time: PhyAddr1: %p,\t PhyAddr2:0x%p\n",
-                addr1, addr2);
+                phy_addr1, phy_addr2);
     dprintf("VirtAddr1: 0x%lx,\t VirtAddr2: 0x%lx\n", a, b);
 
     data->time = device_find_dram_read_time((void *)a, (void *)b, data->threshold);
@@ -61,18 +66,18 @@ bool check_dram_partition_pair(void *addr1, void *addr2, void *arg)
 
     return false;
 }
-void *find_next_dram_partition_pair(void *addr1, void *start_addr, 
-        void *end_addr, size_t offset, void *arg)
+void *find_next_dram_partition_pair(void *phy_addr1, void *phy_start_addr, 
+        void *phy_end_addr, size_t offset, void *arg)
 {
     uintptr_t a, b;
-    uintptr_t ustart_addr = (uintptr_t)start_addr;
-    uintptr_t uend_addr = (uintptr_t)end_addr;
+    uintptr_t ustart_addr = (uintptr_t)phy_start_addr;
+    uintptr_t uend_addr = (uintptr_t)phy_end_addr;
 
     cb_arg_t *data = (cb_arg_t *)arg;
 
     for (; ustart_addr <= uend_addr; ustart_addr += offset) {
 
-        if (check_dram_partition_pair(addr1, (void *)ustart_addr, arg))
+        if (check_dram_partition_pair(phy_addr1, (void *)ustart_addr, arg))
             return (void *)ustart_addr;
     }
 
@@ -84,20 +89,22 @@ void *find_next_dram_partition_pair(void *addr1, void *start_addr,
  * virt start and phy start are virtual/physical start address of a contiguous
  * memory range.
  */
-static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
+static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
 {
     void *phy_end;
-    uintptr_t a, b;
+    size_t min_row_size;
+    void *row_start, *row_end;
+    uintptr_t a, b, b_phy;
     double threshold = LONG_MAX;
     double time, sum, running_threshold, nearest_nonoutlier;
     double min, max;
     hash_context_t *hctx;
     cb_arg_t data;
     int ret;
-
-    int count = std::min((size_t)NUM_ENTRIES, (size_t)THRESHOLD_SAMPLE_SIZE);
-
-    printf("Finding DRAM Banks hash function\n");
+    size_t offset = (1ULL << min_bit);
+    size_t max_entries = allocated / offset;
+    int count = std::min(max_entries, (size_t)THRESHOLD_SAMPLE_SIZE);
+    std::vector<std::pair<void *, int>> times;
 
     // Find running threshold
     min = LONG_MAX;
@@ -106,11 +113,14 @@ static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
     printf("Finding threshold\n");
     for (int i = 0; i < count; i++) {
         a = (uintptr_t)virt_start;
-        b = a + MIN_BANK_SIZE * i;
+        b = a + offset * i;
+        b_phy = (uintptr_t)phy_start +  offset * i;
+
         time = device_find_dram_read_time((void *)a, (void *)b, threshold);
         sum += time;
         min = time < min ? time : min;
         max = time > max ? time : max;
+        times.push_back(std::pair<void *, int>((void *)b_phy, time));
 
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(i * 100)/(float)(count));
@@ -126,9 +136,6 @@ static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
 
     phy_end = (void *)((uintptr_t)phy_start + allocated - device_allocation_overhead());
 
-    hctx = hash_init(MIN_BIT, MAX_BIT, phy_start, phy_end);
-    assert(hctx);
-
     data.min = LONG_MAX;
     data.max = 0;
     data.nearest_nonoutlier = 0;
@@ -137,6 +144,65 @@ static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
     data.phy_start = (uintptr_t)phy_start;
     data.virt_start = (uintptr_t)virt_start;
 
+    /* 
+     * The minimum bit supplied can be too small. It might make the whole
+     * brute force search quite slow. So instead we try to update the min bit
+     * by finding (approximately) the row size.
+     * To do this, two steps are required:
+     * 1) Find start addr of another row in same bank.
+     * 2) Find the end address of the row.
+     * The difference in these address tell the (minimum) row size.
+     */
+    printf("Finding DRAM row size\n");
+    
+    row_start = NULL;
+    /* Check already measured first */
+    for (int i = 0; i < times.size(); i++) {
+        if (times[i].second >= data.running_threshold) {
+            row_start = times[i].first;
+            break;
+        }
+    }
+
+    if (!row_start) {
+    
+        row_start = times[times.size() - 1].first;
+        row_start = find_next_dram_partition_pair(phy_start, row_start, phy_end,
+                offset, &data);
+        if (!row_start) {
+            fprintf(stderr, "Couldn't find another address in same partition\n");
+            return -1;
+        }
+    }
+
+    for (row_end = row_start; (uintptr_t)(row_end) <= (uintptr_t)phy_end; 
+            row_end = (void *)((uintptr_t)row_end + offset)) {
+        if (!check_dram_partition_pair(phy_start, row_end, &data))
+            break;
+    }
+
+    if ((uintptr_t)row_end > (uintptr_t)phy_end) {
+        fprintf(stderr, "Couldn't find end of DRAM row\n");
+        return -1;
+    }
+
+    min_row_size = (uintptr_t)row_end - (uintptr_t)row_start;
+
+    /* Row size should be a power of 2 */
+    if (min_row_size == 0 || !is_power_of_2(min_row_size)) {
+        fprintf(stderr, "Min row size seems to be incorrect\n");
+        return -1;
+    }
+
+    min_bit = ilog2((unsigned long long)min_row_size);
+    offset = (1ULL << min_bit);
+    
+    printf("Max Bit:%d, Min Bit:%d\n", max_bit, min_bit);
+
+    hctx = hash_init(min_bit, max_bit, phy_start, phy_end);
+    assert(hctx);
+
+    printf("Finding solutions\n");
     ret = hash_find_solutions2(hctx, &data, check_dram_partition_pair);
 
     dprintf("Min: %f, Max: %f, Percentage diff: %f\n",
@@ -152,16 +218,33 @@ static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
     }
 
     hash_del(hctx);
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
     void *virt_start;
     void *phy_start;
-    size_t allocated;
+    size_t req_allocated, allocated;
     int ret;
+    int max_bit, min_bit;
 
-    ret = device_init(MAX_CONTIGUOUS_ALLOC, &allocated);
+    max_bit = device_max_physical_bit();
+    if (max_bit < 0) {
+        fprintf(stderr, "Couldn't find the maximum bit\n");
+        return -1;
+    }
+
+    min_bit = device_min_physical_bit();
+    if (min_bit < 0) {
+        fprintf(stderr, "Couldn't find the minimum bit\n");
+        return -1;
+    }
+
+    req_allocated = (1ULL << (max_bit + 1)) - 1;
+
+    ret = device_init(req_allocated, &allocated);
     if (ret < 0) {
         fprintf(stderr, "Init failed\n");
         return -1;
@@ -173,7 +256,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    run_dram_exp(virt_start, phy_start, allocated);
+    printf("Finding DRAM Banks hash function\n");
+    ret = run_dram_exp(virt_start, phy_start, allocated, min_bit, max_bit);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't find DRAM Banks hash function\n");
+        return -1;
+    }
 
     return 0;
 }

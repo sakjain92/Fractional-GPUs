@@ -18,7 +18,6 @@ static uint64_t *d_refresh_v;
 static double *d_ticks;
 static double *h_ticks;
 static uint64_t *h_a;
-
 /* 
  * Read enough data to implicitly flush L2 cache.
  * Uses p-chase to make sure compiler/hardware doesn't optimize away the code.
@@ -187,7 +186,7 @@ double device_find_dram_read_time(void *_a, void *_b, double threshold)
 int device_init(size_t req_reserved_size, size_t *reserved_size)
 {
     cudaDeviceProp deviceProp;
-    size_t l2_size, global_memory, resv_memory;
+    size_t l2_size, resv_memory;
     static uint64_t *h_refresh_v;
     size_t max_len;
     int num_colors;
@@ -199,17 +198,11 @@ int device_init(size_t req_reserved_size, size_t *reserved_size)
         return ret;
     }
 
-    gpuErrAssert(cudaGetDeviceProperties(&deviceProp, 0));
+    gpuErrAssert(cudaGetDeviceProperties(&deviceProp, FGPU_DEVICE_NUMBER));
     l2_size = deviceProp.l2CacheSize;
 
     if (l2_size < GPU_L2_CACHE_LINE_SIZE) {
         fprintf(stderr, "Invalid value for GPU_L2_CACHE_LINE_SIZE\n");
-        return -1;
-    }
-
-    global_memory = deviceProp.totalGlobalMem;
-    if (global_memory < (1ULL << GPU_MAX_BIT)) {
-        fprintf(stderr, "Invalid value for GPU_MAX_BIT\n");
         return -1;
     }
 
@@ -251,11 +244,36 @@ int device_init(size_t req_reserved_size, size_t *reserved_size)
 
     init_pointer_chase(h_a, GPU_L2_CACHE_LINE_SIZE, GPU_L2_CACHE_LINE_SIZE);
 
-    return (1 << GPU_MIN_BIT);
+    return 0;
 }
 
 /* Any contiguous allocation can't be fully used. There is some internal overhead */
 size_t device_allocation_overhead(void)
 {
     return 2 * GPU_L2_CACHE_LINE_SIZE;
+}
+
+/* Finds the maximum physical bit of GPU - Based on total GPU physical memory */
+int device_max_physical_bit(void)
+{
+    size_t free, total;
+    gpuErrAssert(cudaMemGetInfo(&free, &total));
+
+    /* Find highest bit set in total size */
+    for (int i = sizeof(size_t) * 8 - 1; i >=0; i--) {
+        if (total & (1ULL << i))
+            return i;
+    }
+
+    return -1;
+}
+
+/* 
+ * Finds the minimum physical bit of GPU that matters for hash function 
+ * Based on the size of cache line. Anything bit less than log2(cache_line)
+ * is not of consequence
+ */
+int device_min_physical_bit(void)
+{
+    return ilog2((unsigned long long)GPU_L2_CACHE_LINE_SIZE);
 }
