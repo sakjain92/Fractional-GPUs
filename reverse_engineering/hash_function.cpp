@@ -40,14 +40,7 @@ typedef struct hash_context {
     uintptr_t start_addr;               /* Range of permissible addresses */
     uintptr_t end_addr;
 
-    uintptr_t unexplored_bits;          /* Bit mask of unexplored bits */
-    uintptr_t global_unexplored_bits;   /* Across multiple base address */
-
-    int cur_bit_to_explore;             /* Highest bit which is being explored */
-
     bool is_valid_pair;
-    uintptr_t test_addr;                /* Pair of address to check */
-    uintptr_t base_addr;
 
     std::vector<std::pair <uintptr_t, uintptr_t>> keys;        /* Keys with same hash */
     std::vector<solution_t> solutions;  /* Valid solutions */
@@ -344,36 +337,6 @@ static bool try_find_all_solutions(hash_context_t *ctx)
     return 0;
 }
  
-/* 
- * Called whenever base address is changed. 
- * Tries to find solution.
- * Returns true if solution found. Else return false.
- */
-static bool change_base_address_and_find_solutions(hash_context_t *ctx)
-{
-    if (try_find_all_solutions(ctx)) {
-        
-        /* Find if any bit possibly not covered */
-        for (int i = ctx->min_bit; i <= ctx->max_bit; i++) {
-            if ((ctx->global_unexplored_bits >> i) & 0x1)
-                fprintf(stderr, "Warning: Bit(%d) possibly not covered in solution\n", i);
-        }
-        return 1;
-    }
-
-    /* Solutions based on keys have been found. Discard the key pair */
-    ctx->keys.clear();
-   
-    /* Reset explored bits */
-    ctx->unexplored_bits = (uintptr_t)-1ULL;
-
-    ctx->cur_bit_to_explore = ctx->max_bit;
-
-    ctx->base_addr = rand() % (ctx->end_addr - ctx->start_addr + 1) + ctx->start_addr;
-    ctx->base_addr &= ~((1ULL << ctx->min_bit) - 1);
-    return 0;
-}
-
 /* Find highest bit set in mask <= ceiling bit */
 static int find_highest_bit(uintptr_t mask, int ceiling)
 {
@@ -386,35 +349,12 @@ static int find_highest_bit(uintptr_t mask, int ceiling)
     return -1;
 }
 
-/* Mark all explored bits. Explored bits are bits which differ in two addresses */
-static void mark_explored_bits(uintptr_t *unexplored_mask, uintptr_t addr1, uintptr_t addr2)
-{
-    uintptr_t old_mask = *unexplored_mask;
-    uintptr_t new_mask = old_mask & ~(addr1 ^ addr2);
-    *unexplored_mask = new_mask;
-}
-
-/* Checks if all bits in [min_bit, max_bit] have been set */
-static bool are_all_bits_explored(uintptr_t unexplored_mask, int min_bit, int max_bit)
-{
-    for (int i = min_bit; i <= max_bit; i++) {
-        if (unexplored_mask & (1ULL << i))
-            return false;
-    }
-
-    return true;
-}
-
 /* Called when is it confirmed that the pair of address lie in same partition */
 static void hash_confirm_pair(hash_context_t *ctx, uintptr_t phy_addr1, uintptr_t phy_addr2)
 {
     std::pair <uintptr_t, uintptr_t> key (phy_addr1, phy_addr2);
 
     ctx->keys.push_back(key);
-
-    mark_explored_bits(&ctx->unexplored_bits, phy_addr1, phy_addr2);
-    mark_explored_bits(&ctx->global_unexplored_bits, phy_addr1, phy_addr2);
-
 }
 
 /* Eliminate equivalent solutions to get only unique solutions */
@@ -485,139 +425,24 @@ hash_context_t *hash_init(int min_bit, int max_bit,
     ctx->start_addr = (uintptr_t)start_addr;
     ctx->end_addr = (uintptr_t)end_addr;
 
-    ctx->global_unexplored_bits = (uintptr_t)-1ULL;
-
     ctx->is_valid_pair = false;
     
     return ctx;
 }
-
-#if 0
-/* 
- * Runs till a solution is found. This function might take a long time
- * to execute.
- * Takes a callback function as argument:
- *   Given an address 'addr1', find another address such that it lies on same
- *   partition as 'addr1', lies between 'start_addr' and 'end_addr'.
- *   Test addresses with an  offset of 'offset'. 
- *   Return NULL if no such address found.
- *
- * Returns 0 if solution found.
- * Returns < 0 if no solutions found.
- */
-int hash_find_solutions(hash_context_t *ctx, void *arg,
-    void *(*find_partition_pair)(void *addr1, void *start_addr, 
-        void *end_addr, size_t offset, void *arg))
-{
-    /* Brute force check all pairs and then brute force to find solutions */
-    void *addr;
-
-    ctx->base_addr = ctx->start_addr;
-    ctx->test_addr = ctx->start_addr;
-
-    while (ctx->test_addr < ctx->end_addr) {
-
-        addr = find_partition_pair((void *)ctx->base_addr, (void *)ctx->test_addr, 
-            (void *)ctx->end_addr, 1ULL << ctx->min_bit, arg);
-        if (addr) {
-            hash_confirm_pair(ctx, ctx->base_addr, (uintptr_t)addr);
-        }
-
-        ctx->test_addr = (uintptr_t)addr + (1ULL << ctx->min_bit);
-    }
-
-    if (try_find_all_solutions(ctx))
-        return 0;
-    
-    return -1;
-}
-#endif
-
-#if 0
-/* 
- * Runs till a solution is found. This function might take a long time
- * to execute.
- * Takes a callback function as argument:
- *   Given an address 'addr1', find another address such that it lies on same
- *   partition as 'addr1', lies between 'start_addr' and 'end_addr'.
- *   Test addresses with an  offset of 'offset'. 
- *   Return NULL if no such address found.
- *
- * Returns 0 if solution found.
- * Returns < 0 if no solutions found.
- */
-int hash_find_solutions(hash_context_t *ctx, void *arg,
-    void *(*find_partition_pair)(void *addr1, void *start_addr, 
-        void *end_addr, size_t offset, void *arg))
-{
-    int new_bit_to_explore;
-
-    if (!ctx->is_valid_pair) {
-
-        ctx->is_valid_pair = true;
-        ctx->cur_addr1 = ctx->start_addr;
-        ctx->cur_addr2 = ctx->start_addr;
-        change_base_address(ctx);
-    
-    } 
-    
-    new_bit_to_explore = find_highest_bit(ctx->unexplored_bits, ctx->cur_bit_to_explore);
-    if (new_bit_to_explore != ctx->cur_bit_to_explore) {
-        ctx->cur_bit_to_explore = new_bit_to_explore;
-        ctx->cur_addr2 = ctx->start_addr;
-    } else {
-        ctx->cur_addr2 += 1ULL << ctx->min_bit;
-    }
-
-    while (true) {
-        if ((ctx->cur_addr1 & (1ULL << ctx->cur_bit_to_explore)) ==
-            (ctx->cur_addr2 & (1ULL << ctx->cur_bit_to_explore))) {
-        
-            ctx->cur_addr2 += (1ULL << ctx->cur_bit_to_explore);
-            ctx->cur_addr2 &= ~((1ULL << ctx->cur_bit_to_explore) - 1);
-        }
-    
-        if (ctx->cur_addr2 <= ctx->end_addr)
-            break;
-
-        ctx->cur_bit_to_explore = find_highest_bit(ctx->unexplored_bits, ctx->cur_bit_to_explore - 1);
-
-        if (ctx->cur_bit_to_explore >= ctx->min_bit) {
-            ctx->cur_addr2 = ctx->start_addr;
-            continue;
-        }
-
-        ctx->cur_addr1 += 1ULL << ctx->min_bit;
-        change_base_address(ctx);
-
-        if (ctx->cur_addr1 <= ctx->end_addr) {
-            ctx->cur_addr2 = ctx->start_addr;
-            continue;
-        }
-
-        ctx->reached_end = true;
-        return -1;
-    }
-
-    *phy_addr1 = (void *)ctx->cur_addr1;
-    *phy_addr2 = (void *)ctx->cur_addr2;
-
-    return 1;
-
-}
-#endif
 
 /*
  * Give a set of solutions, try seeing if a new bit can 
  * be added into the sets of solutions.
  */
 static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
-        bool (*check_partition_pair)(void *addr1, void *addr2, void *arg))
+        void *(*find_next_partition_pair)(void *addr1, void *start_addr, 
+        void *end_addr, size_t offset, void *arg))
 {
     std::vector<std::vector<solution_t>> all_new_solutions;
     std::vector<solution_t> new_solutions;
     int ret;
     int num_solutions = ctx->solutions.size();
+    uintptr_t base_addr, test_addr;
 
     assert(num_solutions < 8 * sizeof(uint64_t));
 
@@ -636,17 +461,22 @@ static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
     /* Try eliminating all but one of the new solutions */
     uintptr_t end_addr = ctx->start_addr + (1ULL << (new_bit + 1));
     end_addr = std::min(ctx->end_addr, end_addr);
-    ctx->base_addr = ctx->start_addr;
+    base_addr = ctx->start_addr;
     
-    for (ctx->test_addr = ctx->start_addr + (1ULL << new_bit); 
-            ctx->test_addr <= end_addr; 
-            ctx->test_addr += 1ULL << ctx->min_bit) {
+    size_t offset = 1ULL << ctx->min_bit;
+
+    for (test_addr = ctx->start_addr + (1ULL << new_bit); 
+            test_addr <= end_addr; 
+            test_addr += offset) {
         
-        if (check_partition_pair((void *)ctx->base_addr, (void *)ctx->test_addr, arg)) {
+        void *addr = find_next_partition_pair((void *)base_addr, 
+                (void *)test_addr, (void *)end_addr, offset, arg);
+        if (addr) {
             
             std::vector<std::vector<solution_t>>::iterator s;
 
-            hash_confirm_pair(ctx, ctx->base_addr, ctx->test_addr);
+            test_addr = (uintptr_t)addr;
+            hash_confirm_pair(ctx, base_addr, test_addr);
        
             for (s = all_new_solutions.begin(); s != all_new_solutions.end();) {
                 
@@ -664,7 +494,9 @@ static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
                 } else {
                     s++;
                 }
-            } 
+            }
+        } else {
+            break;
         }
 
         if (all_new_solutions.size() <= 1)
@@ -680,16 +512,18 @@ static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
 }
 
 /* 
- * Runs till a solution is found. Faster than "hash_find_solutions"
+ * Runs till a solution is found.
  * Takes a callback function as argument:
- *   Given a pair of addresses 'addr1' and 'addr2', checks if they lie on same
- *   partition.
+ *   Given an address 'addr1', find another address between [start_addr, end_addr]
+ *   (testing at offset of 'offset') that lies in same partition as 'addr1' and
+ *   return it. Return NULL if no such pair found.
  *
  * Returns 0 if solution found.
  * Returns < 0 if no solutions found.
  */
-int hash_find_solutions2(hash_context_t *ctx, void *arg,
-    bool (*check_partition_pair)(void *addr1, void *addr2, void *arg))
+int hash_find_solutions(hash_context_t *ctx, void *arg,
+    void *(*find_next_partition_pair)(void *addr1, void *start_addr, 
+        void *end_addr, size_t offset, void *arg))
 {
     /* 
      * Works in two steps:
@@ -704,6 +538,7 @@ int hash_find_solutions2(hash_context_t *ctx, void *arg,
     int end_bit = ((ctx->max_bit + ctx->min_bit) + 1) / 2;
     int highest_bit = find_highest_bit(ctx->start_addr, ctx->max_bit);
     end_bit = std::max(end_bit, highest_bit + 1);
+    uintptr_t base_addr, test_addr;
 
     uintptr_t end_addr = (1ULL << (end_bit + 1)) - 1;
     end_addr = std::min(ctx->end_addr, end_addr);
@@ -711,18 +546,26 @@ int hash_find_solutions2(hash_context_t *ctx, void *arg,
 
     /* Step 1 */
     printf("Finding base solutions\n");
-    ctx->base_addr = ctx->start_addr;
-    ctx->test_addr = ctx->start_addr;
+    base_addr = ctx->start_addr;
+    test_addr = ctx->start_addr;
 
     size_t count;
     size_t max_count = (end_addr - ctx->start_addr) / (1ULL << ctx->min_bit) + 1;
-    for (count = 0, ctx->test_addr = ctx->start_addr; 
-            ctx->test_addr <= end_addr; 
-            count++, ctx->test_addr += 1ULL << ctx->min_bit) {
+    size_t offset = 1ULL << ctx->min_bit;
 
-        if (check_partition_pair((void *)ctx->base_addr, (void *)ctx->test_addr, arg))
-            hash_confirm_pair(ctx, ctx->base_addr, ctx->test_addr);
+    for (test_addr = ctx->start_addr; test_addr <= end_addr; 
+            test_addr += offset) {
 
+        void *addr = find_next_partition_pair((void *)base_addr, (void *)test_addr,
+                (void *)end_addr, offset, arg);
+        if (addr) {
+            hash_confirm_pair(ctx, base_addr, (uintptr_t)addr);
+            test_addr = (uintptr_t)addr;
+        } else {
+            break;
+        }
+
+        count = (test_addr - ctx->start_addr)/offset;
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(count * 100)/(float)(max_count));
     }
@@ -751,13 +594,53 @@ int hash_find_solutions2(hash_context_t *ctx, void *arg,
     max_count = (ctx->max_bit - end_bit);
     printf("Finding overall solutions\n");
     for (int i = end_bit + 1; i <= ctx->max_bit; count++, i++) {
-        try_accomodate_new_bit(ctx, i, arg, check_partition_pair);
+        try_accomodate_new_bit(ctx, i, arg, find_next_partition_pair);
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(count * 100)/(float)(max_count));
     }
     printf("\n");
 
     return 0;
+}
+
+typedef struct cb_arg {
+    bool (*check_partition_pair)(void *addr1, void *addr2, void *arg);
+    void *arg;
+} cb_arg_t;
+
+static void *local_find_next_partition_pair(void *addr1, void *start_addr, 
+        void *end_addr, size_t offset, void *arg)
+{
+    cb_arg_t *data = (cb_arg_t *)arg;
+    uintptr_t uaddr2;
+
+    for (uaddr2 = (uintptr_t)start_addr; uaddr2 <= (uintptr_t)end_addr;
+            uaddr2 += offset) {
+        if (data->check_partition_pair(addr1, (void *)uaddr2, data->arg))
+            return (void *)uaddr2;
+    }
+
+    return NULL;
+}
+
+/* 
+ * Runs till a solution is found.
+ * Takes a callback function as argument:
+ *   Given a pair of addresses 'addr1' and 'addr2', checks if they lie on same
+ *   partition.
+ *
+ * Returns 0 if solution found.
+ * Returns < 0 if no solutions found.
+ */
+int hash_find_solutions2(hash_context_t *ctx, void *arg,
+    bool (*check_partition_pair)(void *addr1, void *addr2, void *arg))
+{
+    cb_arg_t data;
+
+    data.arg = arg;
+    data.check_partition_pair = check_partition_pair;
+
+    return hash_find_solutions(ctx, &data, local_find_next_partition_pair);
 }
 
 void hash_print_solutions(hash_context_t *ctx)

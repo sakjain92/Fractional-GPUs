@@ -143,7 +143,7 @@ int runTest(void)
 
 
     // Execute the kernel
-    int nIter = 10000;
+    int nIter = 132000;
     double start, total;
     pstats_t stats;
 

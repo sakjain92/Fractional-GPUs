@@ -137,8 +137,6 @@ static void run_dram_exp(void *virt_start, void *phy_start, size_t allocated)
     data.phy_start = (uintptr_t)phy_start;
     data.virt_start = (uintptr_t)virt_start;
 
-//    ret = hash_find_solutions(hctx, &data, find_next_partition_pair);
-
     ret = hash_find_solutions2(hctx, &data, check_dram_partition_pair);
 
     dprintf("Min: %f, Max: %f, Percentage diff: %f\n",
