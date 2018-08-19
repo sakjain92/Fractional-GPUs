@@ -31,8 +31,9 @@ include_directories(include)
 include_directories(programs/cuda_samples/common/inc)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/)
+include_directories(reverse_engineering/)
 
-string(APPEND CMAKE_CUDA_FLAGS " -arch=${TARGET}")
+string(APPEND CMAKE_CUDA_FLAGS " -m 64 -arch=${TARGET}")
 
 # Add programs to be built using persistent threads model
 # First arg is target name
@@ -132,3 +133,11 @@ add_persistent_target(membench_persistent programs/membench_persistent
 #add_persistent_target(conjugateGradientMultiBlockCG_persistent programs/cuda_samples/conjugateGradientMultiBlockCG_persistent
 #    programs/cuda_samples/conjugateGradientMultiBlockCG_persistent/conjugateGradientMultiBlockCG_persistent.cu)
 
+# Reverse engineering code
+if(FGPU_TEST_MEM_COLORING_ENABLED)
+    # DRAM Bank and Cache Lines Hash Function Finder for GPU
+    add_persistent_target(gpu_reverse_engineering reverse_engineering/
+        reverse_engineering/reverse_engineering.cpp
+        reverse_engineering/gpu.cu
+        reverse_engineering/hash_function.cpp)
+endif()
