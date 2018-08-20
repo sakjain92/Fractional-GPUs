@@ -568,6 +568,7 @@ int hash_find_solutions(hash_context_t *ctx, void *arg,
         count = (test_addr - ctx->start_addr)/offset;
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(count * 100)/(float)(max_count));
+        fflush(stdout);
     }
     printf("\n");
 
@@ -597,6 +598,7 @@ int hash_find_solutions(hash_context_t *ctx, void *arg,
         try_accomodate_new_bit(ctx, i, arg, find_next_partition_pair);
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(count * 100)/(float)(max_count));
+        fflush(stdout);
     }
     printf("\n");
 

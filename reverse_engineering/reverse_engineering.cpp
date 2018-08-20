@@ -60,7 +60,7 @@ bool check_dram_partition_pair(void *phy_addr1, void *phy_addr2, void *arg)
     }
 
     if (data->time >= data->running_threshold) {
-        dprintf("Found valid pair\n");
+        dprintf("Found valid pair: (%p, %p)\n", phy_addr1, phy_addr2);
         return true;
     }
 
@@ -129,7 +129,7 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
     
     double avg = sum / count;
     threshold = avg * THRESHOLD_MULTIPLIER;
-    running_threshold = (avg * (100.0 + OUTLIER_PERCENTAGE)) / 100.0;
+    running_threshold = (avg * (100.0 + OUTLIER_DRAM_PERCENTAGE)) / 100.0;
 
     dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
             threshold, running_threshold, max, min);
@@ -222,6 +222,83 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
     return 0;
 }
 
+void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr, 
+        void *phy_end_addr, size_t offset, void *arg)
+{
+    void *phy_addr2;
+    uintptr_t a, b;
+    uintptr_t ret_addr;
+    cb_arg_t *data = (cb_arg_t *)arg;
+
+    a = (uintptr_t)phy_addr1 - data->phy_start + data->virt_start;
+    b = (uintptr_t)phy_start_addr - data->phy_start + data->virt_start;
+
+    ret_addr = (uintptr_t)device_find_cache_eviction_addr((void * )a, (void *)b, offset, data->running_threshold);
+    if (!ret_addr)
+        return NULL;
+
+    phy_addr2 = (void *)((uintptr_t)ret_addr - data->virt_start + data->phy_start);
+    dprintf("Found valid pair: (%p, %p)\n", phy_addr1, phy_addr2);
+
+    return phy_addr2;
+}
+
+/*
+ * Finds the hash function for Cachelines
+ * virt start and phy start are virtual/physical start address of a contiguous
+ * memory range.
+ */
+static int run_cache_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
+{
+    void *phy_end;
+    hash_context_t *hctx;
+    cb_arg_t data;
+    int ret;
+    size_t offset = (1ULL << min_bit);
+    double avg, running_threshold;
+
+    printf("Doing initialization\n");
+    ret = device_cacheline_test_init(virt_start, allocated);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't initialize\n");
+        return -1;
+    }
+
+    // Find running threshold
+    printf("Finding threshold\n");
+    
+    ret = device_cacheline_test_find_threshold(THRESHOLD_SAMPLE_SIZE, &avg);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't find the threshold\n");
+        return -1;
+    }
+    running_threshold = (avg * (100.0 + OUTLIER_CACHE_PERCENTAGE)) / 100.0;
+
+    dprintf("Running threshold is: %f\n", running_threshold);
+
+    phy_end = (void *)((uintptr_t)phy_start + allocated - device_allocation_overhead());
+
+    data.running_threshold = running_threshold;
+    data.phy_start = (uintptr_t)phy_start;
+    data.virt_start = (uintptr_t)virt_start;
+
+    hctx = hash_init(min_bit, max_bit, phy_start, phy_end);
+    assert(hctx);
+
+    printf("Finding solutions\n");
+    ret = hash_find_solutions(hctx, &data, find_next_cache_partition_pair);
+    if (ret < 0) {
+        fprintf(stderr, "No solutions found\n");
+    } else {
+        printf("Hash Function for Cacheline:\n");
+        hash_print_solutions(hctx);
+    }
+
+    hash_del(hctx);
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     void *virt_start;
@@ -263,5 +340,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    printf("Finding Cacheline hash function\n");
+    ret = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't find Cacheline hash function\n");
+        return -1;
+    }
     return 0;
 }

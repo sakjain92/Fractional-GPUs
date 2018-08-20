@@ -37,10 +37,19 @@
  * By what percentage do the bank conflict cause delay as compared to avg read time 
  * Used as cutoff
  */
-#define GPU_OUTLIER_PERCENTAGE              10
+#define GPU_DRAM_OUTLIER_PERCENTAGE              10
+
+
+/* 
+ * By what percentage do the cacheline eviction cause delay as compared to avg read time 
+ * Used as cutoff. Can be high as read from DRAM should be much slower than read from cache.
+ */
+#define GPU_CACHE_OUTLIER_PERCENTAGE              50
 
 /****************************** COMMON DEFINES *******************************/
-#define OUTLIER_PERCENTAGE                  GPU_OUTLIER_PERCENTAGE
+#define OUTLIER_DRAM_PERCENTAGE                  GPU_DRAM_OUTLIER_PERCENTAGE
+#define OUTLIER_CACHE_PERCENTAGE                 GPU_CACHE_OUTLIER_PERCENTAGE
+
 /* 
  * For CPU, any values above THRESHOLD_MULTIPLIER * avg is ignored (as might have
  * noise). This is because we are using wall clock time and interrupts might
@@ -52,12 +61,15 @@
 #define THRESHOLD_SAMPLE_SIZE               1000
 
 /***************************** FUNCTION DECLARATIONS **************************/
-void *device_allocate_contigous(size_t contiguous_size, void **phy_start_p);
-double device_find_dram_read_time(void *_a, void *_b, double threshold);
-int device_init(size_t req_reserved_size, size_t *reserved_size);
 size_t device_allocation_overhead(void);
 int device_max_physical_bit(void);
 int device_min_physical_bit(void);
+void *device_allocate_contigous(size_t contiguous_size, void **phy_start_p);
+double device_find_dram_read_time(void *_a, void *_b, double threshold);
+int device_init(size_t req_reserved_size, size_t *reserved_size);
+int device_cacheline_test_init(void *gpu_start_addr, size_t size);
+int device_cacheline_test_find_threshold(size_t sample_size, double *avg);
+void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double threshold);
 
 
 inline int ilog2(unsigned int x)
