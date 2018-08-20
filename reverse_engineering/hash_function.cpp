@@ -651,6 +651,64 @@ void hash_print_solutions(hash_context_t *ctx)
         print_solution(ctx->solutions[i]);
 }
 
+/* Finds common solutions and print them */
+void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
+{
+    std::vector<solution_t> perm_sarray1;
+    std::vector<solution_t> perm_sarray2;
+    std::vector<solution_t> common;
+    std::vector<solution_t>::iterator s1, s2;
+
+    hash_reduce(ctx1);
+    hash_reduce(ctx2);
+
+    for (s1 = ctx1->solutions.begin(); s1 != ctx1->solutions.end(); s1++) {
+
+        try {
+            add_solution_with_permuations(perm_sarray1, *s1);
+        } catch(...) {
+            /* Out of memory - Permutation grows exponentially */
+            fprintf(stderr, "Out of memory exception while hash_reduce\n");
+            return;
+        }
+    }
+
+    for (s2 = ctx2->solutions.begin(); s2 != ctx2->solutions.end(); s2++) {
+
+        try {
+            add_solution_with_permuations(perm_sarray2, *s2);
+        } catch(...) {
+            /* Out of memory - Permutation grows exponentially */
+            fprintf(stderr, "Out of memory exception while hash_reduce\n");
+            return;
+        }
+    }
+
+    for (s1 = perm_sarray1.begin(); s1 != perm_sarray1.end(); ) {
+        
+        bool is_unique = true;
+        for (s2 = perm_sarray2.begin(); s2 != perm_sarray2.end(); ) {
+            if (are_solutions_same(*s1, *s2)) {
+                is_unique = false;
+                common.push_back(*s1);
+                s2 = perm_sarray2.erase(s2);
+                break;
+            } else {
+                s2++;
+            }
+        }
+
+        if (is_unique) {
+            s1++;
+        } else {
+            s1 = perm_sarray1.erase(s1);
+        }
+    }
+    printf("Number of common solutions found: %zd\n", common.size());
+    for (size_t i = 0; i < common.size(); i++)
+        print_solution(common[i]);
+}
+
 void hash_del(hash_context *ctx)
 {
     delete ctx;

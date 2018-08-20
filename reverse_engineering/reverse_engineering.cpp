@@ -89,7 +89,7 @@ void *find_next_dram_partition_pair(void *phy_addr1, void *phy_start_addr,
  * virt start and phy start are virtual/physical start address of a contiguous
  * memory range.
  */
-static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
+static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
 {
     void *phy_end;
     size_t min_row_size;
@@ -171,7 +171,7 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
                 offset, &data);
         if (!row_start) {
             fprintf(stderr, "Couldn't find another address in same partition\n");
-            return -1;
+            return NULL;
         }
     }
 
@@ -183,7 +183,7 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
 
     if ((uintptr_t)row_end > (uintptr_t)phy_end) {
         fprintf(stderr, "Couldn't find end of DRAM row\n");
-        return -1;
+        return NULL;
     }
 
     min_row_size = (uintptr_t)row_end - (uintptr_t)row_start;
@@ -191,7 +191,7 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
     /* Row size should be a power of 2 */
     if (min_row_size == 0 || !is_power_of_2(min_row_size)) {
         fprintf(stderr, "Min row size seems to be incorrect\n");
-        return -1;
+        return NULL;
     }
 
     min_bit = ilog2((unsigned long long)min_row_size);
@@ -217,9 +217,7 @@ static int run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int
         hash_print_solutions(hctx);
     }
 
-    hash_del(hctx);
-
-    return 0;
+    return hctx;
 }
 
 void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr, 
@@ -248,7 +246,7 @@ void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr,
  * virt start and phy start are virtual/physical start address of a contiguous
  * memory range.
  */
-static int run_cache_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
+static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
 {
     void *phy_end;
     hash_context_t *hctx;
@@ -261,7 +259,7 @@ static int run_cache_exp(void *virt_start, void *phy_start, size_t allocated, in
     ret = device_cacheline_test_init(virt_start, allocated);
     if (ret < 0) {
         fprintf(stderr, "Couldn't initialize\n");
-        return -1;
+        return NULL;
     }
 
     // Find running threshold
@@ -270,7 +268,7 @@ static int run_cache_exp(void *virt_start, void *phy_start, size_t allocated, in
     ret = device_cacheline_test_find_threshold(THRESHOLD_SAMPLE_SIZE, &avg);
     if (ret < 0) {
         fprintf(stderr, "Couldn't find the threshold\n");
-        return -1;
+        return NULL;
     }
     running_threshold = (avg * (100.0 + OUTLIER_CACHE_PERCENTAGE)) / 100.0;
 
@@ -294,9 +292,7 @@ static int run_cache_exp(void *virt_start, void *phy_start, size_t allocated, in
         hash_print_solutions(hctx);
     }
 
-    hash_del(hctx);
-
-    return 0;
+    return hctx;
 }
 
 int main(int argc, char *argv[])
@@ -306,6 +302,7 @@ int main(int argc, char *argv[])
     size_t req_allocated, allocated;
     int ret;
     int max_bit, min_bit;
+    hash_context_t *dram_hctx, *cache_hctx;
 
     max_bit = device_max_physical_bit();
     if (max_bit < 0) {
@@ -334,17 +331,24 @@ int main(int argc, char *argv[])
     }
 
     printf("Finding DRAM Banks hash function\n");
-    ret = run_dram_exp(virt_start, phy_start, allocated, min_bit, max_bit);
-    if (ret < 0) {
+    dram_hctx = run_dram_exp(virt_start, phy_start, allocated, min_bit, max_bit);
+    if (dram_hctx == NULL) {
         fprintf(stderr, "Couldn't find DRAM Banks hash function\n");
         return -1;
     }
 
     printf("Finding Cacheline hash function\n");
-    ret = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
-    if (ret < 0) {
+    cache_hctx = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
+    if (cache_hctx == NULL) {
         fprintf(stderr, "Couldn't find Cacheline hash function\n");
         return -1;
     }
+
+    printf("Finding common solutions between DRAM and Cache\n");
+    hash_print_common_solutions(dram_hctx, cache_hctx);
+
+    hash_del(dram_hctx);
+    hash_del(cache_hctx);
+
     return 0;
 }
