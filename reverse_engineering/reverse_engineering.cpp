@@ -238,6 +238,9 @@ void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr,
     phy_addr2 = (void *)((uintptr_t)ret_addr - data->virt_start + data->phy_start);
     dprintf("Found valid pair: (%p, %p)\n", phy_addr1, phy_addr2);
 
+    if ((uintptr_t)phy_addr2 > (uintptr_t)phy_end_addr)
+        return NULL;
+
     return phy_addr2;
 }
 
@@ -336,7 +339,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Couldn't find DRAM Banks hash function\n");
         return -1;
     }
-
+    
     printf("Finding Cacheline hash function\n");
     cache_hctx = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
     if (cache_hctx == NULL) {

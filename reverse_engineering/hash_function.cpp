@@ -357,13 +357,12 @@ static void hash_confirm_pair(hash_context_t *ctx, uintptr_t phy_addr1, uintptr_
     ctx->keys.push_back(key);
 }
 
-/* Eliminate equivalent solutions to get only unique solutions */
-static void hash_reduce(hash_context_t *ctx)
+static void eliminate_duplicate_solutions(std::vector<solution_t> &solutions)
 {
     std::vector<solution_t> perm_sarray;
     std::vector<solution_t>::iterator s;
 
-    for (s = ctx->solutions.begin(); s != ctx->solutions.end();) {
+    for (s = solutions.begin(); s != solutions.end();) {
 
         bool is_unique = true;
         
@@ -379,14 +378,24 @@ static void hash_reduce(hash_context_t *ctx)
                 add_solution_with_permuations(perm_sarray, *s);
             } catch(...) {
                 /* Out of memory - Permutation grows exponentially */
-                fprintf(stderr, "Out of memory exception while hash_reduce\n");
+                fprintf(stderr, "Out of memory exception\n");
                 return;
             }
             s++;
         } else {
-            s = ctx->solutions.erase(s);
+            s = solutions.erase(s);
         }
     }
+
+}
+
+/* Eliminate equivalent solutions to get only unique solutions */
+static void hash_reduce(hash_context_t *ctx)
+{
+    if (ctx->solutions.size() == 0)
+        return;
+
+    eliminate_duplicate_solutions(ctx->solutions);
 }
 /* 
  * Initializes the hash context. 
@@ -704,6 +713,9 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
             s1 = perm_sarray1.erase(s1);
         }
     }
+
+    eliminate_duplicate_solutions(common);
+
     printf("Number of common solutions found: %zd\n", common.size());
     for (size_t i = 0; i < common.size(); i++)
         print_solution(common[i]);
