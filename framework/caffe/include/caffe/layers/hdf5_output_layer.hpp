@@ -1,7 +1,7 @@
 #ifndef CAFFE_HDF5_OUTPUT_LAYER_HPP_
 #define CAFFE_HDF5_OUTPUT_LAYER_HPP_
 
-#include "hdf5.h"
+#include "hdf5/serial/hdf5.h"
 
 #include <string>
 #include <vector>

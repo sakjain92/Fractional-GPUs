@@ -6,7 +6,7 @@
 #include <vector>
 
 #ifdef USE_HDF5
-#include "hdf5.h"
+#include "hdf5/serial/hdf5.h"
 #endif  // USE_HDF5
 
 #include "caffe/common.hpp"

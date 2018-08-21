@@ -7,8 +7,8 @@ TODO:
 #include <stdint.h>
 #include <vector>
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
+#include "hdf5/serial/hdf5.h"
+#include "hdf5/serial/hdf5_hl.h"
 
 #include "caffe/layers/hdf5_data_layer.hpp"
 
