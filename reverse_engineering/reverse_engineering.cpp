@@ -16,9 +16,9 @@
 #include <sys/ioctl.h>
 #include <algorithm>
 
-#include <reverse_engineering.h>
+#include <reverse_engineering.hpp>
 
-#include <hash_function.h>
+#include <hash_function.hpp>
 
 typedef struct cb_arg {
     uintptr_t phy_start;

@@ -1,12 +1,12 @@
 /* This file is header file for exposing API to external application */
-#ifndef __FRACTIONAL_GPU_H__
-#define __FRACTIONAL_GPU_H__
+#ifndef __FRACTIONAL_GPU_HPP__
+#define __FRACTIONAL_GPU_HPP__
 
 #include <inttypes.h>
 
-#include <persistent.h>
+#include <fgpu_internal_persistent.hpp>
 
-#include <common.h>
+#include <fgpu_internal_common.hpp>
 
 /* Currently only the very first device is used */
 #define FGPU_DEVICE_NUMBER  0
@@ -103,4 +103,4 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
 })
 
 
-#endif /* FRACTIONAL_GPU */
+#endif /* FRACTIONAL_GPU_HPP */

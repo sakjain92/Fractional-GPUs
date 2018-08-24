@@ -1,13 +1,16 @@
 /* This file contains common utilities. */
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#ifndef __FGPU_INTERNAL_COMMON_HPP__
+#define __FGPU_INTERNAL_COMMON_HPP__
 
 #include <stdio.h>
 #include <sys/time.h>
 
 #include <cuda.h>
 
-#include <config.h>
+#include <fgpu_internal_config.hpp>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 /* Compile time assertion */
 #define COMPILE_ASSERT(val) typedef char assertion_typedef[(val) * 2 - 1];
@@ -89,4 +92,4 @@ inline void pstats_print(pstats_t *stats)
     printf("STATS: Avg:%f, Min:%f, Max:%f, Count:%f\n",
             stats->sum / stats->count, stats->min, stats->max, stats->count);
 }
-#endif /* COMMON_H */
+#endif /* __FGPU_INTERNAL_COMMON_HPP__ */

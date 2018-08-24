@@ -1,7 +1,6 @@
 #include <assert.h>
 
-#include <common.h>
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 FGPU_DEFINE_KERNEL(info, int A)

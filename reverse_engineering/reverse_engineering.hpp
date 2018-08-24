@@ -1,5 +1,5 @@
-#ifndef __REVERSE_ENGINEERING_H__
-#define __REVERSE_ENGINEERING_H__
+#ifndef __REVERSE_ENGINEERING_HPP__
+#define __REVERSE_ENGINEERING_HPP__
 
 /* TODO: Add support for CPU also if needed */
 
@@ -82,4 +82,4 @@ inline int ilog2(unsigned long long x)
     return sizeof(unsigned long long ) * 8 - __builtin_clzll(x) - 1;
 }
 
-#endif /* __REVERSE_ENGINEERING_H__ */
+#endif /* __REVERSE_ENGINEERING_HPP__ */

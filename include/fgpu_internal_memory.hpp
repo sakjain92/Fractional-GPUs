@@ -1,8 +1,8 @@
 /* Header file for memory coloring functionality */
-#ifndef __MEMORY_H__
-#define __MEMORY_H__
+#ifndef __FGPU_INTERNAL_MEMORY_HPP__
+#define __FGPU_INTERNAL_MEMORY_HPP__
 
-#include <common.h>
+#include <fgpu_internal_common.hpp>
 
 #ifdef FGPU_MEM_COLORING_ENABLED
 
@@ -18,4 +18,4 @@ int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx);
 
 #endif /* FGPU_MEM_COLORING_ENABLED */
 
-#endif /* __MEMORY_H__ */
+#endif /* __FGPU_INTERNAL_MEMORY_HPP__ */

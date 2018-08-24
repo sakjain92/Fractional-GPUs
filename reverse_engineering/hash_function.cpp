@@ -21,7 +21,7 @@
 
 #include <vector>
 
-#include <hash_function.h>
+#include <hash_function.hpp>
 
 /* Maximum physical address bits currently is 64 */
 #define MAX_NUM_INDEX        64

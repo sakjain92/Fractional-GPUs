@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <common.h>
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 #define N                   (128 * 1024 * 1024)

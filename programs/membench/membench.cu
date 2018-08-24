@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <common.h>
+#include <fractional_gpu.hpp>
 
 #define N                   (128 * 1024 * 1024)
 #define PAGE_SIZE           (4 * 1024)

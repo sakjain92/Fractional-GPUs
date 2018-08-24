@@ -1,8 +1,8 @@
 /* This file is a header used by internal API */
-#ifndef __PERSISTENT_H__
-#define __PERSISTENT_H__
+#ifndef __FGPU_INTERNAL_PERSISTENT_HPP__
+#define __FGPU_INTERNAL_PERSISTENT_HPP__
 
-#include <config.h>
+#include <fgpu_internal_config.hpp>
 
 struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_bindex {
     int index[2];
@@ -22,4 +22,4 @@ typedef struct fgpu_indicators {
     struct fgpu_indicator indicators[FGPU_MAX_NUM_PBLOCKS];
 } fgpu_indicators_t;
 
-#endif /* PERSISTENT_H */
+#endif /* FGPU_INTERNAL_PERSISTENT_HPP */

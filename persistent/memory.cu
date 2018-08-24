@@ -43,9 +43,9 @@
 /* NVIDIA driver */
 #include <uvm_minimal_init.h>
 
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
-#include <memory.h>
+#include <fgpu_internal_memory.hpp>
 
 #ifdef FGPU_MEM_COLORING_ENABLED
 

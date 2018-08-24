@@ -1,8 +1,8 @@
 /* Thie file contains the server that initializes the persistent module */
 #include <stdio.h>
 
-#include <fractional_gpu.h>
-#include <persistent.h>
+#include <fractional_gpu.hpp>
+#include <fgpu_internal_persistent.hpp>
 
 int main()
 {

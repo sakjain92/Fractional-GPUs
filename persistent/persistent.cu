@@ -15,10 +15,10 @@
 
 #include <cuda.h>
 
-#include <common.h>
-#include <fractional_gpu.h>
-#include <memory.h>
-#include <persistent.h>
+#include <fgpu_internal_common.hpp>
+#include <fractional_gpu.hpp>
+#include <fgpu_internal_memory.hpp>
+#include <fgpu_internal_persistent.hpp>
 
 /* TODO: Add support for multithreaded applications */
 

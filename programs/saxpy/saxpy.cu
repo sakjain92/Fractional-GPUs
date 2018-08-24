@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#include <common.h>
-
+#include <fractional_gpu.hpp>
 __global__
 void saxpy(int n, float a, float *x, float *y)
 {

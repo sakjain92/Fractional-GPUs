@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <common.h>
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 #define N (1024*1024*2)

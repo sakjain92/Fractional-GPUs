@@ -6,7 +6,7 @@
 
 #include <cuda.h>
 
-#include <common.h>
+#include <fractional_gpu.hpp>
 
 #include "bmp.h"
 

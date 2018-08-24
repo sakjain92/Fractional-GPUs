@@ -1,5 +1,5 @@
-#ifndef __HASH_FUNCTION_H__
-#define __HASH_FUNCTION_H__
+#ifndef __HASH_FUNCTION_HPP__
+#define __HASH_FUNCTION_HPP__
 
 /* Forward declarations for external use */
 struct hash_context;
@@ -20,4 +20,4 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2);
 
 void hash_del(hash_context *ctx);
 
-#endif /* __HASH_FUNCTION_H__ */
+#endif /* __HASH_FUNCTION_HPP__ */

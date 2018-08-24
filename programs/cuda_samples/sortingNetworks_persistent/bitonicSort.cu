@@ -23,7 +23,7 @@ namespace cg = cooperative_groups;
 #include "sortingNetworks_common.h"
 #include "sortingNetworks_common.cuh"
 
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 ////////////////////////////////////////////////////////////////////////////////

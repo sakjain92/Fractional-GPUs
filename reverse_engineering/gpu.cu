@@ -9,10 +9,9 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include <reverse_engineering.h>
+#include <reverse_engineering.hpp>
 
-#include "common.h"
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 /* Device memory */

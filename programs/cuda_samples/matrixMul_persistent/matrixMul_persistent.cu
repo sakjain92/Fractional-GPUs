@@ -1,8 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <common.h>
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
 /**
@@ -233,8 +232,8 @@ int matrixMultiply(void)
         }
         if (ret < 0)
             return ret;
-
-	    ret = fgpu_color_stream_synchronize();
+	
+	ret = fgpu_color_stream_synchronize();
     	if (ret < 0)
         	return ret;
 

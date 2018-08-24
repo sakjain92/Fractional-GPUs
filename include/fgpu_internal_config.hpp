@@ -1,6 +1,6 @@
 /* This file contains configurable macros */
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#ifndef __FGPU_INTERNAL_CONFIG_HPP__
+#define __FGPU_INTERNAL_CONFIG_HPP__
 
 #include <g_nvconfig.h>
 
@@ -33,4 +33,4 @@
 #error "Both FGPU_USER_MEM_COLORING_ENABLED and FGPU_TEST_MEM_COLORING_ENABLED defined"
 #endif
 
-#endif /* CONFIG_H */
+#endif /* __FGPU_INTERNAL_CONFIG_HPP__ */

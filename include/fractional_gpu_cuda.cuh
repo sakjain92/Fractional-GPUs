@@ -1,8 +1,8 @@
 /* This file contains cuda related external functions */
-#ifndef __FRACTIONAL_GPU_CUDA_H__
-#define __FRACTIONAL_GPU_CUDA_H__
+#ifndef __FRACTIONAL_GPU_CUH__
+#define __FRACTIONAL_GPU_CUH__
 
-#include <fractional_gpu.h>
+#include <fractional_gpu.hpp>
 
 
 /* Macro to define (modified) kernels (with no args) */
@@ -167,4 +167,4 @@ inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr,
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */
 
 
-#endif /* __FRACTIONAL_GPU_CUDA_H__ */
+#endif /* __FRACTIONAL_GPU_CUH__ */
