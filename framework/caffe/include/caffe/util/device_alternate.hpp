@@ -31,7 +31,12 @@ void classname<Dtype>::funcname##_##gpu(const vector<Blob<Dtype>*>& top, \
 
 #else  // Normal GPU + CPU Caffe.
 
+#ifdef USE_FGPU
+#include <fractional_gpu.hpp>
+#else // USE_FGPU
 #include <cublas_v2.h>
+#endif // USE_FGPU
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
@@ -52,12 +57,26 @@ void classname<Dtype>::funcname##_##gpu(const vector<Blob<Dtype>*>& top, \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
   } while (0)
 
+
+#ifdef USE_FGPU
+
+#define FGPU_CHECK(condition) \
+  do { \
+    int status = condition; \
+    CHECK_EQ(status, 0) << " " \
+      << caffe::fgpuGetErrorString(status); \
+  } while (0)
+
+#else // USE_FGPU
+
 #define CUBLAS_CHECK(condition) \
   do { \
     cublasStatus_t status = condition; \
     CHECK_EQ(status, CUBLAS_STATUS_SUCCESS) << " " \
       << caffe::cublasGetErrorString(status); \
   } while (0)
+
+#endif // USE_FGPU
 
 #define CURAND_CHECK(condition) \
   do { \
@@ -78,7 +97,11 @@ void classname<Dtype>::funcname##_##gpu(const vector<Blob<Dtype>*>& top, \
 namespace caffe {
 
 // CUDA: library error reporting.
+#ifdef USE_FGPU
+const char* fgpuGetErrorString(int error); 
+#else // USE_FGPU
 const char* cublasGetErrorString(cublasStatus_t error);
+#endif // USE_FGPU
 const char* curandGetErrorString(curandStatus_t error);
 
 // CUDA: use 512 threads per block

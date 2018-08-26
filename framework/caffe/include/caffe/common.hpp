@@ -132,7 +132,9 @@ class Caffe {
     return *(Get().random_generator_);
   }
 #ifndef CPU_ONLY
+#ifndef USE_FGPU
   inline static cublasHandle_t cublas_handle() { return Get().cublas_handle_; }
+#endif
   inline static curandGenerator_t curand_generator() {
     return Get().curand_generator_;
   }
@@ -169,7 +171,9 @@ class Caffe {
 
  protected:
 #ifndef CPU_ONLY
+#ifndef USE_FGPU
   cublasHandle_t cublas_handle_;
+#endif
   curandGenerator_t curand_generator_;
 #endif
   shared_ptr<RNG> random_generator_;

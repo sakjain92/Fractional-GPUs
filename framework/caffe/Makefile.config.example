@@ -1,6 +1,12 @@
 ## Refer to http://caffe.berkeleyvision.org/installation.html
 # Contributions simplifying and improving our build system are welcome!
 
+# FGPU provides virtual GPU capabilities (uncomment to build with FGPU)
+USE_FGPU := 1
+
+# FGPU directory contains build/ inc/ directories that we need. 
+FGPU_DIR := ../../
+
 # cuDNN acceleration switch (uncomment to build with cuDNN).
 # USE_CUDNN := 1
 

@@ -171,14 +171,27 @@ ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
 endif
 CUDA_LIB_DIR += $(CUDA_DIR)/lib
 
+ifeq ($(USE_FGPU), 1)
+CUDA_INCLUDE_DIR += $(FGPU_DIR)/include/
+CUDA_LIB_DIR += $(FGPU_DIR)/build/
+endif
+
 INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
 ifneq ($(CPU_ONLY), 1)
 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
-	LIBRARIES := cudart cublas curand
+	LIBRARIES := cudart curand
 endif
 
 LIBRARIES += glog gflags protobuf boost_system boost_filesystem m
+
+ifneq ($(CPU_ONLY), 1)
+ifeq ($(USE_FGPU), 1)
+LIBRARIES += fractional_gpu
+else
+LIBRARIES += cublas
+endif
+endif
 
 # handle IO dependencies
 USE_LEVELDB ?= 1
@@ -328,8 +341,11 @@ else
 	COMMON_FLAGS += -DNDEBUG -O2
 endif
 
+# Fractional GPU - Can't use closed source libraries with this.
+ifeq ($(USE_FGPU), 1)
+	COMMON_FLAGS += -DUSE_FGPU
 # cuDNN acceleration configuration.
-ifeq ($(USE_CUDNN), 1)
+else ifeq ($(USE_CUDNN), 1)
 	LIBRARIES += cudnn
 	COMMON_FLAGS += -DUSE_CUDNN
 endif

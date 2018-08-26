@@ -105,14 +105,19 @@ void* Caffe::RNG::generator() {
 #else  // Normal GPU + CPU Caffe.
 
 Caffe::Caffe()
-    : cublas_handle_(NULL), curand_generator_(NULL), random_generator_(),
+    : curand_generator_(NULL), random_generator_(),
     mode_(Caffe::CPU),
     solver_count_(1), solver_rank_(0), multiprocess_(false) {
+
+#ifndef USE_FGPU
+  cublas_handle_ = NULL;
   // Try to create a cublas handler, and report an error if failed (but we will
   // keep the program running as one might just want to run CPU code).
   if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
     LOG(ERROR) << "Cannot create Cublas handle. Cublas won't be available.";
   }
+#endif
+
   // Try to create a curand handler.
   if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
       != CURAND_STATUS_SUCCESS ||
@@ -123,7 +128,9 @@ Caffe::Caffe()
 }
 
 Caffe::~Caffe() {
+#ifndef USE_FGPU
   if (cublas_handle_) CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#endif
   if (curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));
   }
@@ -156,11 +163,13 @@ void Caffe::SetDevice(const int device_id) {
   // The call to cudaSetDevice must come before any calls to Get, which
   // may perform initialization using the GPU.
   CUDA_CHECK(cudaSetDevice(device_id));
+#ifndef USE_FGPU
   if (Get().cublas_handle_) CUBLAS_CHECK(cublasDestroy(Get().cublas_handle_));
+  CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
+#endif
   if (Get().curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(Get().curand_generator_));
   }
-  CUBLAS_CHECK(cublasCreate(&Get().cublas_handle_));
   CURAND_CHECK(curandCreateGenerator(&Get().curand_generator_,
       CURAND_RNG_PSEUDO_DEFAULT));
   CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(Get().curand_generator_,
@@ -258,6 +267,11 @@ void* Caffe::RNG::generator() {
   return static_cast<void*>(generator_->rng());
 }
 
+#ifdef USE_FGPU
+const char* fgpuGetErrorString(int error) {
+    return "FGPU Error";
+}
+#else // USE_FGPU
 const char* cublasGetErrorString(cublasStatus_t error) {
   switch (error) {
   case CUBLAS_STATUS_SUCCESS:
@@ -287,6 +301,7 @@ const char* cublasGetErrorString(cublasStatus_t error) {
   }
   return "Unknown cublas status";
 }
+#endif
 
 const char* curandGetErrorString(curandStatus_t error) {
   switch (error) {
