@@ -770,9 +770,47 @@ void caffe_gpu_sqrt<double>(const int N, const double* a, double* y) {
       N, a, y);
 }
 
-DEFINE_AND_INSTANTIATE_GPU_UNARY_FUNC(sign, y[index] = (Dtype(0) < x[index])
-                                      - (x[index] < Dtype(0)));
-DEFINE_AND_INSTANTIATE_GPU_UNARY_FUNC(sgnbit, y[index] = signbit(x[index]));
+template <typename Dtype>
+__global__ void sign_kernel(const int n, const Dtype* x, Dtype* y) {
+  CUDA_KERNEL_LOOP(index, n) {
+    y[index] = (Dtype(0) < x[index]) - (x[index] < Dtype(0));
+  }
+}
+
+template <>
+void caffe_gpu_sign<float>(const int N, const float* x, float* y) {
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  sqrt_kernel<float><<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS>>>(
+      N, x, y);
+}
+
+template <>
+void caffe_gpu_sign<double>(const int N, const double* x, double* y) {
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  sqrt_kernel<double><<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS>>>(
+      N, x, y);
+}
+
+template <typename Dtype>
+__global__ void sgnbit_kernel(const int n, const Dtype* x, Dtype* y) {
+  CUDA_KERNEL_LOOP(index, n) {
+    y[index] = signbit(x[index]);
+  }
+}
+
+template <>
+void caffe_gpu_sgnbit<float>(const int N, const float* x, float* y) {
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  sgnbit_kernel<float><<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS>>>(
+      N, x, y);
+}
+
+template <>
+void caffe_gpu_sgnbit<double>(const int N, const double* x, double* y) {
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  sgnbit_kernel<double><<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS>>>(
+      N, x, y);
+}
 
 void caffe_gpu_rng_uniform(const int n, unsigned int* r) {
   CURAND_CHECK(curandGenerate(Caffe::curand_generator(), r, n));
