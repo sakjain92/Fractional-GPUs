@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "caffe/common.hpp"
+#include "caffe/util/gpu_util.cuh"
 #include "caffe/util/math_functions.hpp"
 
 namespace caffe {
@@ -153,7 +154,7 @@ void caffe_gpu_asum<double>(const int n, const double* x, double* y) {
 
 #else  /* USE_FGPU */
 
-
+#include <fractional_gpu_cuda.cuh>
 #include <cooperative_groups.h>
 
 /* TODO: Use shfl_down to reduce summation time */
@@ -161,22 +162,22 @@ void caffe_gpu_asum<double>(const int n, const double* x, double* y) {
 template <typename Dtype>
 __device__ void reduce_sum(cooperative_groups::thread_group g, Dtype val, Dtype *out)
 {
-    int lane = g.thread_rank();
-    __shared__ Dtype temp [CAFFE_CUDA_NUM_THREADS];
+  int lane = g.thread_rank();
+  __shared__ Dtype temp [CAFFE_CUDA_NUM_THREADS];
 
-    // Each iteration halves the number of active threads
-    // Each thread adds its partial sum[i] to sum[lane+i]
-    for (int i = g.size() / 2; i > 0; i /= 2)
-    {
-        temp[lane] = val;
-        g.sync(); // wait for all threads to store
-        if(lane < i) 
-            val += temp[lane + i];
-        g.sync(); // wait for all threads to load
-    }
+  // Each iteration halves the number of active threads
+  // Each thread adds its partial sum[i] to sum[lane+i]
+  for (int i = g.size() / 2; i > 0; i /= 2)
+  {
+    temp[lane] = val;
+    g.sync(); // wait for all threads to store
+    if(lane < i) 
+      val += temp[lane + i];
+    g.sync(); // wait for all threads to load
+  }
 
-    if (g.thread_rank() == 0)
-        atomicAdd(out, val);
+  if (g.thread_rank() == 0)
+    caffe_gpu_atomic_add(val, out);
 }
 
 template <typename Dtype, size_t BLOCK_SIZE> 
@@ -185,97 +186,96 @@ __global__ void gemm_kernel(const CBLAS_TRANSPOSE TransA,
         const int hB, const int wB, const Dtype *A, const Dtype *B, 
         Dtype *C, const Dtype alpha, const Dtype beta)
 {
-    // Block index
-    int bx = blockIdx.x;
-    int by = blockIdx.y;
+  // Block index
+  int bx = blockIdx.x;
+  int by = blockIdx.y;
 
-    // Thread index
-    int tx = threadIdx.x;
-    int ty = threadIdx.y;
+  // Thread index
+  int tx = threadIdx.x;
+  int ty = threadIdx.y;
 
-    // Index of the first sub-matrix of A processed by the block
-    int aRow = BLOCK_SIZE * by;
-    int aColBegin = 0;
+  // Index of the first sub-matrix of A processed by the block
+  int aRow = BLOCK_SIZE * by;
+  int aColBegin = 0;
 
-    // Index of the last sub-matrix of A processed by the block
-    int aColEnd = wA - 1;
+  // Index of the last sub-matrix of A processed by the block
+  int aColEnd = wA - 1;
 
-    // Step size used to iterate through the sub-matrices of A
-    int aColStep  = BLOCK_SIZE;
+  // Step size used to iterate through the sub-matrices of A
+  int aColStep  = BLOCK_SIZE;
 
-    // Index of the first sub-matrix of B processed by the block
-    int bRowBegin = 0;
-    int bCol = BLOCK_SIZE * bx;
+  // Index of the first sub-matrix of B processed by the block
+  int bRowBegin = 0;
+  int bCol = BLOCK_SIZE * bx;
 
-    // Step size used to iterate through the sub-matrices of B
-    int bRowStep  = BLOCK_SIZE;
+  // Step size used to iterate through the sub-matrices of B
+  int bRowStep  = BLOCK_SIZE;
 
-    // Csub is used to store the element of the block sub-matrix
-    // that is computed by the thread
-    float Csub = 0;
+  // Csub is used to store the element of the block sub-matrix
+  // that is computed by the thread
+  float Csub = 0;
 
-    // Loop over all the sub-matrices of A and B    
-    // required to compute the block sub-matrix
-    for (int aCol = aColBegin, bRow = bRowBegin, istep=0;
+  // Loop over all the sub-matrices of A and B    
+  // required to compute the block sub-matrix
+  for (int aCol = aColBegin, bRow = bRowBegin, istep=0;
          aCol <= aColEnd;
          aCol += aColStep, bRow += bRowStep, ++istep)
-    {
-        int aIndex, bIndex;
+  {
+    int aIndex, bIndex;
 
-        // Declaration of the shared memory array As used to
-        // store the sub-matrix of A
-        __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+    // Declaration of the shared memory array As used to
+    // store the sub-matrix of A
+    __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
 
-        // Declaration of the shared memory array Bs used to
-        // store the sub-matrix of B
-        __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+    // Declaration of the shared memory array Bs used to
+    // store the sub-matrix of B
+    __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
 
-        aIndex = (TransA == CblasNoTrans) ? (wA * (aRow + ty) + aCol + tx) :
-            (hA * (aCol + tx) + aRow + ty);
+    aIndex = (TransA == CblasNoTrans) ? (wA * (aRow + ty) + aCol + tx) :
+      (hA * (aCol + tx) + aRow + ty);
 
-        bIndex = (TransB == CblasNoTrans) ? (wB * (bRow + ty) + bCol + tx) :
-            (hB * (bCol + tx) + bRow + ty);
+    bIndex = (TransB == CblasNoTrans) ? (wB * (bRow + ty) + bCol + tx) :
+      (hB * (bCol + tx) + bRow + ty);
 
-        // Load the matrices from device memory
-        // to shared memory; each thread loads
-        // one element of each matrix
-        if ((aRow + ty < hA) && (aCol + tx < wA))
-            As[ty][tx] = A[aIndex];
-        else
-            As[ty][tx] = 0;
+    // Load the matrices from device memory
+    // to shared memory; each thread loads
+    // one element of each matrix
+    if ((aRow + ty < hA) && (aCol + tx < wA))
+      As[ty][tx] = A[aIndex];
+    else
+      As[ty][tx] = 0;
 
-        if ((bRow + ty < hB) && (bCol + tx < wB))
-            Bs[ty][tx] = B[bIndex];
-        else
-            Bs[ty][tx] = 0;
+    if ((bRow + ty < hB) && (bCol + tx < wB))
+      Bs[ty][tx] = B[bIndex];
+    else
+      Bs[ty][tx] = 0;
 
-        // Synchronize to make sure the matrices are loaded
-        __syncthreads();
+    // Synchronize to make sure the matrices are loaded
+    __syncthreads();
 
-        // Multiply the two matrices together;
-        // each thread computes one element
-        // of the block sub-matrix
+    // Multiply the two matrices together;
+    // each thread computes one element
+    // of the block sub-matrix
 #pragma unroll
 
-        for (int k = 0; k < BLOCK_SIZE; ++k)
-        {
-            Csub += As[ty][k] * Bs[k][tx];
-        }
-
-        // Synchronize to make sure that the preceding
-        // computation is done before loading two new
-        // sub-matrices of A and B in the next iteration
-        __syncthreads();
+    for (int k = 0; k < BLOCK_SIZE; ++k) {
+        Csub += As[ty][k] * Bs[k][tx];
     }
 
-    // Write the block sub-matrix to device memory;
-    // each thread writes one element
-    int cRow = BLOCK_SIZE * by + ty;
-    int cCol = BLOCK_SIZE * bx + tx;
-    int cIndex = wB * cRow + cCol;
+    // Synchronize to make sure that the preceding
+    // computation is done before loading two new
+    // sub-matrices of A and B in the next iteration
+    __syncthreads();
+  }
 
-    if ((cRow < hA) && (cCol < wB))
-        C[cIndex] = alpha * Csub + beta * C[cIndex];
+  // Write the block sub-matrix to device memory;
+  // each thread writes one element
+  int cRow = BLOCK_SIZE * by + ty;
+  int cCol = BLOCK_SIZE * bx + tx;
+  int cIndex = wB * cRow + cCol;
+
+  if ((cRow < hA) && (cCol < wB))
+    C[cIndex] = alpha * Csub + beta * C[cIndex];
 }
 
 template <>
@@ -309,51 +309,51 @@ __global__ void gemv_kernel(const CBLAS_TRANSPOSE TransA,
     const int hA, const int wA, const Dtype *A, const Dtype *x, 
         Dtype *y, const Dtype alpha, const Dtype beta)
 {
-    int row = blockIdx.x;
-    Dtype sum = 0;
-    for (int col = threadIdx.x; col < wA; col += blockDim.x) {
-        if (TransA == CblasNoTrans)
-            sum += A[wA * row + col] * x[col];
-        else
-            sum += A[hA * col + row] * x[col];
-    }
+  int row = blockIdx.x;
+  Dtype sum = 0;
+  for (int col = threadIdx.x; col < wA; col += blockDim.x) {
+    if (TransA == CblasNoTrans)
+      sum += A[wA * row + col] * x[col];
+    else
+      sum += A[hA * col + row] * x[col];
+  }
 
-    sum = alpha * sum;
+  sum = alpha * sum;
 
-    cooperative_groups::thread_group  g = cooperative_groups::this_thread_block();
+  cooperative_groups::thread_group  g = cooperative_groups::this_thread_block();
     
-    if (g.thread_rank() == 0)
-        y[row] += (beta - 1) * y[row];
+  if (g.thread_rank() == 0)
+    y[row] += (beta - 1) * y[row];
 
-    g.sync();
+  g.sync();
 
-    reduce_sum<Dtype>(g, sum, &y[row]);
+  reduce_sum<Dtype>(g, sum, &y[row]);
 }
 
 template <>
 void caffe_gpu_gemv<float>(const CBLAS_TRANSPOSE TransA, const int M,
     const int N, const float alpha, const float *A, const float *x,
     const float beta, float *y) {
-    if (TransA == CblasNoTrans) {
-        gemv_kernel<float><<<M, CAFFE_CUDA_NUM_THREADS>>>(
-          TransA, M, N, A, x, y, alpha, beta);
-    } else {
-        gemv_kernel<float><<<N, CAFFE_CUDA_NUM_THREADS>>>(
-          TransA, N, M, A, x, y, alpha, beta);
-    }
+  if (TransA == CblasNoTrans) {
+    gemv_kernel<float><<<M, CAFFE_CUDA_NUM_THREADS>>>(
+      TransA, M, N, A, x, y, alpha, beta);
+  } else {
+    gemv_kernel<float><<<N, CAFFE_CUDA_NUM_THREADS>>>(
+      TransA, N, M, A, x, y, alpha, beta);
+  }
 }
 
 template <>
 void caffe_gpu_gemv<double>(const CBLAS_TRANSPOSE TransA, const int M,
     const int N, const double alpha, const double *A, const double *x,
     const double beta, double *y) {
-    if (TransA == CblasNoTrans) {
-        gemv_kernel<double><<<M, CAFFE_CUDA_NUM_THREADS>>>(
-          TransA, M, N, A, x, y, alpha, beta);
-    } else {
-        gemv_kernel<double><<<N, CAFFE_CUDA_NUM_THREADS>>>(
-          TransA, N, M, A, x, y, alpha, beta);
-    }
+  if (TransA == CblasNoTrans) {
+    gemv_kernel<double><<<M, CAFFE_CUDA_NUM_THREADS>>>(
+      TransA, M, N, A, x, y, alpha, beta);
+  } else {
+    gemv_kernel<double><<<N, CAFFE_CUDA_NUM_THREADS>>>(
+      TransA, N, M, A, x, y, alpha, beta);
+  }
 }
 
 template <typename Dtype>
@@ -366,14 +366,16 @@ __global__ void axpy_kernel(const int n, const Dtype alpha, const Dtype *x, Dtyp
 template <>
 void caffe_gpu_axpy(int n, float alpha, float const *x, float *y)
 {
-    axpy_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  axpy_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, alpha, x, y);
 }
 
 template <>
 void caffe_gpu_axpy<double>(int n, double alpha, double const *x, double *y)
 {
-    axpy_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  axpy_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, alpha, x, y);
 }
 
@@ -393,7 +395,8 @@ __global__ void scal_kernel(const int n, const Dtype alpha, Dtype *x) {
 template <>
 void caffe_gpu_scal<float>(const int n, float alpha, float *x)
 {
-    scal_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  scal_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, alpha, x);
 }
 
@@ -401,24 +404,25 @@ void caffe_gpu_scal<float>(const int n, float alpha, float *x)
 template <>
 void caffe_gpu_scal<double>(const int n, double alpha, double *x)
 {
-    scal_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  scal_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, alpha, x);
 }
 
 static void *initialize_temp_variable(void)
 {
-    void *temp;
+  void *temp;
 
-    CUDA_CHECK(cudaMalloc(&temp, sizeof(double)));
-    CUDA_CHECK(cudaMemset(temp, 0, sizeof(double)));
+  CUDA_CHECK(cudaMalloc(&temp, sizeof(double)));
+  CUDA_CHECK(cudaMemset(temp, 0, sizeof(double)));
 
-    return temp;
+  return temp;
 }
 
 
 static void deinitialize_temp_variable(void *temp)
 {
-    CUDA_CHECK(cudaFree(temp));
+  CUDA_CHECK(cudaFree(temp));
 }
 
 
@@ -436,21 +440,21 @@ __global__ void dot_kernel(const int n, const Dtype *x, const Dtype *y, Dtype *o
 template <>
 void caffe_gpu_dot<float>(const int n, const float *x, const float *y, float *out)
 {
-    void *tempResult = initialize_temp_variable();
-    dot_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  void *tempResult = initialize_temp_variable();
+  dot_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, x, y, (float *)tempResult);
-    CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(float), cudaMemcpyDefault));
-    deinitialize_temp_variable(tempResult);
+  CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(float), cudaMemcpyDefault));
+  deinitialize_temp_variable(tempResult);
 }
 
 template <>
 void caffe_gpu_dot<double>(const int n, const double *x, const double *y, double *out)
 {
-    void *tempResult = initialize_temp_variable();
-    dot_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  void *tempResult = initialize_temp_variable();
+  dot_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, x, y, (double *)tempResult);
-    CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(double), cudaMemcpyDefault));
-    deinitialize_temp_variable(tempResult);
+  CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(double), cudaMemcpyDefault));
+  deinitialize_temp_variable(tempResult);
 }
 
 template <typename Dtype>
@@ -467,21 +471,21 @@ __global__ void asum_kernel(const int n, const Dtype *x, Dtype *out) {
 template <>
 void caffe_gpu_asum<float>(const int n, const float *x, float *out)
 {
-    void *tempResult = initialize_temp_variable();
-    asum_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  void *tempResult = initialize_temp_variable();
+  asum_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, x, (float *)tempResult);
-    CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(float), cudaMemcpyDefault));
-    deinitialize_temp_variable(tempResult);
+  CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(float), cudaMemcpyDefault));
+  deinitialize_temp_variable(tempResult);
 }
 
 template <>
 void caffe_gpu_asum<double>(const int n, const double *x, double *out)
 {
-    void *tempResult = initialize_temp_variable();
-    asum_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  void *tempResult = initialize_temp_variable();
+  asum_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
       n, x, (double *)tempResult);
-    CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(double), cudaMemcpyDefault));
-    deinitialize_temp_variable(tempResult);
+  CUDA_CHECK(cudaMemcpy(out, tempResult, sizeof(double), cudaMemcpyDefault));
+  deinitialize_temp_variable(tempResult);
 }
 
 template <typename Dtype>
@@ -495,14 +499,16 @@ __global__ void scale_kernel(const int n, const Dtype alpha, const Dtype *x,
 template <>
 void caffe_gpu_scale<float>(const int n, const float alpha, const float *x,
                             float* y) {
-    scale_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  scale_kernel<float><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
             n, alpha, x, y);
 }
 
 template <>
 void caffe_gpu_scale<double>(const int n, const double alpha, const double *x,
                              double* y) {
-    scale_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  scale_kernel<double><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(
             n, alpha, x, y);
 }
 #endif /* USE_FGPU */
