@@ -671,6 +671,25 @@ static void stream_callback(int color)
     pthread_mutex_unlock(&g_host_ctx->streams_lock);
 }
 
+/* Overloaded function to get blockDim and gridDim */
+void fgpu_set_ctx_dims(fgpu_dev_ctx_t *ctx, int _gridDim, int _blockDim)
+{
+    ctx->gridDim = dim3(_gridDim, 1, 1);
+    ctx->blockDim = dim3(_blockDim, 1, 1);
+}
+
+void fgpu_set_ctx_dims(fgpu_dev_ctx_t *ctx, dim3 _gridDim, dim3 _blockDim)
+{
+    ctx->gridDim = _gridDim;
+    ctx->blockDim = _blockDim;
+}
+
+void fgpu_set_ctx_dims(fgpu_dev_ctx_t *ctx, uint3 _gridDim, uint3 _blockDim)
+{
+    ctx->gridDim = _gridDim;
+    ctx->blockDim = _blockDim;
+}
+
 /* Called after kernel has been launched */
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
 {

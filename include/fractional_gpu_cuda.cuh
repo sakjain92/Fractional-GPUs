@@ -119,6 +119,12 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
     *(typeof(addr))ptr = value;                 \
 })
 
+#define FGPU_COLOR_TRANSLATE_ADDR(ctx, addr)    \
+({                                              \
+    void *ptr = fgpu_color_load(ctx, addr);     \
+    (typeof(addr))ptr;                          \
+})
+
 __device__ __forceinline__
 void *fgpu_color_load(const fgpu_dev_ctx_t *ctx, const void *virt_offset)
 {
@@ -156,12 +162,17 @@ inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr,
 
 #define FGPU_COLOR_LOAD(ctx, addr)              \
 ({                                              \
-    *(typeof(addr))addr;                        \
+    *addr;                                      \
 })
 
 #define FGPU_COLOR_STORE(ctx, addr, value)      \
 ({                                              \
-    *(typeof(addr))addr = value;                \
+    *addr = value;                              \
+})
+
+#define FGPU_COLOR_TRANSLATE_ADDR(ctx, addr)    \
+({                                              \
+    addr;                                       \
 })
 
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */

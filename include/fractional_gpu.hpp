@@ -71,8 +71,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
     int ret;                                                                \
     uint3 _lgridDim;                                                        \
     cudaStream_t *stream;                                                   \
-    dev_fctx.gridDim = _gridDim;                                            \
-    dev_fctx.blockDim = _blockDim;                                          \
+    fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx =  -1;                                               \
     ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
     if (ret >= 0) {                                                         \
@@ -89,8 +88,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
     int ret;                                                                \
     uint3 _lgridDim;                                                        \
     cudaStream_t *stream;                                                   \
-    dev_fctx.gridDim = _gridDim;                                            \
-    dev_fctx.blockDim = _blockDim;                                          \
+    fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx = -1;                                                \
     ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
     if (ret >= 0) {                                                         \
