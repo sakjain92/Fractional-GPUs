@@ -357,11 +357,11 @@ extern "C" uint bitonicSort(
     if (arrayLength <= SHARED_SIZE_LIMIT)
     {
         assert((batchSize * arrayLength) % SHARED_SIZE_LIMIT == 0);
-        FGPU_LAUNCH_KERNEL(grid, threads, 0, bitonicSortShared, d_DstKey, d_DstVal, d_SrcKey, d_SrcVal, arrayLength, dir);
+        FGPU_LAUNCH_KERNEL(bitonicSortShared, grid, threads, 0, d_DstKey, d_DstVal, d_SrcKey, d_SrcVal, arrayLength, dir);
     }
     else
     {
-	    FGPU_LAUNCH_KERNEL(grid, threads, 0, bitonicSortShared1, d_DstKey, d_DstVal, d_SrcKey, d_SrcVal);
+	    FGPU_LAUNCH_KERNEL(bitonicSortShared1, grid, threads, 0, d_DstKey, d_DstVal, d_SrcKey, d_SrcVal);
 
         for (uint size = 2 * SHARED_SIZE_LIMIT; size <= arrayLength; size <<= 1)
             for (unsigned stride = size / 2; stride > 0; stride >>= 1)
@@ -369,13 +369,13 @@ extern "C" uint bitonicSort(
                 {
 		            threads.x = 256;
 		            grid.x = (batchSize * arrayLength) / 512;
-                    FGPU_LAUNCH_KERNEL(grid, threads, 0, bitonicMergeGlobal, d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, stride, dir);
+                    FGPU_LAUNCH_KERNEL(bitonicMergeGlobal, grid, threads, 0, d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, stride, dir);
                 }
                 else
                 {
                     threads.x = threadCount;
 		            grid.x = blockCount;
-		            FGPU_LAUNCH_KERNEL(grid, threads, 0, bitonicMergeShared, d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, dir);
+		            FGPU_LAUNCH_KERNEL(bitonicMergeShared, grid, threads, 0, d_DstKey, d_DstVal, d_DstKey, d_DstVal, arrayLength, size, dir);
                     break;
                 }
     }

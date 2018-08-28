@@ -56,7 +56,7 @@ int main()
     if (ret < 0)
         return ret;
 
-    ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, info, 100);
+    ret = FGPU_LAUNCH_KERNEL(info, grid, threads, 0, 100);
     if (ret < 0)
         return ret;
 
@@ -67,9 +67,9 @@ int main()
 /*
     for (int i = 0; i < 100; i++) {
         start = dtime_usec(0);
-        ret = FGPU_LAUNCH_VOID_KERNEL(0, grid, threads, 0, dummy);
+        ret = FGPU_LAUNCH__KERNEL_VOID(dummy, grid, threads, 0);
         assert(ret);
-	gpuErrAssert(fgpu_color_stream_synchronize(0));
+	    gpuErrAssert(fgpu_color_stream_synchronize(0));
         printf("Dummy Time:%f\n", dtime_usec(start));
     }
 */
@@ -90,7 +90,7 @@ int main()
 
     for (int i = 0; i < 10000; i++) {
         start = dtime_usec(0);
-        ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, simple, d_out);
+        ret = FGPU_LAUNCH_KERNEL(simple, grid, threads, 0, d_out);
         assert(ret == 0);
     	ret = fgpu_color_stream_synchronize();
     	assert(ret == 0);

@@ -224,11 +224,11 @@ int matrixMultiply(void)
 
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<16>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<32>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;
@@ -248,11 +248,11 @@ int matrixMultiply(void)
         double sub_start = dtime_usec(0);
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<16>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<32>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;
@@ -283,11 +283,11 @@ int matrixMultiply(void)
 
         if (block_size == 16)
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<16>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<16>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         else
         {
-            ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, matrixMulCUDA<32>, d_C, d_A, d_B, dimsA.x, dimsB.x);
+            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<32>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
         }
         if (ret < 0)
             return ret;

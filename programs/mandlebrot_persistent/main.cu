@@ -81,7 +81,7 @@ int runCUDA(int width, int height)
   dim3 gridDim(width / blockDim.x, height / blockDim.y, 1);
   
   start = dtime_usec(0);
-  FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, device_image, width, height);
+  FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, device_image, width, height);
   ret = fgpu_color_stream_synchronize();
   if (ret < 0)
       return ret;
@@ -93,7 +93,7 @@ int runCUDA(int width, int height)
   start = dtime_usec(0);
   for (int i = 0; i < nIter; i++) {
     start = dtime_usec(0);
-    FGPU_LAUNCH_KERNEL(gridDim, blockDim, 0, render, device_image, width, height);
+    FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, device_image, width, height);
     ret = fgpu_color_stream_synchronize();
     if (ret < 0)
         return ret;

@@ -114,7 +114,7 @@ int runTest(void)
     if (ret < 0)
         return ret;
 
-    ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, vector_add, d_a, d_b, d_c_gpu, N );
+    ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
     if (ret < 0)
         return ret;
 
@@ -149,7 +149,7 @@ int runTest(void)
     // Warmup
     for (int i = 0; i < nIter; i++) {
         start = dtime_usec(0);
-        ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, vector_add, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
         if (ret < 0)
             return ret;
 
@@ -165,7 +165,7 @@ int runTest(void)
     pstats_init(&stats);
     for (int i = 0; i < nIter; i++) {
         double sub_start = dtime_usec(0);
-        ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, vector_add, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
         if (ret < 0)
             return ret;
 
@@ -179,7 +179,7 @@ int runTest(void)
 
     // Ending
     for (int i = 0; i < nIter; i++) {
-        ret = FGPU_LAUNCH_KERNEL(grid, threads, 0, vector_add, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
         if (ret < 0)
             return ret;
 

@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     return ret;
 
   // Functional test
-  FGPU_LAUNCH_KERNEL(grid, threads, 0, saxpy, N, 2.0f, d_x, d_y);
+  FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);
   
   ret = fgpu_memory_copy_async(y, h_y, N*sizeof(float), FGPU_COPY_GPU_TO_CPU);
   if (ret < 0)
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
     start = dtime_usec(0);
     
-    FGPU_LAUNCH_KERNEL(grid, threads, 0, saxpy, N, 2.0f, d_x, d_y);
+    FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);
     cudaDeviceSynchronize();
 
     total = dtime_usec(start);
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
   for (int j = 0; j < nIter; j++)
   {
     double sub_start = dtime_usec(0);
-    FGPU_LAUNCH_KERNEL(grid, threads, 0, saxpy, N, 2.0f, d_x, d_y);    
+    FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);    
     cudaDeviceSynchronize();
     pstats_add_observation(&stats, dtime_usec(sub_start));
   }
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
   // Termination - To allow other color's application to overlap in time
   for (int j = 0; j < nIter; j++)
   {
-    FGPU_LAUNCH_KERNEL(grid, threads, 0, saxpy, N, 2.0f, d_x, d_y);    
+    FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);    
     cudaDeviceSynchronize();
   }
     

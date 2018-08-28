@@ -65,7 +65,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type);
 
 /* Macro to launch kernel - Returns a tag - Negative if error */
-#define FGPU_LAUNCH_KERNEL(_gridDim, _blockDim, sharedMem, func, ...)       \
+#define FGPU_LAUNCH_KERNEL(func, _gridDim, _blockDim, sharedMem, ...)       \
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
     int ret;                                                                \
@@ -82,7 +82,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
     ret;                                                                    \
 })
 
-#define FGPU_LAUNCH_VOID_KERNEL(_gridDim, _blockDim, sharedMem, func)       \
+#define FGPU_LAUNCH_KERNEL_VOID(func, _gridDim, _blockDim, sharedMem)       \
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
     int ret;                                                                \
