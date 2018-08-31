@@ -640,6 +640,11 @@ size_t fgpu_get_env_color_mem_size(void)
     return (size_t)atoll(tmp);
 }
 
+bool fgpu_is_init_complete(void)
+{
+    return is_initialized();
+}
+
 int fgpu_set_color_prop(int color, size_t mem_size)
 {
     if (!is_initialized()) {
@@ -668,6 +673,13 @@ int fgpu_set_color_prop(int color, size_t mem_size)
     return 0;
 }
 
+bool fgpu_is_color_prop_set(void)
+{
+    if (!is_initialized())
+        return false;
+
+    return is_color_set();
+}
 
 /* Wait for last launched kernel to be completely started */
 static void wait_for_last_start(void)
