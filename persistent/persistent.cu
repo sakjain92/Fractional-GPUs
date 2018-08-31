@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -34,6 +35,14 @@
 /* TODO: Use CudaIPC to share device memory pointer to be safe */
 
 #define FGPU_INVALID_COLOR -1
+
+/* Name of environment variables to check for color/size of colored mem */
+#define FGPU_COLOR_ENV_NAME             "FGPU_COLOR_ENV"
+#define FGPU_COLOR_MEM_SIZE_ENV_NAME    "FGPU_COLOR_MEM_SIZE_ENV"
+
+/* Default values of color/size of colored mem */
+#define FGPU_DEFAULT_COLOR              0
+#define FGPU_DEFAULT_COLOR_MEM_SIZE     (1024 * 1024 * 1024) /* 1 GB */
 
 /* List of supported GPUs */
 static std::string supported_gpus[] = {"GeForce GTX 1070"};
@@ -611,6 +620,26 @@ static bool is_color_set(void)
     return g_color != FGPU_INVALID_COLOR;
 }
 
+/* Returns either the color set via env variable or default value */
+int fgpu_get_env_color(void)
+{
+    const char* tmp = getenv(FGPU_COLOR_ENV_NAME);
+    if (!tmp)
+        return FGPU_DEFAULT_COLOR;
+
+    return atoi(tmp);
+}
+
+/* returns either the size of colored mem set via env variable or default value */
+size_t fgpu_get_env_color_mem_size(void)
+{
+    const char* tmp = getenv(FGPU_COLOR_MEM_SIZE_ENV_NAME);
+    if (!tmp)
+        return FGPU_DEFAULT_COLOR_MEM_SIZE;
+
+    return (size_t)atoll(tmp);
+}
+
 int fgpu_set_color_prop(int color, size_t mem_size)
 {
     if (!is_initialized()) {
@@ -836,5 +865,20 @@ int fgpu_memory_prefetch_from_device_async(void *p, size_t len)
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type)
 {
+#ifndef FGPU_MEM_COLORING_ENABLED
+    int ret;
+
+    switch (type) {
+    case FGPU_COPY_CPU_TO_GPU:
+        ret = gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToDevice, color_stream));
+    case FGPU_COPY_GPU_TO_CPU:
+        ret = gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToHost, color_stream));
+    default:
+        ret = -1;
+    }   
+
+    return ret;
+#else
     return fgpu_memory_copy_async_internal(dst, src, count, type, color_stream);
+#endif
 }

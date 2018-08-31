@@ -2,6 +2,7 @@
 #ifndef __FRACTIONAL_GPU_CUH__
 #define __FRACTIONAL_GPU_CUH__
 
+#include <fgpu_internal_common.hpp>
 #include <fractional_gpu.hpp>
 
 

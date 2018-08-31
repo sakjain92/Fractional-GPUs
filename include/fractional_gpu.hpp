@@ -44,6 +44,8 @@ int fgpu_server_init(void);
 void fgpu_server_deinit(void);
 int fgpu_init(void);
 void fgpu_deinit(void);
+int fgpu_get_env_color(void);
+size_t fgpu_get_env_color_mem_size(void);
 int fgpu_set_color_prop(int color, size_t mem_size);
 int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream);
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);

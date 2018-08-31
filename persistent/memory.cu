@@ -452,6 +452,17 @@ int fgpu_memory_free(void *p)
     return 0;
 }
 
+/* Useful for only reverse engineering */
+void *fgpu_memory_get_phy_address(void *addr)
+{
+    if (!g_memory_ctx.base_phy_addr)
+        return NULL;
+
+    return (void *)((uintptr_t)g_memory_ctx.base_phy_addr + 
+            (uintptr_t)addr - (uintptr_t)g_memory_ctx.base_addr);
+}
+
+
 #else /* FGPU_MEM_COLORING_ENABLED */
 
 int fgpu_memory_allocate(void **p, size_t len)
@@ -462,6 +473,11 @@ int fgpu_memory_allocate(void **p, size_t len)
 int fgpu_memory_free(void *p)
 {
     return gpuErrCheck(cudaFree(p));
+}
+
+void *fgpu_memory_get_phy_address(void *addr)
+{
+    return NULL;
 }
 
 #endif /* FGPU_MEM_COLORING_ENABLED */
@@ -560,7 +576,6 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
     }   
 }
 
-
 #else /* FGPU_USER_MEM_COLORING_ENABLED */
 
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
@@ -581,13 +596,3 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
     }   
 }
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */
-
-
-void *fgpu_memory_get_phy_address(void *addr)
-{
-    if (!g_memory_ctx.base_phy_addr)
-        return NULL;
-
-    return (void *)((uintptr_t)g_memory_ctx.base_phy_addr + 
-            (uintptr_t)addr - (uintptr_t)g_memory_ctx.base_addr);
-}
