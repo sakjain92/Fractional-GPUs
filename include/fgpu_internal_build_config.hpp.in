@@ -1,0 +1,10 @@
+#ifndef __FGPU_INTERNAL_BUILD_CONFIG_HPP__
+#define __FGPU_INTERNAL_BUILD_CONFIG_HPP__
+
+/* Variables definition exported from CMake */
+#cmakedefine FGPU_COMP_COLORING_ENABLE
+#cmakedefine FGPU_MEM_COLORING_ENABLED
+#cmakedefine FGPU_USER_MEM_COLORING_ENABLED
+#cmakedefine FGPU_TEST_MEM_COLORING_ENABLED
+
+#endif // __FGPU_INTERNAL_BUILD_CONFIG_HPP__

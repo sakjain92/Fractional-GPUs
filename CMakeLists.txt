@@ -5,21 +5,13 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
 
+option(FGPU_COMP_COLORING_ENABLE "Enable computational coloring" ON)
 option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
 option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
 
-if(FGPU_MEM_COLORING_ENABLED)
-    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_MEM_COLORING_ENABLED")
-endif()
-
-if(FGPU_USER_MEM_COLORING_ENABLED)
-    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_USER_MEM_COLORING_ENABLED")
-endif()
-
-if(FGPU_TEST_MEM_COLORING_ENABLED)
-    string(APPEND CMAKE_CUDA_FLAGS " -DFGPU_TEST_MEM_COLORING_ENABLED")
-endif()
+configure_file(include/fgpu_internal_build_config.hpp.in            
+    "${PROJECT_SOURCE_DIR}/include/fgpu_internal_build_config.hpp")
 
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -31,7 +23,6 @@ include_directories(include)
 include_directories(programs/cuda_samples/common/inc)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/)
-include_directories(reverse_engineering/)
 
 string(APPEND CMAKE_CUDA_FLAGS " -m 64 -arch=${TARGET}")
 

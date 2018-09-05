@@ -3,6 +3,7 @@
 #define __FGPU_INTERNAL_CONFIG_HPP__
 
 #include <g_nvconfig.h>
+#include <fgpu_internal_build_config.hpp>
 
 /* Cache line size on GPU. Needed for performance improvement. */
 #define FGPU_DEVICE_CACHELINE_SIZE      32
@@ -21,6 +22,11 @@
 
 /* Can be set to -1 if no preference. Preference is like a hint */
 #define FGPU_PREFERRED_NUM_COLORS	2
+
+/* For memory coloring, computational coloring is a must */
+#if defined(FGPU_MEM_COLORING_ENABLED) && !defined(FGPU_COMP_COLORING_ENABLE)
+#error "FGPU_COMP_COLORING_ENABLE not defined"
+#endif
 
 /* When userspace coloring is enabled, coloring must be enabled */
 #if defined(FGPU_USER_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED) || \

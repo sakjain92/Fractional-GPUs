@@ -5,6 +5,7 @@
 #include <fgpu_internal_common.hpp>
 #include <fractional_gpu.hpp>
 
+#ifdef FGPU_COMP_COLORING_ENABLE
 
 /* Macro to define (modified) kernels (with no args) */
 #define FGPU_DEFINE_VOID_KERNEL(func)                                       \
@@ -99,6 +100,27 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
     for (; fgpu_device_get_blockIdx(&dev_fctx, &_blockIdx) == 0;)
 
 #define FGPU_FOR_EACH_END
+
+#else /* FGPU_COMP_COLORING_ENABLE */
+
+#define FGPU_DEFINE_VOID_KERNEL(func)                                       \
+    __global__ void func(void)
+
+#define FGPU_DEFINE_KERNEL(func, ...)                                       \
+    __global__ void func(__VA_ARGS__)
+
+#define FGPU_DEVICE_INIT()                                                  \
+({                                                                          \
+    (fgpu_dev_ctx_t *)NULL;                                                 \
+ })
+
+#define FGPU_GET_GRIDDIM(ctx)       (gridDim)
+
+#define FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx)   _blockIdx = blockIdx;
+
+#define FGPU_FOR_EACH_END
+
+#endif /* FGPU_COMP_COLORING_ENABLE */
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
 

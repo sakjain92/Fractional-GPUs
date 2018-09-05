@@ -68,6 +68,8 @@ int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type);
 
+#ifdef FGPU_COMP_COLORING_ENABLE
+
 /* Macro to launch kernel - Returns a tag - Negative if error */
 #define FGPU_LAUNCH_KERNEL(func, _gridDim, _blockDim, sharedMem, ...)       \
 ({                                                                          \
@@ -104,5 +106,21 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
     ret;                                                                    \
 })
 
+#else /* FGPU_COMP_COLORING_ENABLE */
+
+/* Macro to launch kernel - Returns a tag - Negative if error */
+#define FGPU_LAUNCH_KERNEL(func, _gridDim, _blockDim, sharedMem, ...)       \
+({                                                                          \
+    func<<<_gridDim, _blockDim, sharedMem>>>(__VA_ARGS__);                  \
+    0;                                                                      \
+ })
+
+#define FGPU_LAUNCH_KERNEL_VOID(func, _gridDim, _blockDim, sharedMem)       \
+({                                                                          \
+    func<<<_gridDim, _blockDim, sharedMem>>>(void);                         \
+    0;                                                                      \
+})
+
+#endif /* FGPU_COMP_COLORING_ENABLE */
 
 #endif /* FRACTIONAL_GPU_HPP */
