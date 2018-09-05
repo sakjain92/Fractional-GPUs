@@ -5,6 +5,7 @@
 #include <fgpu_internal_common.hpp>
 #include <fractional_gpu.hpp>
 
+/******************************************************************************/
 #ifdef FGPU_COMP_COLORING_ENABLE
 
 /* Macro to define (modified) kernels (with no args) */
@@ -86,6 +87,46 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, dim3 *_blockIdx)
     return 0;
 }
 
+/* To reduce number of atomicAdd() calls, collect multiple blocks together */
+__device__ __forceinline__
+int fgpu_device_get_multi_blockIdx(fgpu_dev_ctx_t *dev_ctx, int *_blockIdx1D, int count)
+{
+    __shared__ int lblockIdx1D;
+    int got;
+
+    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+        lblockIdx1D = atomicAdd(&dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index], count);
+    }
+    __syncthreads();
+
+    got = dev_ctx->num_blocks - lblockIdx1D;
+    if (got <= 0)
+        return -1;
+
+    *_blockIdx1D = lblockIdx1D;
+
+    return count < got ? count : got;
+}
+
+__device__ __forceinline__
+dim3 fgpu_device_get_blockIdx3D(fgpu_dev_ctx_t *dev_ctx, int _blockIdx1D)
+{
+    uint blocks_left;
+    uint num2Dblocks;
+    uint x, y, z;
+    dim3 _blockIdx3D;
+
+    num2Dblocks = dev_ctx->gridDim.x * dev_ctx->gridDim.y;
+    z = _blockIdx1D / (num2Dblocks);
+    blocks_left = _blockIdx1D - (z * num2Dblocks);
+    y = blocks_left / dev_ctx->gridDim.x;
+    x = blocks_left - y * dev_ctx->gridDim.x;
+    _blockIdx3D.x = x;
+    _blockIdx3D.y = y;
+    _blockIdx3D.z = z;
+    return _blockIdx3D;
+}
+
 #define FGPU_DEVICE_INIT()                                                  \
 ({                                                                          \
     if (fgpu_device_init(&dev_fctx) < 0)                                    \
@@ -100,6 +141,13 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, dim3 *_blockIdx)
     for (; fgpu_device_get_blockIdx(&dev_fctx, &_blockIdx) == 0;)
 
 #define FGPU_FOR_EACH_END
+
+#define FGPU_FOR_EACH_DEVICE_MULTIBLOCK(_blockIdx, count)                   \
+    for (int tcount = count, _blockIdx1D; (tcount = fgpu_device_get_multi_blockIdx(&dev_fctx, &_blockIdx1D, count)) > 0 ;) { \
+        for (int i = 0; i < tcount; i++) {                                  \
+            _blockIdx = fgpu_device_get_blockIdx3D(&dev_fctx, _blockIdx1D + i);
+
+#define FGPU_FOR_EACH_MULTI_END     }}
 
 #else /* FGPU_COMP_COLORING_ENABLE */
 
@@ -120,7 +168,14 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, dim3 *_blockIdx)
 
 #define FGPU_FOR_EACH_END
 
+#define FGPU_FOR_EACH_DEVICE_MULTIBLOCK(_blockIdx, count)                   \
+        FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx)
+
+#define FGPU_FOR_EACH_MULTI_END     FGPU_FOR_EACH_END
+
 #endif /* FGPU_COMP_COLORING_ENABLE */
+
+/*****************************************************************************/
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
 
