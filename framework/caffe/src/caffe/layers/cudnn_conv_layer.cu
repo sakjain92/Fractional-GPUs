@@ -5,7 +5,9 @@
 
 namespace caffe {
 
+#ifndef USE_FGPU
 __global__ void sync_conv_groups() { }
+#endif
 
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
@@ -40,8 +42,12 @@ void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
 
     // Synchronize the work across groups, each of which went into its own
     // stream, by launching an empty kernel into the default (null) stream.
+#ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
     sync_conv_groups<<<1, 1>>>();
+#else
+    FGPU_CHECK(fgpu_color_stream_synchronize());
+#endif
   }
 }
 
@@ -107,8 +113,12 @@ void CuDNNConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 
     // Synchronize the work across groups, each of which went into its own
     // stream, by launching an empty kernel into the default (null) stream.
+#ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
     sync_conv_groups<<<1, 1>>>();
+#else
+    FGPU_CHECK(fgpu_color_stream_synchronize());
+#endif  
   }
 }
 

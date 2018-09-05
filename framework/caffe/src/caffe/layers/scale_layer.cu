@@ -4,8 +4,13 @@
 #include "caffe/layers/scale_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void ScaleForward(const int n, const Dtype* in,
     const Dtype* scale, const int scale_dim, const int inner_dim,
@@ -26,6 +31,55 @@ __global__ void ScaleBiasForward(const int n, const Dtype* in,
   }
 }
 
+#else
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(ScaleForward, const int n, const Dtype* in,
+    const Dtype* scale, const int scale_dim, const int inner_dim,
+    Dtype* out) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
+      const int scale_index = (index / inner_dim) % scale_dim;
+      FGPU_COLOR_STORE(ctx, &out[index],
+              FGPU_COLOR_LOAD(ctx, &in[index]) * 
+              FGPU_COLOR_LOAD(ctx, &scale[scale_index]));
+    }
+
+  }
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(ScaleBiasForward, const int n, const Dtype* in,
+    const Dtype* scale, const Dtype* bias,
+    const int scale_dim, const int inner_dim, Dtype* out) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
+      const int scale_index = (index / inner_dim) % scale_dim;
+      FGPU_COLOR_STORE(ctx, &out[index],
+              FGPU_COLOR_LOAD(ctx, &in[index]) * 
+              FGPU_COLOR_LOAD(ctx, &scale[scale_index]) + 
+              FGPU_COLOR_LOAD(ctx, &bias[scale_index]));
+    }
+
+  }
+}
+
+#endif
+
 template <typename Dtype>
 void ScaleLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
@@ -44,14 +98,27 @@ void ScaleLayer<Dtype>::Forward_gpu(
   Dtype* top_data = top[0]->mutable_gpu_data();
   if (bias_layer_) {
     const Dtype* bias_data = this->blobs_[bias_param_id_]->gpu_data();
+#ifndef USE_FGPU
     ScaleBiasForward<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, bottom_data, scale_data, bias_data, scale_dim_, inner_dim_,
         top_data);
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(ScaleBiasForward<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+        count, bottom_data, scale_data, bias_data, scale_dim_, inner_dim_,
+        top_data));
+#endif
   } else {
+#ifndef USE_FGPU
     ScaleForward<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, bottom_data, scale_data, scale_dim_, inner_dim_, top_data);
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(ScaleForward<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+        count, bottom_data, scale_data, scale_dim_, inner_dim_, top_data));
+#endif
   }
 }
 
@@ -124,9 +191,16 @@ void ScaleLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const Dtype* top_diff = top[0]->gpu_diff();
     const Dtype* scale_data = scale->gpu_data();
     Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
+#ifndef USE_FGPU
     ScaleForward<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, top_diff, scale_data, scale_dim_, inner_dim_, bottom_diff);
+#else
+   FGPU_CHECK(FGPU_LAUNCH_KERNEL(ScaleForward<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0, 
+        count, top_diff, scale_data, scale_dim_, inner_dim_, bottom_diff));
+
+#endif
   }
 }
 

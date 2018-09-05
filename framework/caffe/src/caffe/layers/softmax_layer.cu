@@ -7,7 +7,13 @@
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
+
+#ifndef USE_FGPU
 
 template <typename Dtype>
 __global__ void kernel_channel_max(const int num, const int channels,
@@ -82,6 +88,147 @@ __global__ void kernel_channel_dot(const int num, const int channels,
   }
 }
 
+#else // USE_FGPU
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_channel_max, const int num, const int channels,
+    const int spatial_dim, const Dtype* data, Dtype* out) {
+
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, num * spatial_dim, _blockIdx, _gridDim) {
+      int n = index / spatial_dim;
+      int s = index % spatial_dim;
+      Dtype maxval = -FLT_MAX;
+      for (int c = 0; c < channels; ++c) {
+        maxval = max(FGPU_COLOR_LOAD(ctx, &data[(n * channels + c) * spatial_dim + s]), maxval);
+      }
+      FGPU_COLOR_STORE(ctx, &out[index], maxval);
+    }
+
+  }
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_channel_subtract, const int count,
+    const int num, const int channels,
+    const int spatial_dim, const Dtype* channel_max, Dtype* data) {
+
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, count, _blockIdx, _gridDim) {
+      int n = index / channels / spatial_dim;
+      int s = index % spatial_dim;
+      Dtype *data_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &data[index]);
+      *data_addr -= FGPU_COLOR_LOAD(ctx, &channel_max[n * spatial_dim + s]);
+    }
+
+  }
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_exp, const int count, const Dtype* data, Dtype* out) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, count, _blockIdx, _gridDim) {
+      FGPU_COLOR_STORE(ctx, &out[index], exp(FGPU_COLOR_LOAD(ctx, &data[index])));
+    }
+
+  } 
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_channel_sum, const int num, const int channels,
+    const int spatial_dim, const Dtype* data, Dtype* channel_sum) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, num * spatial_dim, _blockIdx, _gridDim) {
+      int n = index / spatial_dim;
+      int s = index % spatial_dim;
+      Dtype sum = 0;
+      for (int c = 0; c < channels; ++c) {
+        sum += FGPU_COLOR_LOAD(ctx, &data[(n * channels + c) * spatial_dim + s]);
+      }
+      FGPU_COLOR_STORE(ctx, &channel_sum[index], sum);
+    }
+
+  } 
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_channel_div, const int count,
+    const int num, const int channels,
+    const int spatial_dim, const Dtype* channel_sum, Dtype* data) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, count, _blockIdx, _gridDim) {
+      int n = index / channels / spatial_dim;
+      int s = index % spatial_dim;
+      Dtype *data_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &data[index]);
+      *data_addr /= FGPU_COLOR_LOAD(ctx, &channel_sum[n * spatial_dim + s]);
+    }
+
+  }
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(kernel_channel_dot, const int num, const int channels,
+    const int spatial_dim, const Dtype* data_1, const Dtype* data_2,
+    Dtype* channel_dot) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, num * spatial_dim, _blockIdx, _gridDim) {
+      int n = index / spatial_dim;
+      int s = index % spatial_dim;
+      Dtype dot = 0;
+      for (int c = 0; c < channels; ++c) {
+        dot += (FGPU_COLOR_LOAD(ctx, &data_1[(n * channels + c) * spatial_dim + s])
+            * FGPU_COLOR_LOAD(ctx, &data_2[(n * channels + c) * spatial_dim + s]));
+      }
+      FGPU_COLOR_STORE(ct, &channel_dot[index],  dot);
+    }
+
+  }
+}
+
+#endif // USE_FGPU
+
 template <typename Dtype>
 void SoftmaxLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
@@ -94,6 +241,7 @@ void SoftmaxLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   // We need to subtract the max to avoid numerical issues, compute the exp,
   // and then normalize.
   // compute max
+#ifndef USE_FGPU
   // NOLINT_NEXT_LINE(whitespace/operators)
   kernel_channel_max<Dtype><<<CAFFE_GET_BLOCKS(outer_num_ * inner_num_),
       CAFFE_CUDA_NUM_THREADS>>>(outer_num_, channels, inner_num_, top_data,
@@ -117,6 +265,39 @@ void SoftmaxLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   kernel_channel_div<Dtype><<<CAFFE_GET_BLOCKS(count),
       CAFFE_CUDA_NUM_THREADS>>>(count, outer_num_, channels, inner_num_,
       scale_data, top_data);
+
+#else // USE_FGPU
+
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_max<Dtype>,
+      CAFFE_GET_BLOCKS(outer_num_ * inner_num_), CAFFE_CUDA_NUM_THREADS, 0,
+      outer_num_, channels, inner_num_, top_data,
+      scale_data));
+  // subtract
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_subtract<Dtype>,
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, outer_num_, channels, inner_num_,
+      scale_data, top_data));
+  // exponentiate
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_exp<Dtype>, 
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, top_data, top_data));
+  // sum after exp
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_sum<Dtype>,
+      CAFFE_GET_BLOCKS(outer_num_ * inner_num_), CAFFE_CUDA_NUM_THREADS, 0,
+      outer_num_, channels, inner_num_, top_data,
+      scale_data));
+  // divide
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_div<Dtype>,
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, outer_num_, channels, inner_num_,
+      scale_data, top_data));
+
+#endif // USE_FGPU
 }
 
 template <typename Dtype>
@@ -130,6 +311,7 @@ void SoftmaxLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   int channels = top[0]->shape(softmax_axis_);
   caffe_copy(count, top_diff, bottom_diff);
   // Compute inner1d(top_diff, top_data) and subtract them from the bottom diff.
+#ifndef USE_FGPU
   // NOLINT_NEXT_LINE(whitespace/operators)
   kernel_channel_dot<Dtype><<<CAFFE_GET_BLOCKS(outer_num_ * inner_num_),
       CAFFE_CUDA_NUM_THREADS>>>(outer_num_, channels, inner_num_,
@@ -138,6 +320,19 @@ void SoftmaxLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   kernel_channel_subtract<Dtype><<<CAFFE_GET_BLOCKS(count),
       CAFFE_CUDA_NUM_THREADS>>>(count, outer_num_, channels, inner_num_,
       scale_data, bottom_diff);
+#else
+    // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_dot<Dtype>,
+      CAFFE_GET_BLOCKS(outer_num_ * inner_num_), CAFFE_CUDA_NUM_THREADS, 0,
+      outer_num_, channels, inner_num_,
+      top_diff, top_data, scale_data));
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(kernel_channel_subtract<Dtype>,
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, outer_num_, channels, inner_num_,
+      scale_data, bottom_diff));
+
+#endif
   // elementwise multiplication
   caffe_gpu_mul<Dtype>(top[0]->count(), bottom_diff, top_data, bottom_diff);
 }

@@ -3,9 +3,13 @@
 #include "caffe/layers/accuracy_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
 
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void AccuracyForwardGPU(const int nthreads,
           const Dtype* bottom_data, const Dtype* label, Dtype* acc,
@@ -63,6 +67,92 @@ __global__ void AccuracyForwardWithPerClassGPU(const int nthreads,
   }
 }
 
+#else // USE_FGPU
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(AccuracyForwardGPU, const int nthreads,
+          const Dtype* bottom_data, const Dtype* label, Dtype* acc,
+          const int num, const int dim, const int spatial_dim,
+          const int num_labels, const int top_k,
+          const bool has_ignore_label_, const int ignore_label_,
+          Dtype* counts) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, nthreads, _blockIdx, _gridDim) {
+      const int n = index / spatial_dim;
+      const int s = index % spatial_dim;
+      const int label_value = static_cast<int>(FGPU_COLOR_LOAD(ctx, &label[n * spatial_dim + s]));
+      const Dtype prob_of_true_class = FGPU_COLOR_LOAD(ctx, &bottom_data[n * dim
+                                                   + label_value * spatial_dim
+                                                   + s]);
+      int num_better_predictions = -1;  // true_class also counts as "better"
+      Dtype *counts_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &counts[index]);
+      Dtype *acc_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &acc[index]);
+
+      if (has_ignore_label_ && label_value == ignore_label_) {
+        *acc_addr = 0;
+        *counts_addr = 0;
+      } else {
+        for (int k = 0; k < num_labels & num_better_predictions < top_k; k++) {
+          num_better_predictions +=
+            (FGPU_COLOR_LOAD(ctx, &bottom_data[n * dim + k * spatial_dim + s]) >= prob_of_true_class);
+        }
+        *acc_addr = (num_better_predictions < top_k);
+        *counts_addr = 1;
+      }
+    }
+
+  } 
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(AccuracyForwardWithPerClassGPU, const int nthreads,
+          const Dtype* bottom_data, const Dtype* label,
+          Dtype* acc, Dtype* counts,
+          const int num, const int dim, const int spatial_dim,
+          const int num_labels, const int top_k,
+          const bool has_ignore_label_, const int ignore_label_) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, nthreads, _blockIdx, _gridDim) {
+      const int n = index / spatial_dim;
+      const int s = index % spatial_dim;
+      const int label_value = static_cast<int>(FGPU_COLOR_LOAD(ctx, &label[n * spatial_dim + s]));
+      const Dtype prob_of_true_class = FGPU_COLOR_LOAD(ctx, &bottom_data[n * dim
+                                                   + label_value * spatial_dim
+                                                   + s]);
+
+      if (has_ignore_label_ && label_value == ignore_label_) {
+        // nothing to be done.
+      } else {
+        int num_better_predictions = -1;  // true_class also counts as "better"
+        for (int k = 0; k < num_labels & num_better_predictions < top_k; k++) {
+          num_better_predictions +=
+            (FGPU_COLOR_LOAD(ctx, &bottom_data[n * dim + k * spatial_dim + s]) >= prob_of_true_class);
+        }
+
+        Dtype *acc_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &acc[label_value*nthreads + index]);
+        *acc_addr += (num_better_predictions < top_k);
+        FGPU_COLOR_STORE(ctx, &counts[label_value*nthreads + index], 1);
+      }
+    }
+
+  }
+}
+#endif
+
 template <typename Dtype>
 void AccuracyLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
@@ -80,11 +170,20 @@ void AccuracyLayer<Dtype>::Forward_gpu(
     // Similarly, this memory is never used elsewhere, and thus we can use it
     // to avoid having to allocate additional GPU memory.
     Dtype* counts = bottom[1]->mutable_gpu_diff();
+#ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
     AccuracyForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, bottom_data, bottom_label,
         acc_data, outer_num_, dim, inner_num_, num_labels, top_k_,
         has_ignore_label_, ignore_label_, counts);
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(AccuracyForwardGPU<Dtype>,
+        CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS, 0,
+        nthreads, bottom_data, bottom_label,
+        acc_data, outer_num_, dim, inner_num_, num_labels, top_k_,
+        has_ignore_label_, ignore_label_, counts));
+#endif
+
     Dtype acc;
     caffe_gpu_asum(nthreads, acc_data, &acc);
     Dtype valid_count;
@@ -104,11 +203,19 @@ void AccuracyLayer<Dtype>::Forward_gpu(
     caffe_gpu_set(bottom[0]->count(), Dtype(0), acc_data);
     caffe_gpu_set(nums_buffer_.count(), Dtype(0), counts);
 
+#ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
     AccuracyForwardWithPerClassGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, bottom_data, bottom_label,
         acc_data, counts, outer_num_, dim, inner_num_, num_labels, top_k_,
         has_ignore_label_, ignore_label_);
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(AccuracyForwardWithPerClassGPU<Dtype>,
+        CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS, 0,
+        nthreads, bottom_data, bottom_label,
+        acc_data, counts, outer_num_, dim, inner_num_, num_labels, top_k_,
+        has_ignore_label_, ignore_label_));
+#endif
 
     // get the overall accuracy
     Dtype acc;

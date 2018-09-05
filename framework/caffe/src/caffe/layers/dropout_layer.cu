@@ -3,8 +3,13 @@
 #include "caffe/layers/dropout_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void DropoutForward(const int n, const Dtype* in,
     const unsigned int* mask, const unsigned int threshold, const float scale,
@@ -13,6 +18,57 @@ __global__ void DropoutForward(const int n, const Dtype* in,
     out[index] = in[index] * (mask[index] > threshold) * scale;
   }
 }
+
+template <typename Dtype>
+__global__ void DropoutBackward(const int n, const Dtype* in_diff,
+    const unsigned int* mask, const unsigned int threshold, const float scale,
+    Dtype* out_diff) {
+  CUDA_KERNEL_LOOP(index, n) {
+    out_diff[index] = in_diff[index] * scale * (mask[index] > threshold);
+  }
+}
+#else
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(DropoutForward, const int n, const Dtype* in,
+    const unsigned int* mask, const unsigned int threshold, const float scale,
+    Dtype* out) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
+      FGPU_COLOR_STORE(ctx, &out[index],
+        FGPU_COLOR_LOAD(ctx, &in[index]) * (FGPU_COLOR_LOAD(ctx, &mask[index]) > threshold) * scale);
+    }
+
+  } 
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(DropoutBackward, const int n, const Dtype* in_diff,
+    const unsigned int* mask, const unsigned int threshold, const float scale,
+    Dtype* out_diff) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
+      FGPU_COLOR_STORE(ctx, &out_diff[index],
+              FGPU_COLOR_LOAD(ctx, &in_diff[index]) * 
+              scale * (FGPU_COLOR_LOAD(ctx, &mask[index]) > threshold));
+    }
+
+  } 
+}
+#endif
 
 template <typename Dtype>
 void DropoutLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
@@ -25,21 +81,18 @@ void DropoutLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
         static_cast<unsigned int*>(rand_vec_.mutable_gpu_data());
     caffe_gpu_rng_uniform(count, mask);
     // set thresholds
+#ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
     DropoutForward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, bottom_data, mask, uint_thres_, scale_, top_data);
     CUDA_POST_KERNEL_CHECK;
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(DropoutForward<Dtype>,
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+        count, bottom_data, mask, uint_thres_, scale_, top_data));
+#endif
   } else {
     caffe_copy(count, bottom_data, top_data);
-  }
-}
-
-template <typename Dtype>
-__global__ void DropoutBackward(const int n, const Dtype* in_diff,
-    const unsigned int* mask, const unsigned int threshold, const float scale,
-    Dtype* out_diff) {
-  CUDA_KERNEL_LOOP(index, n) {
-    out_diff[index] = in_diff[index] * scale * (mask[index] > threshold);
   }
 }
 
@@ -54,11 +107,18 @@ void DropoutLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       const unsigned int* mask =
           static_cast<const unsigned int*>(rand_vec_.gpu_data());
       const int count = bottom[0]->count();
+#ifndef USE_FGPU
       // NOLINT_NEXT_LINE(whitespace/operators)
       DropoutBackward<Dtype><<<CAFFE_GET_BLOCKS(count),
         CAFFE_CUDA_NUM_THREADS>>>(
           count, top_diff, mask, uint_thres_, scale_, bottom_diff);
       CUDA_POST_KERNEL_CHECK;
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(DropoutBackward<Dtype>,
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+          count, top_diff, mask, uint_thres_, scale_, bottom_diff));
+
+#endif
     } else {
       caffe_copy(top[0]->count(), top_diff, bottom_diff);
     }

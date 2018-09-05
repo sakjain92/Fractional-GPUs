@@ -74,6 +74,7 @@ TYPED_TEST(ContrastiveLossLayerTest, TestForward) {
           this->blob_bottom_data_j_->cpu_data()[i*channels+j];
       dist_sq += diff*diff;
     }
+
     if (this->blob_bottom_y_->cpu_data()[i]) {  // similar pairs
       loss += dist_sq;
     } else {

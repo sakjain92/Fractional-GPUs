@@ -4,7 +4,86 @@
 #include "caffe/layers/contrastive_loss_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
+
+#ifndef USE_FGPU
+template <typename Dtype>
+__global__ void CLLBackward(const int count, const int channels,
+    const Dtype margin, const bool legacy_version, const Dtype alpha,
+    const Dtype* y, const Dtype* diff, const Dtype* dist_sq,
+    Dtype *bottom_diff) {
+  CUDA_KERNEL_LOOP(i, count) {
+    int n = i / channels;  // the num index, to access y and dist_sq
+    if (static_cast<int>(y[n])) {  // similar pairs
+      bottom_diff[i] = alpha * diff[i];
+    } else {  // dissimilar pairs
+      Dtype mdist(0.0);
+      Dtype beta(0.0);
+      if (legacy_version) {
+        mdist = (margin - dist_sq[n]);
+        beta = -alpha;
+      } else {
+        Dtype dist = sqrt(dist_sq[n]);
+        mdist = (margin - dist);
+        beta = -alpha * mdist / (dist + Dtype(1e-4)) * diff[i];
+      }
+      if (mdist > 0.0) {
+        bottom_diff[i] = beta;
+      } else {
+        bottom_diff[i] = 0;
+      }
+    }
+  }
+}
+#else
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(CLLBackward, const int count, const int channels,
+    const Dtype margin, const bool legacy_version, const Dtype alpha,
+    const Dtype* y, const Dtype* diff, const Dtype* dist_sq,
+    Dtype *bottom_diff) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(i, count, _blockIdx, _gridDim) {
+      int n = i / channels;  // the num index, to access y and dist_sq
+
+      Dtype *bdiff_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &bottom_diff[i]);
+      const Dtype *diff_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &diff[i]);
+      const Dtype *dist_sq_addr = FGPU_COLOR_TRANSLATE_ADDR(ctx, &dist_sq[n]);
+
+      if (static_cast<int>(FGPU_COLOR_LOAD(ctx, &y[n]))) {  // similar pairs
+        *bdiff_addr = alpha * (*diff_addr);
+      } else {  // dissimilar pairs
+        Dtype mdist(0.0);
+        Dtype beta(0.0);
+        if (legacy_version) {
+          mdist = (margin - *dist_sq_addr);
+          beta = -alpha;
+        } else {
+          Dtype dist = sqrt(*dist_sq_addr);
+          mdist = (margin - dist);
+          beta = -alpha * mdist / (dist + Dtype(1e-4)) * (*diff_addr);
+        }
+        if (mdist > 0.0) {
+          *bdiff_addr = beta;
+        } else {
+          *bdiff_addr = 0;
+        }
+      }
+    }
+
+  } 
+}
+#endif
 
 template <typename Dtype>
 void ContrastiveLossLayer<Dtype>::Forward_gpu(
@@ -51,35 +130,6 @@ void ContrastiveLossLayer<Dtype>::Forward_gpu(
 }
 
 template <typename Dtype>
-__global__ void CLLBackward(const int count, const int channels,
-    const Dtype margin, const bool legacy_version, const Dtype alpha,
-    const Dtype* y, const Dtype* diff, const Dtype* dist_sq,
-    Dtype *bottom_diff) {
-  CUDA_KERNEL_LOOP(i, count) {
-    int n = i / channels;  // the num index, to access y and dist_sq
-    if (static_cast<int>(y[n])) {  // similar pairs
-      bottom_diff[i] = alpha * diff[i];
-    } else {  // dissimilar pairs
-      Dtype mdist(0.0);
-      Dtype beta(0.0);
-      if (legacy_version) {
-        mdist = (margin - dist_sq[n]);
-        beta = -alpha;
-      } else {
-        Dtype dist = sqrt(dist_sq[n]);
-        mdist = (margin - dist);
-        beta = -alpha * mdist / (dist + Dtype(1e-4)) * diff[i];
-      }
-      if (mdist > 0.0) {
-        bottom_diff[i] = beta;
-      } else {
-        bottom_diff[i] = 0;
-      }
-    }
-  }
-}
-
-template <typename Dtype>
 void ContrastiveLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
   for (int i = 0; i < 2; ++i) {
@@ -92,6 +142,7 @@ void ContrastiveLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       const Dtype sign = (i == 0) ? 1 : -1;
       const Dtype alpha = sign * top[0]->cpu_diff()[0] /
           static_cast<Dtype>(bottom[0]->num());
+#ifndef USE_FGPU
       // NOLINT_NEXT_LINE(whitespace/operators)
       CLLBackward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
           count, channels, margin, legacy_version, alpha,
@@ -100,6 +151,15 @@ void ContrastiveLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
           dist_sq_.gpu_data(),  // the cached square distance between a and b
           bottom[i]->mutable_gpu_diff());
       CUDA_POST_KERNEL_CHECK;
+#else
+      FGPU_CHECK(FGPU_LAUNCH_KERNEL(CLLBackward<Dtype>,
+          CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+          count, channels, margin, legacy_version, alpha,
+          bottom[2]->gpu_data(),  // pair similarity 0 or 1
+          diff_.gpu_data(),  // the cached eltwise difference between a and b
+          dist_sq_.gpu_data(),  // the cached square distance between a and b
+          bottom[i]->mutable_gpu_diff()));
+#endif
     }
   }
 }

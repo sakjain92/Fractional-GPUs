@@ -103,6 +103,7 @@ void* Caffe::RNG::generator() {
 }
 
 #else  // Normal GPU + CPU Caffe.
+#include <execinfo.h>
 
 Caffe::Caffe()
     : curand_generator_(NULL), random_generator_(),
@@ -116,6 +117,23 @@ Caffe::Caffe()
   if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
     LOG(ERROR) << "Cannot create Cublas handle. Cublas won't be available.";
   }
+#else
+  
+  if (!fgpu_is_init_complete()) {
+    if (fgpu_init() != 0) {
+      LOG(ERROR) << "Cannot initilize FGPU";
+    }
+  }
+  
+  if (!fgpu_is_color_prop_set()) {
+    int color = fgpu_get_env_color();
+    size_t mem_size = fgpu_get_env_color_mem_size();
+
+    if (fgpu_set_color_prop(color, mem_size) != 0) {
+        LOG(ERROR) << "Cannot set property of FGPU";
+    }
+  }
+
 #endif
 
   // Try to create a curand handler.
@@ -130,6 +148,8 @@ Caffe::Caffe()
 Caffe::~Caffe() {
 #ifndef USE_FGPU
   if (cublas_handle_) CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#else
+  //fgpu_deinit();
 #endif
   if (curand_generator_) {
     CURAND_CHECK(curandDestroyGenerator(curand_generator_));

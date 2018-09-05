@@ -4,8 +4,13 @@
 #include "caffe/layers/bias_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void BiasForward(const int n, const Dtype* in,
     const Dtype* bias, const int bias_dim, const int inner_dim,
@@ -15,6 +20,28 @@ __global__ void BiasForward(const int n, const Dtype* in,
     out[index] = in[index] + bias[bias_index];
   }
 }
+#else
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(BiasForward, const int n, const Dtype* in,
+    const Dtype* bias, const int bias_dim, const int inner_dim,
+    Dtype* out) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
+      const int bias_index = (index / inner_dim) % bias_dim;
+      FGPU_COLOR_STORE(ctx, &out[index],
+            FGPU_COLOR_LOAD(ctx, &in[index]) + FGPU_COLOR_LOAD(ctx, &bias[bias_index]));
+    }
+
+  }
+}
+#endif
 
 template <typename Dtype>
 void BiasLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
@@ -24,9 +51,15 @@ void BiasLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   const Dtype* bias_data =
       ((bottom.size() > 1) ? bottom[1] : this->blobs_[0].get())->gpu_data();
   Dtype* top_data = top[0]->mutable_gpu_data();
+#ifndef USE_FGPU
   BiasForward<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
       <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
       count, bottom_data, bias_data, bias_dim_, inner_dim_, top_data);
+#else
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(BiasForward<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, bottom_data, bias_data, bias_dim_, inner_dim_, top_data));
+#endif
 }
 
 template <typename Dtype>

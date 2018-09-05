@@ -4,8 +4,13 @@
 #include "caffe/layers/eltwise_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void MaxForward(const int nthreads, const Dtype* bottom_data_a,
     const Dtype* bottom_data_b, const int blob_idx, Dtype* top_data,
@@ -31,6 +36,80 @@ __global__ void MaxForward(const int nthreads, const Dtype* bottom_data_a,
 }
 
 template <typename Dtype>
+__global__ void MaxBackward(const int nthreads, const Dtype* top_diff,
+    const int blob_idx, const int* mask, Dtype* bottom_diff) {
+  CUDA_KERNEL_LOOP(index, nthreads) {
+    Dtype gradient = 0;
+    if (mask[index] == blob_idx) {
+      gradient += top_diff[index];
+    }
+    bottom_diff[index] = gradient;
+  }
+}
+
+#else // USE_FGPU
+
+template <typename Dtype>
+__global__
+FGPU_DEFINE_KERNEL(MaxForward ,const int nthreads, const Dtype* bottom_data_a,
+    const Dtype* bottom_data_b, const int blob_idx, Dtype* top_data,
+    int* mask) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, nthreads, _blockIdx, _gridDim) {
+      Dtype maxval = -FLT_MAX;
+      Dtype bdata_a = FGPU_COLOR_LOAD(ctx, &bottom_data_a[index]);
+      Dtype bdata_b = FGPU_COLOR_LOAD(ctx, &bottom_data_b[index]);
+
+      int maxidx = -1;
+      if (bdata_a > bdata_b) {
+        // only update for very first bottom_data blob (blob_idx == 0)
+        if (blob_idx == 0) {
+          maxval = bdata_a;
+          maxidx = blob_idx;
+          FGPU_COLOR_STORE(ctx, &top_data[index], maxval);
+          FGPU_COLOR_STORE(ctx, &mask[index], maxidx);
+        }
+      } else {
+        maxval = bdata_b;
+        maxidx = blob_idx + 1;
+        FGPU_COLOR_STORE(ctx, &top_data[index], maxval);
+        FGPU_COLOR_STORE(ctx, &mask[index], maxidx);
+      }
+    }
+  } 
+}
+
+template <typename Dtype>
+__global__
+FGPU_DEFINE_KERNEL(MaxBackward, const int nthreads, const Dtype* top_diff,
+    const int blob_idx, const int* mask, Dtype* bottom_diff) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+    CUDA_KERNEL_LOOP(index, nthreads, _blockIdx, _gridDim) {
+      Dtype gradient = 0;
+      if (FGPU_COLOR_LOAD(ctx, &mask[index]) == blob_idx) {
+        gradient += FGPU_COLOR_LOAD(ctx, &top_diff[index]);
+      }
+      FGPU_COLOR_STORE(ctx, &bottom_diff[index], gradient);
+    }
+  } 
+}
+
+#endif // USE_FGPU
+
+template <typename Dtype>
 void EltwiseLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   int* mask = NULL;
@@ -54,30 +133,31 @@ void EltwiseLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   case EltwiseParameter_EltwiseOp_MAX:
     mask = max_idx_.mutable_gpu_data();
     // NOLINT_NEXT_LINE(whitespace/operators)
+#ifndef USE_FGPU
     MaxForward<Dtype> <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, bottom[0]->gpu_data(), bottom[1]->gpu_data(), 0, top_data, mask);
-    for (int i = 2; i < bottom.size(); ++i) {
-      // NOLINT_NEXT_LINE(whitespace/operators)
+ 
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(MaxForward<Dtype>, CAFFE_GET_BLOCKS(count),
+        CAFFE_CUDA_NUM_THREADS, 0, count, bottom[0]->gpu_data(), bottom[1]->gpu_data(), 
+        0, top_data, mask));
+#endif
+   for (int i = 2; i < bottom.size(); ++i) {
+#ifndef USE_FGPU
       MaxForward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
           count, top_data, bottom[i]->gpu_data(), i-1, top_data, mask);
-    }
+#else
+      FGPU_CHECK(FGPU_LAUNCH_KERNEL( MaxForward<Dtype>, CAFFE_GET_BLOCKS(count),
+          CAFFE_CUDA_NUM_THREADS, 0, count, top_data, bottom[i]->gpu_data(), 
+          i-1, top_data, mask));
+#endif    
+   }
     break;
   default:
     LOG(FATAL) << "Unknown elementwise operation.";
   }
 }
 
-template <typename Dtype>
-__global__ void MaxBackward(const int nthreads, const Dtype* top_diff,
-    const int blob_idx, const int* mask, Dtype* bottom_diff) {
-  CUDA_KERNEL_LOOP(index, nthreads) {
-    Dtype gradient = 0;
-    if (mask[index] == blob_idx) {
-      gradient += top_diff[index];
-    }
-    bottom_diff[index] = gradient;
-  }
-}
 
 template <typename Dtype>
 void EltwiseLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
@@ -118,9 +198,14 @@ void EltwiseLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         break;
       case EltwiseParameter_EltwiseOp_MAX:
         mask = max_idx_.gpu_data();
+#ifndef USE_FGPU
         MaxBackward<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
             <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
             count, top_diff, i, mask, bottom_diff);
+#else
+        FGPU_CHECK(FGPU_LAUNCH_KERNEL(MaxBackward<Dtype>, CAFFE_GET_BLOCKS(count), 
+	    CAFFE_CUDA_NUM_THREADS, 0, count, top_diff, i, mask, bottom_diff));
+#endif
         break;
       default:
         LOG(FATAL) << "Unknown elementwise operation.";

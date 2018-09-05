@@ -3,9 +3,13 @@
 #include "caffe/layers/sigmoid_cross_entropy_loss_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
-
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void SigmoidCrossEntropyLossForwardGPU(const int nthreads,
           const Dtype* input_data, const Dtype* target, Dtype* loss,
@@ -36,6 +40,61 @@ __global__ void SigmoidCrossEntropyLossIgnoreDiffGPU(const int count,
   }
 }
 
+#else
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(SigmoidCrossEntropyLossForwardGPU, const int nthreads,
+          const Dtype* input_data, const Dtype* target, Dtype* loss,
+          const bool has_ignore_label_, const int ignore_label_,
+          Dtype* counts) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(i, nthreads, _blockIdx, _gridDim) {
+      Dtype target_val_orig = FGPU_COLOR_LOAD(ctx, &target[i]);
+      const int target_value = static_cast<int>(target_val_orig);
+      if (has_ignore_label_ && target_value == ignore_label_) {
+       loss[i] = 0;
+        FGPU_COLOR_STORE(ctx, &counts[i], 0);
+      } else {
+        Dtype input_data_val = FGPU_COLOR_LOAD(ctx, &input_data[i]);
+
+        FGPU_COLOR_STORE(ctx, &loss[i], input_data_val * (target_val_orig - (input_data_val >= 0)) -
+            log(1 + exp(input_data_val - 2 * input_data_val *
+            (input_data_val >= 0))));
+        FGPU_COLOR_STORE(ctx, &counts[i], 1);
+      }
+    }
+
+  }
+}
+
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(SigmoidCrossEntropyLossIgnoreDiffGPU, const int count,
+    const int ignore_label, const Dtype* target, Dtype* diff) {
+
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(i, count, _blockIdx, _gridDim) {
+      const int target_value = static_cast<int>(FGPU_COLOR_LOAD(ctx, &target[i]));
+      if (target_value == ignore_label) {
+        FGPU_COLOR_STORE(ctx, &diff[i], 0);
+      }
+    }
+
+  }
+}
+#endif
 
 template <typename Dtype>
 void SigmoidCrossEntropyLossLayer<Dtype>::Forward_gpu(
@@ -53,10 +112,19 @@ void SigmoidCrossEntropyLossLayer<Dtype>::Forward_gpu(
   Dtype* loss_data = bottom[0]->mutable_gpu_diff();
   Dtype* count_data = bottom[1]->mutable_gpu_diff();
   Dtype valid_count;
+
+#ifndef USE_FGPU
   // NOLINT_NEXT_LINE(whitespace/operators)
   SigmoidCrossEntropyLossForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(count),
       CAFFE_CUDA_NUM_THREADS>>>(count, input_data, target, loss_data,
       has_ignore_label_, ignore_label_, count_data);
+#else
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(SigmoidCrossEntropyLossForwardGPU<Dtype>,
+      CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+      count, input_data, target, loss_data,
+      has_ignore_label_, ignore_label_, count_data));
+#endif
+
   // Only launch another CUDA kernel if we actually need the valid count.
   if (normalization_ == LossParameter_NormalizationMode_VALID &&
       has_ignore_label_) {
@@ -92,9 +160,15 @@ void SigmoidCrossEntropyLossLayer<Dtype>::Backward_gpu(
     caffe_gpu_axpy(count, Dtype(-1), target, bottom_diff);
     // Zero out gradient of ignored targets.
     if (has_ignore_label_) {
+#ifndef USE_FGPU
       // NOLINT_NEXT_LINE(whitespace/operators)
       SigmoidCrossEntropyLossIgnoreDiffGPU<Dtype><<<CAFFE_GET_BLOCKS(count),
         CAFFE_CUDA_NUM_THREADS>>>(count, ignore_label_, target, bottom_diff);
+#else
+      FGPU_CHECK(FGPU_LAUNCH_KERNEL(SigmoidCrossEntropyLossIgnoreDiffGPU<Dtype>,
+        CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
+        count, ignore_label_, target, bottom_diff));
+#endif
     }
     // Scale down gradient
     Dtype loss_weight = top[0]->cpu_diff()[0] / normalizer_;

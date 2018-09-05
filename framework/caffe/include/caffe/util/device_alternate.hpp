@@ -85,11 +85,19 @@ void classname<Dtype>::funcname##_##gpu(const vector<Blob<Dtype>*>& top, \
       << caffe::curandGetErrorString(status); \
   } while (0)
 
+#ifndef USE_FGPU
 // CUDA: grid stride looping
 #define CUDA_KERNEL_LOOP(i, n) \
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
        i < (n); \
        i += blockDim.x * gridDim.x)
+#else
+#define CUDA_KERNEL_LOOP(i, n, _blockIdx, _gridDim) \
+  for (int i = _blockIdx.x * blockDim.x + threadIdx.x; \
+       i < (n); \
+       i += blockDim.x * _gridDim.x)
+
+#endif
 
 // CUDA: check for error after kernel execution and exit loudly if there is one.
 #define CUDA_POST_KERNEL_CHECK CUDA_CHECK(cudaPeekAtLastError())

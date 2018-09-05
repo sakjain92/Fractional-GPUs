@@ -3,8 +3,13 @@
 #include "caffe/layers/slice_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void Slice(const int nthreads, const Dtype* in_data,
     const bool forward, const int num_slices, const int slice_size,
@@ -23,6 +28,36 @@ __global__ void Slice(const int nthreads, const Dtype* in_data,
     }
   }
 }
+#else
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(Slice, const int nthreads, const Dtype* in_data,
+    const bool forward, const int num_slices, const int slice_size,
+    const int bottom_slice_axis, const int top_slice_axis,
+    const int offset_slice_axis, Dtype* out_data) {
+ 
+  fgpu_dev_ctx_t *ctx;
+  uint3 _blockIdx, _gridDim;
+  ctx = FGPU_DEVICE_INIT();
+  _gridDim = FGPU_GET_GRIDDIM(ctx);
+
+  FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
+
+    CUDA_KERNEL_LOOP(index, nthreads, _blockIdx, _gridDim) {
+      const int total_slice_size = slice_size * top_slice_axis;
+      const int slice_num = index / total_slice_size;
+      const int slice_index = index % total_slice_size;
+      const int bottom_index = slice_index +
+          (slice_num * bottom_slice_axis + offset_slice_axis) * slice_size;
+      if (forward) {
+        FGPU_COLOR_STORE(ctx, &out_data[index], FGPU_COLOR_LOAD(ctx, &in_data[bottom_index]));
+      } else {
+        FGPU_COLOR_STORE(ctx, &out_data[bottom_index], FGPU_COLOR_LOAD(ctx, &in_data[index]));
+      }
+    }
+
+  } 
+}
+#endif
 
 template <typename Dtype>
 void SliceLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
@@ -37,10 +72,17 @@ void SliceLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const int top_slice_axis = top[i]->shape(slice_axis_);
     const int top_slice_size = top_slice_axis * slice_size_;
     const int nthreads = top_slice_size * num_slices_;
+#ifndef USE_FGPU
     Slice<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS>>>(
         nthreads, bottom_data, kForward, num_slices_, slice_size_,
         bottom_slice_axis, top_slice_axis, offset_slice_axis, top_data);
+#else 
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(Slice<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+        CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS, 0,
+        nthreads, bottom_data, kForward, num_slices_, slice_size_,
+        bottom_slice_axis, top_slice_axis, offset_slice_axis, top_data));
+#endif
     offset_slice_axis += top_slice_axis;
   }
 }
@@ -58,10 +100,17 @@ void SliceLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const int top_slice_axis = top[i]->shape(slice_axis_);
     const int top_slice_size = top_slice_axis * slice_size_;
     const int nthreads = top_slice_size * num_slices_;
+#ifndef USE_FGPU
     Slice<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS>>>(
         nthreads, top_diff, kForward, num_slices_, slice_size_,
         bottom_slice_axis, top_slice_axis, offset_slice_axis, bottom_diff);
+#else
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(Slice<Dtype>,  // NOLINT_NEXT_LINE(whitespace/operators)
+        CAFFE_GET_BLOCKS(nthreads), CAFFE_CUDA_NUM_THREADS, 0,
+        nthreads, top_diff, kForward, num_slices_, slice_size_,
+        bottom_slice_axis, top_slice_axis, offset_slice_axis, bottom_diff));
+#endif
     offset_slice_axis += top_slice_axis;
   }
 }

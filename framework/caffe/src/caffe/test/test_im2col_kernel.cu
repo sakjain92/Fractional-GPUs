@@ -10,9 +10,14 @@
 
 #include "caffe/test/test_caffe_main.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu_cuda.cuh>
+#endif
+
 namespace caffe {
 
 // Forward declare kernel functions
+#ifndef USE_FGPU
 template <typename Dtype>
 __global__ void im2col_gpu_kernel(const int n, const Dtype* data_im,
     const int height, const int width, const int kernel_h, const int kernel_w,
@@ -27,6 +32,23 @@ __global__ void im2col_nd_gpu_kernel(const int n, const Dtype* data_im,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, Dtype* data_col);
+#else
+template <typename Dtype>
+__global__ FGPU_DEFINE_KERNEL(im2col_gpu_kernel, const int n, const Dtype* data_im,
+    const int height, const int width, const int kernel_h, const int kernel_w,
+    const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w,
+    const int dilation_h, const int dilation_w,
+    const int height_col, const int width_col,
+    Dtype* data_col);
+
+template <typename Dtype, int num_axes>
+__global__ FGPU_DEFINE_KERNEL(im2col_nd_gpu_kernel, const int n, const Dtype* data_im,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const int* dilation, Dtype* data_col);
+
+#endif
 
 template <typename Dtype>
 class Im2colKernelTest : public GPUDeviceTest<Dtype> {
@@ -132,6 +154,7 @@ TYPED_TEST(Im2colKernelTest, Test2D) {
   for (int grid_div = 2; grid_div <= 8; grid_div++) {
     for (int n = 0; n < this->blob_bottom_->num(); ++n) {
       int grid_dim = default_grid_dim/grid_div;
+#ifndef USE_FGPU
       // NOLINT_NEXT_LINE(whitespace/operators)
       im2col_gpu_kernel<TypeParam><<<grid_dim, CAFFE_CUDA_NUM_THREADS>>>(
         num_kernels, bottom_data + this->blob_bottom_->offset(n),
@@ -141,6 +164,17 @@ TYPED_TEST(Im2colKernelTest, Test2D) {
         this->height_col_, this->width_col_,
         top_data + this->blob_top_->offset(n));
       CUDA_POST_KERNEL_CHECK;
+#else
+      // NOLINT_NEXT_LINE(whitespace/operators)
+      FGPU_CHECK(FGPU_LAUNCH_KERNEL(im2col_gpu_kernel<TypeParam>,
+        grid_dim, CAFFE_CUDA_NUM_THREADS, 0,
+        num_kernels, bottom_data + this->blob_bottom_->offset(n),
+        this->height_, this->width_, this->kernel_size_, this->kernel_size_,
+        this->pad_, this->pad_, this->stride_, this->stride_,
+        this->dilation_, this->dilation_,
+        this->height_col_, this->width_col_,
+        top_data + this->blob_top_->offset(n)));
+#endif
     }
 
     // Compare results against CPU version
@@ -188,6 +222,7 @@ TYPED_TEST(Im2colKernelTest, TestND) {
     for (int n = 0; n < this->blob_bottom_->num(); ++n) {
       const int grid_dim = default_grid_dim / grid_div;
       TypeParam* top_data_gpu = this->blob_top_->mutable_gpu_data();
+#ifndef USE_FGPU
       // NOLINT_NEXT_LINE(whitespace/operators)
       im2col_nd_gpu_kernel<TypeParam, 2><<<grid_dim, CAFFE_CUDA_NUM_THREADS>>>(
           num_kernels, bottom_data_gpu + this->blob_bottom_->offset(n),
@@ -196,6 +231,15 @@ TYPED_TEST(Im2colKernelTest, TestND) {
           this->blob_stride_->gpu_data(), this->blob_dilation_->gpu_data(),
           top_data_gpu + this->blob_top_->offset(n));
       CUDA_POST_KERNEL_CHECK;
+#else
+      FGPU_CHECK(FGPU_LAUNCH_KERNEL((im2col_nd_gpu_kernel<TypeParam, 2>),
+          grid_dim, CAFFE_CUDA_NUM_THREADS, 0,
+          num_kernels, bottom_data_gpu + this->blob_bottom_->offset(n),
+          this->blob_bottom_->gpu_shape() + 1, this->blob_top_->gpu_shape() + 1,
+          this->blob_kernel_shape_->gpu_data(), this->blob_pad_->gpu_data(),
+          this->blob_stride_->gpu_data(), this->blob_dilation_->gpu_data(),
+          top_data_gpu + this->blob_top_->offset(n)));
+#endif
     }
 
     // Compare results against CPU version
