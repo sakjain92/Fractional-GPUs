@@ -37,7 +37,7 @@ __global__ FGPU_DEFINE_KERNEL(Concat, const int nthreads, const Dtype* in_data,
     const int offset_concat_axis, Dtype* out_data) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

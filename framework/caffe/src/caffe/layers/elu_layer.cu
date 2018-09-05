@@ -35,7 +35,7 @@ __global__ FGPU_DEFINE_KERNEL(ELUForward, const int n, const Dtype* in, Dtype* o
     Dtype alpha) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -56,7 +56,7 @@ __global__ FGPU_DEFINE_KERNEL(ELUBackward, const int n, const Dtype* in_diff,
     Dtype* out_diff, Dtype alpha) {
   
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

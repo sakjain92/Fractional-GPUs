@@ -22,7 +22,7 @@ __global__ FGPU_DEFINE_KERNEL(AdaGradUpdate, int N, Dtype* g, Dtype* h, Dtype de
     Dtype local_rate) {
   
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

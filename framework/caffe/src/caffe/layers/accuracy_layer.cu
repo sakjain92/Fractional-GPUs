@@ -78,7 +78,7 @@ __global__ FGPU_DEFINE_KERNEL(AccuracyForwardGPU, const int nthreads,
           Dtype* counts) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -120,7 +120,7 @@ __global__ FGPU_DEFINE_KERNEL(AccuracyForwardWithPerClassGPU, const int nthreads
           const bool has_ignore_label_, const int ignore_label_) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

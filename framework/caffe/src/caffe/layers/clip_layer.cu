@@ -40,7 +40,7 @@ __global__ FGPU_DEFINE_KERNEL(ClipForward, const int n, const float* in, float* 
     float p_min, float p_max) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -58,7 +58,7 @@ __global__ FGPU_DEFINE_KERNEL(ClipForward, const int n, const double* in, double
     double p_min, double p_max) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -77,7 +77,7 @@ __global__ FGPU_DEFINE_KERNEL(ClipBackward, const int n, const Dtype* in_diff,
     const Dtype* in_data, Dtype* out_diff, Dtype p_min, Dtype p_max) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

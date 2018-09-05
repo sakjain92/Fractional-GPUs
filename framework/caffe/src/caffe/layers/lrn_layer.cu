@@ -133,7 +133,7 @@ __global__ FGPU_DEFINE_KERNEL(LRNFillScale, const int nthreads, const Dtype* con
     const Dtype k, Dtype* const scale) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -192,7 +192,7 @@ __global__ FGPU_DEFINE_KERNEL(LRNComputeOutput, const int nthreads, const Dtype*
     const Dtype* const scale, const Dtype negative_beta, Dtype* const out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -216,7 +216,7 @@ __global__ FGPU_DEFINE_KERNEL(LRNComputeDiff, const int nthreads,
     const Dtype cache_ratio, Dtype* const bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

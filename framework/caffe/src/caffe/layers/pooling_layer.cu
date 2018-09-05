@@ -285,7 +285,7 @@ __global__ FGPU_DEFINE_KERNEL(MaxPoolForward, const int nthreads,
     Dtype* const top_data, int* mask, Dtype* top_mask) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -335,7 +335,7 @@ __global__ FGPU_DEFINE_KERNEL(AvePoolForward, const int nthreads,
     Dtype* const top_data) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -379,7 +379,7 @@ __global__ FGPU_DEFINE_KERNEL(StoPoolForwardTrain, const int nthreads,
     const int stride_w, Dtype* const rand_idx, Dtype* const top_data) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -433,7 +433,7 @@ __global__ FGPU_DEFINE_KERNEL(StoPoolForwardTest, const int nthreads,
     const int stride_w, Dtype* const top_data) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -476,7 +476,7 @@ __global__ FGPU_DEFINE_KERNEL(MaxPoolBackward, const int nthreads, const Dtype* 
     const int pad_w, Dtype* const bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -532,7 +532,7 @@ __global__ FGPU_DEFINE_KERNEL(AvePoolBackward, const int nthreads, const Dtype* 
     Dtype* const bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -580,7 +580,7 @@ __global__ FGPU_DEFINE_KERNEL(StoPoolBackward, const int nthreads,
     const int stride_w, Dtype* const bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

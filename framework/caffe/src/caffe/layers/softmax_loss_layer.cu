@@ -67,7 +67,7 @@ __global__ FGPU_DEFINE_KERNEL(SoftmaxLossForwardGPU, const int nthreads,
           Dtype* counts) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -102,7 +102,7 @@ __global__ FGPU_DEFINE_KERNEL(SoftmaxLossBackwardGPU, const int nthreads, const 
   const int channels = dim / spatial_dim;
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

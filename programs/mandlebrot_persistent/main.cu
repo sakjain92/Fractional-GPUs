@@ -16,7 +16,7 @@ FGPU_DEFINE_KERNEL(render, char *out, int width, int height) {
   
   fgpu_dev_ctx_t *ctx;
   ctx = FGPU_DEVICE_INIT();
-  uint3 _blockIdx;
+  dim3 _blockIdx;
 
   FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 

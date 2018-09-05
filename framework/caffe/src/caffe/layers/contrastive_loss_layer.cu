@@ -47,7 +47,7 @@ __global__ FGPU_DEFINE_KERNEL(CLLBackward, const int count, const int channels,
     Dtype *bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

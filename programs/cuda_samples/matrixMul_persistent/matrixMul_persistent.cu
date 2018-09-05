@@ -12,7 +12,7 @@ template <int BLOCK_SIZE>
 FGPU_DEFINE_KERNEL(matrixMulCUDA, float *C, float *A, float *B, int wA, int wB)
 {
     fgpu_dev_ctx_t *ctx;
-    uint3 _blockIdx;
+    dim3 _blockIdx;
     ctx = FGPU_DEVICE_INIT();
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {

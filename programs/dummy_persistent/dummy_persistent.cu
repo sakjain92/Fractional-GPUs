@@ -7,7 +7,7 @@ FGPU_DEFINE_KERNEL(info, int A)
 {
     fgpu_dev_ctx_t *ctx;
     ctx = FGPU_DEVICE_INIT();
-    uint3 _blockIdx;
+    dim3 _blockIdx;
 
     uint sm;
     asm("mov.u32 %0, %smid;" : "=r"(sm));
@@ -22,7 +22,7 @@ FGPU_DEFINE_KERNEL(info, int A)
 FGPU_DEFINE_VOID_KERNEL(dummy)
 {
     FGPU_DEVICE_INIT();
-    uint3 _blockIdx;
+    dim3 _blockIdx;
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
     } FGPU_FOR_EACH_END;
@@ -32,7 +32,7 @@ FGPU_DEFINE_KERNEL(simple, uint32_t *out)
 {
     fgpu_dev_ctx_t *ctx;
     ctx = FGPU_DEVICE_INIT();
-    uint3 _blockIdx;
+    dim3 _blockIdx;
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
         FGPU_COLOR_STORE(ctx, &out[32 * blockIdx.x + _blockIdx.x + 1], _blockIdx.x);

@@ -40,7 +40,7 @@ FGPU_DEFINE_KERNEL(bitonicSortShared,
 )
 {
     fgpu_dev_ctx_t *ctx;
-   	uint3 _blockIdx;
+   	dim3 _blockIdx;
     
     ctx = FGPU_DEVICE_INIT();
 
@@ -129,7 +129,7 @@ FGPU_DEFINE_KERNEL(bitonicSortShared1,
 )
 {
     fgpu_dev_ctx_t *ctx;
-   	uint3 _blockIdx;
+   	dim3 _blockIdx;
 	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
@@ -211,7 +211,7 @@ FGPU_DEFINE_KERNEL(bitonicMergeGlobal,
 )
 {
     fgpu_dev_ctx_t *ctx;
-   	uint3 _blockIdx;
+   	dim3 _blockIdx;
 	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
@@ -260,7 +260,7 @@ FGPU_DEFINE_KERNEL(bitonicMergeShared,
 )
 {
     fgpu_dev_ctx_t *ctx;
-   	uint3 _blockIdx;
+   	dim3 _blockIdx;
 	ctx = FGPU_DEVICE_INIT();
 
    	FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {

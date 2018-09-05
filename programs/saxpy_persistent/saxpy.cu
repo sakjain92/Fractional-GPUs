@@ -8,7 +8,7 @@ __global__
 FGPU_DEFINE_KERNEL(saxpy, int n, float a, float *x, float *y)
 {
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx;
+  dim3 _blockIdx;
   ctx = FGPU_DEVICE_INIT();
 
   FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {

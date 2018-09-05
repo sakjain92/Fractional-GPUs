@@ -771,7 +771,7 @@ static void wait_for_last_complete(int color)
 
 
 /* Prepare ctx before launch */
-int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream)
+int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t **stream)
 {
     uint32_t num_blocks;
     uint32_t num_threads;

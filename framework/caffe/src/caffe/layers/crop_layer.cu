@@ -84,7 +84,7 @@ __global__ FGPU_DEFINE_KERNEL(crop_kernel_forward, const int nthreads,
     const Dtype* src, Dtype* dest) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -108,7 +108,7 @@ __global__ FGPU_DEFINE_KERNEL(crop_kernel_backward, const int nthreads,
     Dtype* src, const Dtype* dest) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

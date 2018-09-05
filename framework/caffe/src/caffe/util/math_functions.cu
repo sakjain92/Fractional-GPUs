@@ -497,7 +497,7 @@ __global__ FGPU_DEFINE_KERNEL(gemm_kernel, const CBLAS_TRANSPOSE TransA,
   // TODO: This can be optimized to load A matrix only once
   // Need API to collect a bunch of blockIdx together
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx;
+  dim3 _blockIdx;
   ctx = FGPU_DEVICE_INIT();
 
   FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
@@ -629,7 +629,7 @@ __global__ FGPU_DEFINE_KERNEL(gemv_kernel, const CBLAS_TRANSPOSE TransA,
         Dtype *y, const Dtype alpha, const Dtype beta)
 {
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx;
+  dim3 _blockIdx;
   ctx = FGPU_DEVICE_INIT();
 
   cooperative_groups::thread_group  g = cooperative_groups::this_thread_block();
@@ -695,7 +695,7 @@ __global__ FGPU_DEFINE_KERNEL(axpy_kernel, const int n, const Dtype alpha,
         const Dtype *x, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -736,7 +736,7 @@ __global__ FGPU_DEFINE_KERNEL(scal_kernel, const int n, const Dtype alpha,
         Dtype *x) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -788,7 +788,7 @@ __global__ FGPU_DEFINE_KERNEL(dot_kernel, const int n, const Dtype *x,
         const Dtype *y, Dtype *out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   Dtype sum = 0;
   cooperative_groups::thread_group g = cooperative_groups::this_thread_block();
 
@@ -831,7 +831,7 @@ __global__ FGPU_DEFINE_KERNEL(asum_kernel, const int n, const Dtype *x,
         Dtype *out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   Dtype sum = 0;
   cooperative_groups::thread_group g = cooperative_groups::this_thread_block();
 
@@ -874,7 +874,7 @@ __global__ FGPU_DEFINE_KERNEL(scale_kernel, const int n, const Dtype alpha,
         const Dtype *x, Dtype *y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -906,7 +906,7 @@ __global__ FGPU_DEFINE_KERNEL(set_kernel, const int n, const Dtype alpha,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -956,7 +956,7 @@ __global__ FGPU_DEFINE_KERNEL(add_scalar_kernel, const int n, const Dtype alpha,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -988,7 +988,7 @@ __global__ FGPU_DEFINE_KERNEL(add_kernel, const int n, const Dtype* a,
     const Dtype* b, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1023,7 +1023,7 @@ __global__ FGPU_DEFINE_KERNEL(sub_kernel, const int n, const Dtype* a,
     const Dtype* b, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1059,7 +1059,7 @@ __global__ FGPU_DEFINE_KERNEL(mul_kernel, const int n, const Dtype* a,
     const Dtype* b, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1094,7 +1094,7 @@ __global__ FGPU_DEFINE_KERNEL(div_kernel, const int n, const Dtype* a,
     const Dtype* b, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1129,7 +1129,7 @@ __global__ FGPU_DEFINE_KERNEL(abs_kernel, const int n, const Dtype* a,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1161,7 +1161,7 @@ __global__ FGPU_DEFINE_KERNEL(exp_kernel, const int n, const Dtype* a,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1192,7 +1192,7 @@ __global__ FGPU_DEFINE_KERNEL(log_kernel, const int n, const Dtype* a,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1224,7 +1224,7 @@ __global__ FGPU_DEFINE_KERNEL(powx_kernel, const int n,
     const Dtype alpha, Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1257,7 +1257,7 @@ __global__ FGPU_DEFINE_KERNEL(sqrt_kernel, const int n, const Dtype* a,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1287,7 +1287,7 @@ __global__ FGPU_DEFINE_KERNEL(sign_kernel, const int n, const Dtype* x,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -1319,7 +1319,7 @@ __global__ FGPU_DEFINE_KERNEL(sgnbit_kernel, const int n, const Dtype* x,
         Dtype* y) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

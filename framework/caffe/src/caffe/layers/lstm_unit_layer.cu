@@ -110,7 +110,7 @@ __global__ FGPU_DEFINE_KERNEL(LSTMActsForward, const int nthreads, const int dim
                                 const Dtype* X, Dtype* X_acts) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -136,7 +136,7 @@ __global__ FGPU_DEFINE_KERNEL(LSTMUnitForward, const int nthreads, const int dim
     Dtype* C, Dtype* H) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -167,7 +167,7 @@ __global__ FGPU_DEFINE_KERNEL(LSTMUnitBackward, const int nthreads, const int di
     Dtype* C_prev_diff, Dtype* X_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -209,7 +209,7 @@ __global__ FGPU_DEFINE_KERNEL(LSTMActsBackward, const int nthreads, const int di
     const Dtype* X_acts, const Dtype* X_acts_diff, Dtype* X_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

@@ -23,7 +23,7 @@ __global__
 FGPU_DEFINE_KERNEL(vector_add, double2 *a, double2 *b, double2 *c, int n)
 {
     fgpu_dev_ctx_t *ctx;
-    uint3 _blockIdx;
+    dim3 _blockIdx;
     ctx = FGPU_DEVICE_INIT();
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {

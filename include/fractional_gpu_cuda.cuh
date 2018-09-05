@@ -55,7 +55,7 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 }
 
 __device__ __forceinline__
-int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, uint3 *_blockIdx)
+int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, dim3 *_blockIdx)
 {
     __shared__ int lblockIdx;
     __shared__ uint3 lblockIdx3D;

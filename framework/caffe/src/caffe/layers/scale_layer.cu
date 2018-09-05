@@ -39,7 +39,7 @@ __global__ FGPU_DEFINE_KERNEL(ScaleForward, const int n, const Dtype* in,
     Dtype* out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -61,7 +61,7 @@ __global__ FGPU_DEFINE_KERNEL(ScaleBiasForward, const int n, const Dtype* in,
     const int scale_dim, const int inner_dim, Dtype* out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

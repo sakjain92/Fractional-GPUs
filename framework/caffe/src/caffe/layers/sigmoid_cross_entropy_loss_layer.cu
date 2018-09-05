@@ -49,7 +49,7 @@ __global__ FGPU_DEFINE_KERNEL(SigmoidCrossEntropyLossForwardGPU, const int nthre
           Dtype* counts) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -79,7 +79,7 @@ __global__ FGPU_DEFINE_KERNEL(SigmoidCrossEntropyLossIgnoreDiffGPU, const int co
     const int ignore_label, const Dtype* target, Dtype* diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

@@ -56,7 +56,7 @@ __global__ FGPU_DEFINE_KERNEL(PReLUForward, const int n, const int channels, con
     const int div_factor) {
     
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -80,7 +80,7 @@ __global__ FGPU_DEFINE_KERNEL(PReLUBackward, const int n, const int channels, co
   
     
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -104,7 +104,7 @@ __global__ FGPU_DEFINE_KERNEL(PReLUParamBackward, const int n,
     const Dtype* in_data, Dtype* out_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

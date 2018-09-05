@@ -35,7 +35,7 @@ __global__ FGPU_DEFINE_KERNEL(ReLUForward ,const int n, const Dtype* in,
     Dtype* out, Dtype negative_slope) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -53,7 +53,7 @@ __global__ FGPU_DEFINE_KERNEL(ReLUBackward, const int n, const Dtype* in_diff,
     const Dtype* in_data, Dtype* out_diff, Dtype negative_slope) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -81,11 +81,11 @@ void ReLULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 #ifndef USE_FGPU
   ReLUForward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
       count, bottom_data, top_data, negative_slope);
+  CUDA_POST_KERNEL_CHECK;
 #else
   FGPU_CHECK(FGPU_LAUNCH_KERNEL(ReLUForward<Dtype>, CAFFE_GET_BLOCKS(count),
       CAFFE_CUDA_NUM_THREADS, 0, count, bottom_data, top_data, negative_slope));
 #endif 
-  CUDA_POST_KERNEL_CHECK;
   // << " count: " << count << " bottom_data: "
   //     << (unsigned long)bottom_data
   //     << " top_data: " << (unsigned long)top_data
@@ -109,13 +109,13 @@ void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 #ifndef USE_FGPU
     ReLUBackward<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, top_diff, bottom_data, bottom_diff, negative_slope);
+   CUDA_POST_KERNEL_CHECK;
 #else
     FGPU_CHECK(FGPU_LAUNCH_KERNEL(ReLUBackward<Dtype>, CAFFE_GET_BLOCKS(count),
 	CAFFE_CUDA_NUM_THREADS, 0, count, top_diff, bottom_data, bottom_diff, 
         negative_slope));
 
 #endif
-    CUDA_POST_KERNEL_CHECK;
   }
 }
 

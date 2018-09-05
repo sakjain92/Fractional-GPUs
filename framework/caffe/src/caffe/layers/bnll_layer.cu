@@ -36,7 +36,7 @@ template <typename Dtype>
 __global__ FGPU_DEFINE_KERNEL(BNLLForward, const int n, const Dtype* in, Dtype* out) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -59,7 +59,7 @@ __global__ FGPU_DEFINE_KERNEL(BNLLBackward, const int n, const Dtype* in_diff,
     const Dtype* in_data, Dtype* out_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 

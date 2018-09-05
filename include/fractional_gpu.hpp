@@ -20,8 +20,8 @@ typedef struct fgpu_dev_ctx {
     int color;                      /* Color to be used by the kernel */
     int index;                      /* Index within the color */
     int launch_index;               /* Like a global tag id for kernel */
-    uint3 gridDim;                  /* User provided grid dimensions */
-    uint3 blockDim;                 /* User provided block dimensions */
+    dim3 gridDim;                  /* User provided grid dimensions */
+    dim3 blockDim;                 /* User provided block dimensions */
     int num_blocks;                 /* Number of blocks to be spawned */
     int num_pblock;                 /* Number of persistent thread blocks spawned */
     int start_sm;
@@ -49,7 +49,7 @@ size_t fgpu_get_env_color_mem_size(void);
 bool fgpu_is_init_complete(void);
 int fgpu_set_color_prop(int color, size_t mem_size);
 bool fgpu_is_color_prop_set(void);
-int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, uint3 *_gridDim, cudaStream_t **stream);
+int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t **stream);
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
 int fgpu_color_stream_synchronize(void);
 int fpgpu_num_sm(int color, int *num_sm);
@@ -75,7 +75,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
     int ret;                                                                \
-    uint3 _lgridDim;                                                        \
+    dim3 _lgridDim;                                                         \
     cudaStream_t *stream;                                                   \
     fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx =  -1;                                               \
@@ -92,7 +92,7 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
 ({                                                                          \
     fgpu_dev_ctx_t dev_fctx;                                                \
     int ret;                                                                \
-    uint3 _lgridDim;                                                        \
+    dim3 _lgridDim;                                                         \
     cudaStream_t *stream;                                                   \
     fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx = -1;                                                \

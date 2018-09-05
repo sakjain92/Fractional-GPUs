@@ -56,7 +56,7 @@ FGPU_DEFINE_KERNEL(MaxForward ,const int nthreads, const Dtype* bottom_data_a,
     int* mask) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
@@ -92,7 +92,7 @@ FGPU_DEFINE_KERNEL(MaxBackward, const int nthreads, const Dtype* top_diff,
     const int blob_idx, const int* mask, Dtype* bottom_diff) {
 
   fgpu_dev_ctx_t *ctx;
-  uint3 _blockIdx, _gridDim;
+  dim3 _blockIdx, _gridDim;
   ctx = FGPU_DEVICE_INIT();
   _gridDim = FGPU_GET_GRIDDIM(ctx);
 
