@@ -10,6 +10,25 @@ option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
 option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
 
+# Check for contraints on configurations
+
+# For memory coloring, computational coloring is a must
+if(FGPU_MEM_COLORING_ENABLED AND NOT FGPU_COMP_COLORING_ENABLE)
+    message(FATAL_ERROR "FGPU_COMP_COLORING_ENABLE not defined")
+endif()
+
+# When userspace/test coloring is enabled, coloring must be enabled
+if((FGPU_USER_MEM_COLORING_ENABLED AND NOT FGPU_MEM_COLORING_ENABLED) OR 
+	(FGPU_TEST_MEM_COLORING_ENABLED AND NOT FGPU_MEM_COLORING_ENABLED))
+    message(FATAL_ERROR "FGPU_MEM_COLORING_ENABLED not defined")
+endif()
+
+# Only one can be selected at a time
+if(FGPU_USER_MEM_COLORING_ENABLED AND FGPU_TEST_MEM_COLORING_ENABLED)
+    message(FATAL_ERROR "Both FGPU_USER_MEM_COLORING_ENABLED and FGPU_TEST_MEM_COLORING_ENABLED defined")
+endif()
+
+
 # Equivalent variables for kernel driver
 if(FGPU_MEM_COLORING_ENABLED)
     set(UVM_MEM_COLORING 1)

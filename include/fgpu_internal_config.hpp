@@ -23,20 +23,4 @@
 /* Can be set to -1 if no preference. Preference is like a hint */
 #define FGPU_PREFERRED_NUM_COLORS	2
 
-/* For memory coloring, computational coloring is a must */
-#if defined(FGPU_MEM_COLORING_ENABLED) && !defined(FGPU_COMP_COLORING_ENABLE)
-#error "FGPU_COMP_COLORING_ENABLE not defined"
-#endif
-
-/* When userspace coloring is enabled, coloring must be enabled */
-#if defined(FGPU_USER_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED) || \
-    defined(FGPU_TEST_MEM_COLORING_ENABLED) && !defined(FGPU_MEM_COLORING_ENABLED) 
-#error "FGPU_MEM_COLORING_ENABLED not defined"
-#endif
-
-/* Only one can be selected at a time */
-#if defined(FGPU_USER_MEM_COLORING_ENABLED) && defined(FGPU_TEST_MEM_COLORING_ENABLED)
-#error "Both FGPU_USER_MEM_COLORING_ENABLED and FGPU_TEST_MEM_COLORING_ENABLED defined"
-#endif
-
 #endif /* __FGPU_INTERNAL_CONFIG_HPP__ */

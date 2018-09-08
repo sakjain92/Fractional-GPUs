@@ -14,6 +14,10 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#if !defined(FGPU_TEST_MEM_COLORING_ENABLED)
+#error "FGPU_TEST_MEM_COLORING_ENABLED not defined. Needed for reverse engineering"
+#endif
+
 /* Device memory */
 static uint64_t *d_sum;
 static uint64_t *d_refresh_v;
