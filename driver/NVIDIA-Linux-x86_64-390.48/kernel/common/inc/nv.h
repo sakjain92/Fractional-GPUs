@@ -20,6 +20,8 @@
 #include "g_nvconfig.h"
 #endif
 
+#include <uvm_config.h>
+
 #if !defined(NV_MIN)
 #define NV_MIN(_a,_b) ((_a) < (_b) ? (_a) : (_b))
 #endif

@@ -10,8 +10,26 @@ option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
 option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
 
+# Equivalent variables for kernel driver
+if(FGPU_MEM_COLORING_ENABLED)
+    set(UVM_MEM_COLORING 1)
+endif()
+
+if(FGPU_USER_MEM_COLORING_ENABLED)
+    set(UVM_USER_MEM_COLORING 1)
+endif()
+
+if(FGPU_TEST_MEM_COLORING_ENABLED)
+    set(UVM_TEST_MEM_COLORING 1)
+endif()
+
+# Set configuration variables for FGPU source code
 configure_file(include/fgpu_internal_build_config.hpp.in            
     "${PROJECT_SOURCE_DIR}/include/fgpu_internal_build_config.hpp")
+
+# Set configuration variables for Kernel driver source code
+configure_file(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h.in            
+    "${PROJECT_SOURCE_DIR}/driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h")
 
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)

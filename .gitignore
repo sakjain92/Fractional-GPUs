@@ -52,3 +52,4 @@ tags
 # File created by CMake #
 ########################
 include/fgpu_internal_build_config.hpp
+driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h

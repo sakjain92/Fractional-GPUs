@@ -50,13 +50,6 @@ NVIDIA_UVM_KO = nvidia-uvm/nvidia-uvm.ko
 #
 # Define nvidia-uvm.ko-specific CFLAGS.
 #
-# Leave all the below uncomment to disable memory coloring
-# Uncomment for reverse engineering the memory hierarchy
-#NVIDIA_UVM_CFLAGS += -DUVM_TEST_MEM_COLORING -DUVM_MEM_COLORING
-# Uncomment for high performance memory coloring (Userspace coloring)
-NVIDIA_UVM_CFLAGS += -DUVM_USER_MEM_COLORING -DUVM_MEM_COLORING
-# Uncomment for userspace transparent memory coloring (Kernel coloring)
-#NVIDIA_UVM_CFLAGS += -DUVM_MEM_COLORING
 ifeq ($(UVM_BUILD_TYPE),debug)
   NVIDIA_UVM_CFLAGS += -DDEBUG $(call cc-option,-Og,-O0) -g
 else
