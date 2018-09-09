@@ -718,8 +718,10 @@ done:
     tracker_status = uvm_tracker_wait_deinit(&local_tracker);
     uvm_va_space_up_read(va_space);
 
+#if 0
     // This API is synchronous, so wait for migrations to finish
     uvm_tools_flush_events();
+#endif
 
     return status == NV_OK? tracker_status : status;
 }

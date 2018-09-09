@@ -79,5 +79,6 @@ void uvm_hal_volta_arch_init_properties(uvm_gpu_t *gpu)
 
     gpu->fault_cancel_va_supported = true;
 
-    gpu->num_mem_colors = 0;
+    gpu->num_allocation_mem_colors = 0;
+    gpu->num_transfer_mem_colors = 0;
 }

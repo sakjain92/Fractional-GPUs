@@ -2967,7 +2967,7 @@ static size_t max_reserve_color_memory_size(uvm_gpu_t *gpu)
     size_t s = ((UVM_MAX_COLOR_MEM_RESV_PERCENTAGE) * 
         gpu->vidmem_max_allocatable_address) / 100;
     /* Round down according to the chunk size */
-    s &= ~(gpu->colored_chunk_size - 1);
+    s &= ~(gpu->colored_allocation_chunk_size - 1);
     return s;
 }
 
@@ -2978,12 +2978,12 @@ static NV_STATUS reserve_color_memory(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
     uvm_gpu_chunk_t *chunk;
     NvU64 last_address = -1;
     NvU64 allocated;
-    size_t chunk_size = gpu->colored_chunk_size;
+    size_t chunk_size = gpu->colored_allocation_chunk_size;
     size_t color;
     size_t resv_mem;
     NV_STATUS status = NV_OK;
    
-    for (i = 0; i < gpu->num_mem_colors; i++) {
+    for (i = 0; i < gpu->num_allocation_mem_colors; i++) {
 
         INIT_LIST_HEAD(&pmm->color_ranges_list[i]);
 
@@ -2997,7 +2997,7 @@ static NV_STATUS reserve_color_memory(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
         range->start_phys_addr = range->end_phys_addr = 0;
         range->total_num_chunks = 0;
         range->left_num_chunks = 0;
-        range->color = i;
+        range->allocation_color = i;
         range->parent = NULL;
         list_add_tail(&range->list, &pmm->color_ranges_list[i]);
     }
@@ -3018,8 +3018,8 @@ static NV_STATUS reserve_color_memory(uvm_gpu_t *gpu, uvm_pmm_gpu_t *pmm)
         UVM_ASSERT(last_address == -1 ||
                 chunk->address == last_address + chunk_size);
 
-        color = gpu->arch_hal->phys_addr_to_color(gpu, chunk->address);
-            
+        color = gpu->arch_hal->phys_addr_to_allocation_color(gpu, chunk->address);
+
         range = list_first_entry(&pmm->color_ranges_list[color],
                     uvm_gpu_color_range_t, list);
 
@@ -3052,7 +3052,7 @@ static void free_reserved_color_memory(uvm_pmm_gpu_t *pmm)
     struct list_head *nc, *tc;
 
     // Release all chunks
-    for (i = 0; i < pmm->gpu->num_mem_colors; i++) {
+    for (i = 0; i < pmm->gpu->num_allocation_mem_colors; i++) {
 
         list_for_each_safe(nr, tr, &pmm->color_ranges_list[i]) {
         
@@ -3085,14 +3085,19 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
     struct list_head *nc, *tc;
     uvm_gpu_color_range_t *nrange;
     uvm_gpu_chunk_t *chunk;
-    NvU64 chunk_size = pmm->gpu->colored_chunk_size;
+    NvU64 chunk_size = gpu->colored_allocation_chunk_size;
     NvU64 num_chunks = memSize / chunk_size;
     NvU64 num_chunks_allocated = 0;
-    NvU64 start_addr = 0, cur_addr = 0;
+    NvU64 start_addr = 0;
+
+    // Incase of userspace coloring, we might not need to color during allocation,
+    // only during transfer
+    if (gpu->num_allocation_mem_colors == 1)
+        color = 0;
 
     range->start_phys_addr = range->end_phys_addr = 0;
     range->total_num_chunks = range->left_num_chunks = 0;
-    range->color = color;
+    range->allocation_color = color;
     INIT_LIST_HEAD(&range->free_chunks);
     
     list_for_each_safe(nr, tr, &pmm->color_ranges_list[color]) {
@@ -3108,16 +3113,11 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
                 list_move_tail(&chunk->list, &range->free_chunks);
                 
                 if (range->start_phys_addr == 0) {
-                    range->start_phys_addr = chunk->address;
-                    start_addr = gpu->arch_hal->phys_addr_to_base_color_addr(gpu, range->start_phys_addr);
-                    cur_addr = start_addr;
+                    start_addr = range->start_phys_addr = chunk->address;
                 }
 
                 if (range->end_phys_addr == 0)
                     range->end_phys_addr = chunk->address;
-
-                chunk->colored_address = cur_addr;
-                cur_addr += chunk_size;
 
                 num_chunks_allocated++;
                 if (num_chunks_allocated == num_chunks)
@@ -3149,7 +3149,7 @@ static NV_STATUS allocate_process_color_memory_locked(uvm_pmm_gpu_t *pmm,
 
 static void remove_process_color_range_locked(uvm_pmm_gpu_t *pmm, uvm_gpu_color_range_t *range)
 {
-    NvU32 color = range->color;
+    NvU32 color = range->allocation_color;
     struct list_head *pmm_range;
     uvm_gpu_process_color_info_t *parent = range->parent;
 
@@ -3179,7 +3179,7 @@ static NvBool can_be_colored_chunk(uvm_pmm_gpu_t *pmm,
 
     // Currently only coloring user chunks
     return (chunk_type == UVM_PMM_GPU_MEMORY_TYPE_USER) && 
-            (chunk_size == pmm->gpu->colored_chunk_size);
+            (chunk_size == pmm->gpu->colored_allocation_chunk_size);
 }
 
 static NV_STATUS try_alloc_user_color_chunk(uvm_pmm_gpu_t *pmm,
@@ -3281,14 +3281,19 @@ static NV_STATUS try_user_color_free_chunk(uvm_pmm_gpu_t *pmm, uvm_gpu_chunk_t *
     return NV_OK;
 }
 
-static NV_STATUS get_device_color_info(uvm_pmm_gpu_t *pmm, NvU32 *num_colors, NvU64 *maxLength)
+static NV_STATUS get_device_color_info(uvm_pmm_gpu_t *pmm, 
+        NvU32 *num_allocation_colors, NvU32 *num_transfer_colors, 
+        NvU64 *maxLength)
 {
     if (!uvm_gpu_supports_coloring(pmm->gpu))
         return NV_ERR_NOT_SUPPORTED;
 
-    if (num_colors)
-        *num_colors = pmm->gpu->num_mem_colors;
+    if (num_allocation_colors)
+        *num_allocation_colors = pmm->gpu->num_allocation_mem_colors;
     
+    if (num_transfer_colors)
+        *num_transfer_colors = pmm->gpu->num_transfer_mem_colors;
+
     if (maxLength)
         *maxLength = max_reserve_color_memory_size(pmm->gpu);
 
@@ -3313,7 +3318,8 @@ NV_STATUS set_current_process_color_info(uvm_pmm_gpu_t *pmm, NvU32 color, NvU64 
     }
 
     new_node->master_pid = current_pid;
-    
+    new_node->color = color;
+
     new_node->color_range = uvm_kvmalloc(sizeof(uvm_gpu_color_range_t));
     if (!new_node->color_range) {
         status = NV_ERR_NO_MEMORY;
@@ -3403,11 +3409,14 @@ static NV_STATUS get_current_process_color_info(uvm_pmm_gpu_t *pmm, NvU32 *color
     }
 
     if (color)
-        *color = node->color_range->color;
+        *color = node->color;
+
     if (address)
         *address = node->color_range->start_phys_addr;
+    
     if (length)
-        *length = node->color_range->total_num_chunks * pmm->gpu->colored_chunk_size;
+        *length = node->color_range->total_num_chunks *
+            pmm->gpu->colored_allocation_chunk_size;
 
 done:
     uvm_spin_unlock(&pmm->list_lock);
@@ -3440,7 +3449,7 @@ NV_STATUS uvm_api_get_device_color_info(UVM_GET_DEVICE_COLOR_INFO_PARAMS *params
             goto done;
         }
 
-        status = get_device_color_info(&gpu->pmm, &params->numColors,
+        status = get_device_color_info(&gpu->pmm, NULL, &params->numColors,
                 &params->maxLength);
     }
 
@@ -3453,7 +3462,6 @@ NV_STATUS uvm_api_get_process_color_info(UVM_GET_PROCESS_COLOR_INFO_PARAMS *para
 {
     NV_STATUS status = NV_OK;
     uvm_va_space_t *va_space = uvm_va_space_get(filp);
-    NvU32 num_colors;
     uvm_gpu_t *gpu = NULL;
 
     uvm_va_space_down_read(va_space);
@@ -3474,12 +3482,6 @@ NV_STATUS uvm_api_get_process_color_info(UVM_GET_PROCESS_COLOR_INFO_PARAMS *para
             status = NV_ERR_NOT_SUPPORTED;
             goto done;
         }
-
-        status = get_device_color_info(&gpu->pmm, &num_colors, NULL);
-        if (status != NV_OK)
-            goto done;
-
-        UVM_ASSERT(num_colors <= UVM_MAX_MEM_COLORS);
 
         status = get_current_process_color_info(&gpu->pmm, &params->color,
                                         &params->length, &params->address);
@@ -3519,15 +3521,15 @@ NV_STATUS uvm_api_set_process_color_info(UVM_SET_PROCESS_COLOR_INFO_PARAMS *para
             goto done;
         }
 
-        status = get_device_color_info(&gpu->pmm, &num_colors, &maxLength);
+        status = get_device_color_info(&gpu->pmm, NULL, &num_colors, &maxLength);
         if (status != NV_OK)
             goto done;
 
         UVM_ASSERT(num_colors <= UVM_MAX_MEM_COLORS);
 
         // Roundup
-        params->length = (params->length + gpu->colored_chunk_size - 1) & 
-            (~(gpu->colored_chunk_size  - 1));
+        params->length = (params->length + gpu->colored_allocation_chunk_size - 1) & 
+            (~(gpu->colored_allocation_chunk_size  - 1));
 
         if (params->length > maxLength || params->length == 0) {
             status = NV_ERR_INVALID_ARGUMENT;

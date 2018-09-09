@@ -359,22 +359,27 @@ void uvm_hal_kepler_mmu_disable_prefetch_faults_unsupported(uvm_gpu_t *gpu)
     UVM_ASSERT_MSG(false, "mmu disable_prefetch_faults called on Kepler GPU\n");
 }
 
-NvU32 uvm_hal_kepler_mmu_phys_addr_to_color_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
+NvU32 uvm_hal_kepler_mmu_phys_addr_to_allocation_color_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
-    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_color called on Kepler GPU\n");
+    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_allocation_color called on Kepler GPU\n");
+    return 0;
+}
+
+NvU32 uvm_hal_kepler_mmu_phys_addr_to_transfer_color_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_transfer_color called on Kepler GPU\n");
+    return 0;
+}
+
+NvU64 uvm_hal_kepler_mmu_phys_addr_to_base_transfer_color_addr_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
+{
+    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_base_transfer_color_addr called on Kepler GPU\n");
     return 0;
 }
 
 
-NvU64 uvm_hal_kepler_mmu_phys_addr_to_base_color_addr_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
+NvU64 uvm_hal_kepler_mmu_phys_addr_to_transfer_color_idx_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
-    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_base_color_addr called on Kepler GPU\n");
-    return 0;
-}
-
-
-NvU64 uvm_hal_kepler_mmu_phys_addr_to_color_idx_unsupported(uvm_gpu_t *gpu, NvU64 phys_addr)
-{
-    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_color_idx called on Kepler GPU\n");
+    UVM_ASSERT_MSG(false, "mmu_phys_addr_to_transfer_color_idx called on Kepler GPU\n");
     return 0;
 }

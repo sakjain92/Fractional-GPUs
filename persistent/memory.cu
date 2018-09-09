@@ -477,6 +477,7 @@ int fgpu_memory_free(void *p)
 
 void *fgpu_memory_get_phy_address(void *addr)
 {
+    assert(0);
     return NULL;
 }
 

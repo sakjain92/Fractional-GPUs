@@ -978,10 +978,10 @@ typedef struct
 #define UVM_GET_DEVICE_COLOR_INFO                                   UVM_IOCTL_BASE(2044)
 typedef struct
 {
-    NvProcessorUuid destinationUuid;     // IN
-    NvU32           numColors;           // OUT
-    NvU64           maxLength;           // OUT
-    NV_STATUS       rmStatus;            // OUT
+    NvProcessorUuid destinationUuid;                            // IN
+    NvU32           numColors;                                  // OUT
+    NvU64           maxLength            NV_ALIGN_BYTES(8);     // OUT
+    NV_STATUS       rmStatus;                                   // OUT
 } UVM_GET_DEVICE_COLOR_INFO_PARAMS;
 
 
@@ -997,8 +997,8 @@ typedef struct
 {
     NvProcessorUuid destinationUuid;                            // IN
     NvU32           color;                                      // OUT
-    NvU64           length;                                     // OUT
-    NvU64           address;                                    // OUT
+    NvU64           length              NV_ALIGN_BYTES(8);      // OUT
+    NvU64           address             NV_ALIGN_BYTES(8);      // OUT
     NV_STATUS       rmStatus;                                   // OUT
 } UVM_GET_PROCESS_COLOR_INFO_PARAMS;
 
