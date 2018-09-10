@@ -183,7 +183,7 @@ dim3 fgpu_device_get_blockIdx3D(fgpu_dev_ctx_t *dev_ctx, int _blockIdx1D)
 #define FGPU_DEVICE_COLOR_SHIFT	            12
 #define FGPU_DEVICE_PAGE_SIZE               (1 << FGPU_DEVICE_COLOR_SHIFT)
 #define FGPU_DEVICE_PAGE_MASK               (~(FGPU_DEVICE_PAGE_SIZE - 1))
-#define FGPU_DEVICE_COLOR_PATTERN           0x4e4c3		// Split cache vertically
+#define FGPU_DEVICE_COLOR_PATTERN           0xce4c3		// Split cache vertically
 
 #define FGPU_COLOR_LOAD(ctx, addr)              \
 ({                                              \
