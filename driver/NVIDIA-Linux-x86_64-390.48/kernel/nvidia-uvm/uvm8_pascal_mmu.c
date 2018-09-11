@@ -381,16 +381,17 @@ void uvm_hal_pascal_mmu_disable_prefetch_faults(uvm_gpu_t *gpu)
 static NvU32 uvm_hal_pascal_mmu_phys_addr_to_true_color(uvm_gpu_t *gpu, NvU64 phys_addr)
 {
     NvU32 color;
-    int bit0;
+    bool bit0;
 
     UVM_ASSERT(uvm_gpu_supports_coloring(gpu));
 
     //Cache Vertically Split
-    bit0 = ((phys_addr >> 12) ^ (phys_addr >> 13) ^ (phys_addr >> 18) ^ 
-            (phys_addr >> 19) ^ (phys_addr >> 22) ^ (phys_addr >> 25) ^ 
-            (phys_addr >> 26) ^ (phys_addr >> 27) ^ (phys_addr >> 30) ^ 
-            (phys_addr >> 31)) & 0x1;
+    //bit0 = ((phys_addr >> 12) ^ (phys_addr >> 13) ^ (phys_addr >> 18) ^ 
+    //        (phys_addr >> 19) ^ (phys_addr >> 22) ^ (phys_addr >> 25) ^ 
+    //        (phys_addr >> 26) ^ (phys_addr >> 27) ^ (phys_addr >> 30) ^ 
+    //        (phys_addr >> 31)) & 0x1;
 
+    bit0 = hweight_long((NvU32)(phys_addr >> 12) & 0xce4c3) & 0x1;
     color = bit0;
 
     // Transfer color represent the true number of total colors
