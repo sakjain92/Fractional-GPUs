@@ -42,6 +42,7 @@
 
 /* NVIDIA driver */
 #include <uvm_minimal_init.h>
+#include <nvCpuUuid.h>
 
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
@@ -156,7 +157,7 @@ static int get_device_UUID(int device, NvProcessorUuid *uuid)
     char pciID[32];
     nvmlDevice_t handle;
     char buf[100];
-    char hex[2];
+    char hex[3];
     char *nbuf;
     int cindex, hindex, uindex, needed_bytes;
     char c;
@@ -198,6 +199,7 @@ static int get_device_UUID(int device, NvProcessorUuid *uuid)
             hex[hindex] = c;
             hindex++;
             if (hindex == 2) {
+                hex[2] = '\0';
                 uuid->uuid[uindex] = (uint8_t)strtol(hex, NULL, 16);
                 uindex++;
                 hindex = 0;
@@ -322,7 +324,6 @@ static int get_process_color_info(int device, int *color, size_t *length)
         *length = params.length;
 
     return 0;
-
 }
 
 /* Indicates the color set currently for the process and the length reserved */
@@ -562,6 +563,8 @@ int fgpu_memory_copy_async_to_host_internal(void *dst, const void *src,
     return 0;
 }
 
+/* Using kernel provided colored memcopy instead of doing it in userspace */
+/*
 int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
                                     enum fgpu_memory_copy_type type,
                                     cudaStream_t stream)
@@ -576,7 +579,66 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
         return -1;
     }   
 }
+*/
 
+int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
+                                    enum fgpu_memory_copy_type type,
+                                    cudaStream_t stream)
+{
+    /* XXX: Currently, not sure how to use stream? */
+    UVM_MEMCPY_COLORED_PARAMS params;
+    int ret;
+
+    if (type == FGPU_COPY_CPU_TO_CPU) {
+        memcpy(dst, src, count);
+        return 0;
+    }
+
+    /* Source is GPU? */
+    if (type == FGPU_COPY_GPU_TO_CPU || type == FGPU_COPY_GPU_TO_GPU) {
+        
+        ret = get_device_UUID(FGPU_DEVICE_NUMBER, &params.srcUuid);
+        if (ret < 0)
+            return ret;
+        
+        params.srcBase = (NvU64)fgpu_color_device_true_virt_addr((uint64_t)g_memory_ctx.base_addr,
+                                                                    (uint64_t)g_memory_ctx.base_phy_addr,
+                                                                    g_memory_ctx.color,
+                                                                    src);
+
+    } else {
+        memcpy(&params.srcUuid, &NV_PROCESSOR_UUID_CPU_DEFAULT, sizeof(NvProcessorUuid));
+        params.srcBase = (NvU64)src;
+    }
+
+    /* Destination is GPU? */
+    if (type == FGPU_COPY_CPU_TO_GPU || type == FGPU_COPY_GPU_TO_GPU) {
+        ret = get_device_UUID(FGPU_DEVICE_NUMBER, &params.destUuid);
+        if (ret < 0)
+            return ret;
+
+        params.destBase = (NvU64)fgpu_color_device_true_virt_addr((uint64_t)g_memory_ctx.base_addr,
+                                                                    (uint64_t)g_memory_ctx.base_phy_addr,
+                                                                    g_memory_ctx.color,
+                                                                    dst);
+
+    } else {
+        memcpy(&params.destUuid, &NV_PROCESSOR_UUID_CPU_DEFAULT, sizeof(NvProcessorUuid));
+        params.destBase = (NvU64)dst;
+    }
+
+    params.length = count;
+
+    ret = ioctl(g_uvm_fd, UVM_MEMCPY_COLORED, &params);
+    if (ret < 0)
+        return ret;
+
+    if (params.rmStatus != NV_OK) {
+        return -1;
+    }
+
+    return 0;
+}
 #else /* FGPU_USER_MEM_COLORING_ENABLED */
 
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
@@ -592,6 +654,10 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
         return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToDevice, stream));
     case FGPU_COPY_GPU_TO_CPU:
         return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToHost, stream));
+    case FGPU_COPY_GPU_TO_GPU:
+        return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToDevice, stream));
+    case FGPU_COPY_CPU_TO_CPU:
+        return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToHost, stream));
     default:
         return -1;
     }   

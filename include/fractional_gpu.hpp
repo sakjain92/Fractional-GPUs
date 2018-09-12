@@ -38,6 +38,8 @@ typedef struct fgpu_dev_ctx {
 enum fgpu_memory_copy_type {
     FGPU_COPY_CPU_TO_GPU,
     FGPU_COPY_GPU_TO_CPU,
+    FGPU_COPY_GPU_TO_GPU,
+    FGPU_COPY_CPU_TO_CPU,
 };
 
 int fgpu_server_init(void);

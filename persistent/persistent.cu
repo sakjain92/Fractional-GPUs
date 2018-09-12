@@ -795,6 +795,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t
     if (num_threads & (num_threads - 1) != 0)
         return -1;
 
+    /* TODO: This is not neccesary condition */
     if (num_threads < FGPU_MIN_BLOCKDIMS)
         return -1;
    
@@ -877,20 +878,5 @@ int fgpu_memory_prefetch_from_device_async(void *p, size_t len)
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type)
 {
-#ifndef FGPU_MEM_COLORING_ENABLED
-    int ret;
-
-    switch (type) {
-    case FGPU_COPY_CPU_TO_GPU:
-        ret = gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToDevice, color_stream));
-    case FGPU_COPY_GPU_TO_CPU:
-        ret = gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToHost, color_stream));
-    default:
-        ret = -1;
-    }   
-
-    return ret;
-#else
     return fgpu_memory_copy_async_internal(dst, src, count, type, color_stream);
-#endif
 }
