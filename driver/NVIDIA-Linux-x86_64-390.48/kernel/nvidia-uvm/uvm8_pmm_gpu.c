@@ -3423,6 +3423,10 @@ done:
     return status;
 }
 
+NV_STATUS uvm_pmm_get_current_process_color(uvm_pmm_gpu_t *pmm, NvU32 *color)
+{
+     return get_current_process_color_info(pmm, color, NULL, NULL);
+}
 
 NV_STATUS uvm_api_get_device_color_info(UVM_GET_DEVICE_COLOR_INFO_PARAMS *params, struct file *filp)
 {

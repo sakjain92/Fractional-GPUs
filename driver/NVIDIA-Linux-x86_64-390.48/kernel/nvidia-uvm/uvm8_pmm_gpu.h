@@ -615,6 +615,11 @@ static uvm_chunk_size_t uvm_chunk_find_prev_size(uvm_chunk_sizes_mask_t chunk_si
 // retained, and it's up to the caller to release them.
 NvU32 uvm_pmm_gpu_phys_to_virt(uvm_pmm_gpu_t *pmm, NvU64 phys_addr, NvU64 region_size, uvm_reverse_map_t *out_mappings);
 
+// Obtain the current processes color information.
+//
+// Color refers to the set color (transfer color) for the process.
+NV_STATUS uvm_pmm_get_current_process_color(uvm_pmm_gpu_t *pmm, NvU32 *color);
+
 // Iterates over every size in the input mask from smallest to largest
 #define for_each_chunk_size(__size, __chunk_sizes)                                  \
     for ((__size) = (__chunk_sizes) ? uvm_chunk_find_first_size(__chunk_sizes) :    \

@@ -1964,6 +1964,39 @@ static NV_STATUS block_copy_begin_push(uvm_va_block_t *va_block,
                                   va_block->end);
 }
 
+// Begin a push appropriate for copying data from src_id processor to dst_id processor.
+static NV_STATUS block_memcopy_begin_push(uvm_processor_id_t dst_id,
+                                       uvm_processor_id_t src_id,
+                                       uvm_push_t *push)
+{
+    uvm_channel_type_t channel_type;
+    uvm_gpu_t *gpu;
+ 
+    if (src_id == UVM_CPU_ID) {
+        gpu = uvm_gpu_get(dst_id);
+        channel_type = UVM_CHANNEL_TYPE_CPU_TO_GPU;
+    }
+    else if (dst_id == UVM_CPU_ID) {
+        gpu = uvm_gpu_get(src_id);
+        channel_type = UVM_CHANNEL_TYPE_GPU_TO_CPU;
+    }
+    else {
+        UVM_ASSERT(src_id == dst_id);
+
+        gpu = uvm_gpu_get(src_id);
+
+        channel_type = UVM_CHANNEL_TYPE_GPU_INTERNAL;
+    }
+
+    return uvm_push_begin_acquire(gpu->channel_manager,
+                                  channel_type,
+                                  NULL,
+                                  push,
+                                  "Copy from %s to %s",
+                                  uvm_processor_name(src_id),
+                                  uvm_processor_name(dst_id));
+}
+
 // A page is clean iff...
 // the destination is the preferred location and
 // the source is the CPU and
@@ -2093,13 +2126,14 @@ static bool block_phys_copy_contig_check(uvm_va_block_t *block,
     return uvm_gpu_addr_cmp(page_address, contig_address) == 0;
 }
 
-static bool is_block_phys_contig(uvm_va_block_t *block, uvm_processor_id_t id)
+bool uvm_block_is_phys_contig(uvm_va_block_t *block, uvm_processor_id_t id)
 {
     // Check if the VA block has a single physically-contiguous chunk of storage
     // on the GPU
     return (id != UVM_CPU_ID) &&
            (uvm_va_block_size(block) == block_gpu_chunk_size(block, uvm_gpu_get(id), 0));
 }
+
 
 static uvm_va_block_region_t block_phys_contig_region(uvm_va_block_t *block,
                                                       uvm_page_index_t page_index,
@@ -2147,8 +2181,8 @@ static NV_STATUS block_copy_resident_pages_between(uvm_va_block_t *block,
     uvm_make_resident_cause_t contig_cause = cause;
     const bool may_prefetch = (cause == UVM_MAKE_RESIDENT_CAUSE_FAULT ||
                                cause == UVM_MAKE_RESIDENT_CAUSE_NON_REPLAYABLE_FAULT) && !!prefetch_page_mask;
-    const bool is_src_phys_contig = is_block_phys_contig(block, src_id);
-    const bool is_dst_phys_contig = is_block_phys_contig(block, dst_id);
+    const bool is_src_phys_contig = uvm_block_is_phys_contig(block, src_id);
+    const bool is_dst_phys_contig = uvm_block_is_phys_contig(block, dst_id);
     uvm_gpu_address_t contig_src_address = {0};
     uvm_gpu_address_t contig_dst_address = {0};
 
@@ -2385,6 +2419,170 @@ update_bits:
                                         get_block_transfer_mode_from_internal(transfer_mode),
                                         contig_cause);
     }
+
+    // TODO: Bug 1766424: If the destination is a GPU and the copy was done by
+    //       that GPU, use a GPU-local membar if no peer can currently map this
+    //       page. When peer access gets enabled, do a MEMBAR_SYS at that point.
+    uvm_push_end(&push);
+    tracker_status = uvm_tracker_add_push_safe(copy_tracker, &push);
+    return status == NV_OK ? tracker_status : status;
+}
+
+// Copies pages from the src_id processor to the dst_id processor
+//
+// Acquires the block's tracker and adds all of its pushes to the copy_tracker.
+NV_STATUS block_copy_pages_between(uvm_va_block_t *src_block,
+                                    uvm_va_block_t *dest_block,
+                                    uvm_processor_id_t src_id,
+                                    uvm_processor_id_t dest_id,
+                                    uvm_va_block_colored_region_t *src_region,
+                                    uvm_va_block_colored_region_t *dest_region,
+                                    NvU64 *copied,
+                                    uvm_tracker_t *copy_tracker)
+{
+    NV_STATUS tracker_status, status = NV_OK;
+    uvm_push_t push;
+    uvm_gpu_t *copying_gpu = NULL;
+    uvm_va_block_gpu_state_t *gpu_state;
+    uvm_page_index_t src_page_index, dest_page_index;
+    const bool is_src_phys_contig = uvm_block_is_phys_contig(src_block, src_id);
+    const bool is_dest_phys_contig = uvm_block_is_phys_contig(dest_block, dest_id);
+    uvm_gpu_address_t contig_src_address = {0};
+    uvm_gpu_address_t contig_dest_address = {0};
+    NvU64 src_page_offset, dest_page_offset;
+    NvU64 src_page_leftover, dest_page_leftover, length;
+
+    *copied = 0;
+
+    src_page_index = uvm_va_block_first_page_in_mask(src_region->region, &src_region->page_mask);
+    dest_page_index = uvm_va_block_first_page_in_mask(dest_region->region, &dest_region->page_mask);
+
+    while (src_page_index != src_region->region.outer && 
+            dest_page_index != dest_region->region.outer) {
+
+        // TODO: Add code to populate and add mapping
+        if (!block_processor_page_is_populated(src_block, src_id, src_page_index)) {
+            status = NV_ERR_INVALID_ADDRESS;
+            break;
+        }
+
+        if (!block_processor_page_is_populated(dest_block, dest_id, dest_page_index)) {
+            status = NV_ERR_INVALID_ADDRESS;
+            break;
+        }
+
+        if (!copying_gpu) {
+
+            // Can't be two different GPUs. Not supported yet.
+            UVM_ASSERT(src_id == UVM_CPU_ID || dest_id == UVM_CPU_ID || src_id == dest_id);
+
+            // Need to map CPU pages on GPU if not already done
+            if (src_id == UVM_CPU_ID) {
+
+                copying_gpu = uvm_gpu_get(dest_id);
+
+                gpu_state = block_gpu_state_get_alloc(src_block, copying_gpu);
+                if (!gpu_state) {
+                    status = NV_ERR_NO_MEMORY;
+                    break;
+                }
+            }
+
+            if (dest_id == UVM_CPU_ID) {
+
+                copying_gpu = uvm_gpu_get(src_id); 
+
+                gpu_state = block_gpu_state_get_alloc(dest_block, copying_gpu);
+                if (!gpu_state) {
+                    status = NV_ERR_NO_MEMORY;
+                    break;
+                }
+            }
+
+            status = block_memcopy_begin_push(dest_id, src_id, &push);
+            if (status != NV_OK)
+                break;
+
+            //uvm_push_acquire_tracker(&push, &src_block->tracker);
+            //uvm_push_acquire_tracker(&push, &dest_block->tracker);
+
+            copying_gpu = uvm_push_get_gpu(&push);
+    
+            if (is_src_phys_contig)
+                contig_src_address = block_phys_page_copy_address(src_block, block_phys_page(src_id, 0), copying_gpu);
+            if (is_dest_phys_contig)
+                contig_dest_address = block_phys_page_copy_address(dest_block, block_phys_page(dest_id, 0), copying_gpu);
+        }
+
+        else {
+            uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_PIPELINED);
+        }
+
+        if (is_src_phys_contig)
+            UVM_ASSERT(block_phys_copy_contig_check(src_block, src_page_index, &contig_src_address, src_id, copying_gpu));
+        if (is_dest_phys_contig)
+            UVM_ASSERT(block_phys_copy_contig_check(dest_block, dest_page_index, &contig_dest_address, dest_id, copying_gpu));
+
+        {
+            uvm_gpu_address_t src_address;
+            uvm_gpu_address_t dest_address;
+            
+            src_page_offset = src_region->page_offset;
+            dest_page_offset = dest_region->page_offset;
+
+            src_page_leftover = min(PAGE_SIZE - src_page_offset, src_region->length);
+            dest_page_leftover = min(PAGE_SIZE - dest_page_offset, dest_region->length);
+
+            if (is_src_phys_contig) {
+                src_address = contig_src_address;
+                src_address.address += src_page_index * PAGE_SIZE;
+            }
+            else {
+                src_address = block_phys_page_copy_address(src_block, block_phys_page(src_id, src_page_index), copying_gpu);
+            }
+
+            src_address.address += src_page_offset;
+
+            if (is_dest_phys_contig) {
+                dest_address = contig_dest_address;
+                dest_address.address += dest_page_index * PAGE_SIZE;
+            }
+            else {
+                dest_address = block_phys_page_copy_address(dest_block, block_phys_page(dest_id, dest_page_index), copying_gpu);
+            }
+
+            dest_address.address += dest_page_offset;
+
+            length = min(src_page_leftover, dest_page_leftover);
+            UVM_ASSERT(src_region->length == dest_region->length);
+
+            uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_MEMBAR_NONE);
+            copying_gpu->ce_hal->memcopy(&push, dest_address, src_address, length);
+        }
+        
+        src_region->page_offset = (src_region->page_offset + length) & (PAGE_SIZE - 1);
+        dest_region->page_offset = (dest_region->page_offset + length) & (PAGE_SIZE - 1);
+
+        src_region->length -= length;
+        dest_region->length -= length;
+
+        *copied += length;
+
+        if (length == src_page_leftover) {
+            uvm_page_mask_clear(&src_region->page_mask, src_page_index);
+            src_page_index = uvm_va_block_next_page_in_mask(src_region->region, 
+                &src_region->page_mask, src_page_index);
+        }
+
+        if (length == dest_page_leftover) {
+            uvm_page_mask_clear(&dest_region->page_mask, dest_page_index);
+            dest_page_index = uvm_va_block_next_page_in_mask(dest_region->region,
+                &dest_region->page_mask, dest_page_index);
+        }   
+    }
+
+    if (!copying_gpu)
+        return status;
 
     // TODO: Bug 1766424: If the destination is a GPU and the copy was done by
     //       that GPU, use a GPU-local membar if no peer can currently map this

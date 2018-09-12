@@ -256,6 +256,290 @@ static NV_STATUS uvm_va_range_migrate(uvm_va_range_t *va_range,
     return NV_OK;
 }
 
+// Iterate over all managed contiguous va_blocks till "length" is covered
+// Length is in terms of color mem size
+static NV_STATUS uvm_block_iter_initialization(uvm_va_space_t *va_space,
+                                                NvU64 start,
+                                                uvm_block_iter_t *iter)
+{
+    uvm_va_range_t *first_va_range;
+    size_t block_index, range_end_block_index;
+
+    uvm_assert_rwsem_locked(&va_space->lock);
+
+    first_va_range = uvm_va_space_iter_first(va_space, start, start);
+    if (!first_va_range || first_va_range->type != UVM_VA_RANGE_TYPE_MANAGED)
+        return NV_ERR_INVALID_ADDRESS;
+
+    block_index = uvm_va_range_block_index(first_va_range, max(start, first_va_range->node.start));
+    range_end_block_index = uvm_va_range_block_index(first_va_range, first_va_range->node.end);
+
+    iter->start = start;
+
+    iter->va_range = first_va_range;
+    iter->next_block_index = block_index;
+    iter->range_end_block_index = range_end_block_index;    
+
+    return NV_OK;
+}
+
+static NV_STATUS uvm_block_iter_next_block(uvm_block_iter_t *iter,
+                                uvm_va_block_t **va_block)
+{
+    NV_STATUS status;
+
+    // Reached end of current range?
+    if (iter->next_block_index > iter->range_end_block_index) {
+        uvm_va_range_t *va_range;
+	    NvU64 end = (NvU64)-1;
+
+    	va_range = uvm_va_space_iter_next(iter->va_range, end);
+        if (!va_range || va_range->type != UVM_VA_RANGE_TYPE_MANAGED) {
+            return NV_ERR_INVALID_ADDRESS;
+        }
+
+        iter->next_block_index = uvm_va_range_block_index(va_range, va_range->node.start);
+	    iter->range_end_block_index = uvm_va_range_block_index(va_range, va_range->node.end);
+        iter->va_range = va_range;
+    }
+
+    status = uvm_va_range_block_create(iter->va_range, iter->next_block_index, va_block);
+    if (status != NV_OK) {
+        return status;
+    }
+
+    iter->next_block_index++;
+
+    return NV_OK;
+}
+
+void uvm_va_colored_block_region_init(NvU64 start, NvU64 length, NvU32 color,
+        uvm_va_block_colored_region_t *region)
+{
+    region->start = start & ~(PAGE_SIZE - 1);
+    region->page_offset = start & (PAGE_SIZE - 1);
+    
+    region->color = color;
+
+    region->length = length;
+    
+    uvm_page_mask_zero(&region->page_mask);
+
+    region->last_block = NULL;
+}
+
+// Update a block color range for a va block
+// Since this function depends on physical address, block should be locked
+// before calling this function.
+NV_STATUS uvm_update_va_colored_block_region(uvm_va_block_t *va_block,
+                                               uvm_processor_id_t id,
+                                               uvm_va_block_colored_region_t *region)
+{
+    NvU64 left = region->length;
+    NvU64 start, end;
+    uvm_page_index_t first, outer, last;
+    uvm_gpu_phys_address_t phy_addr;
+    uvm_gpu_t *gpu;
+    NvU64 page_start, page_end, page_size, page_offset;
+    NvU32 page_color;
+
+    uvm_assert_mutex_locked(&va_block->lock);
+
+    // No update needed if current block same as last block
+    if (region->last_block && region->last_block->start == va_block->start)
+        return NV_OK;
+
+    uvm_page_mask_zero(&region->page_mask);
+
+    page_offset = region->page_offset;
+
+    // No coloring on CPU side
+    if (id == UVM_CPU_ID) {
+        start = max(va_block->start, region->start) + page_offset;
+        end = min(va_block->end, start + region->length - 1);
+
+        first = uvm_va_block_cpu_page_index(va_block, start);
+        outer = uvm_va_block_cpu_page_index(va_block, end) + 1;
+
+        uvm_page_mask_fill(&region->page_mask, first, outer);
+
+        goto done;
+    }
+
+    start = max(va_block->start, region->start);
+    first = uvm_va_block_cpu_page_index(va_block, start);
+    outer = uvm_va_block_cpu_page_index(va_block, va_block->end) + 1;
+    last = first;
+
+    gpu = uvm_gpu_get(id);
+
+    // If physically contiguous, get the start phy address and then increment
+    // Else find physical address for all the pages seperately
+    if (uvm_block_is_phys_contig(va_block, id)) {
+        
+        uvm_page_index_t i;
+
+        phy_addr = uvm_va_block_gpu_phys_page_address(va_block, first, gpu);
+
+        for (i = first; i < outer && left != 0; i++, phy_addr.address += PAGE_SIZE) {
+    
+            page_color = gpu->arch_hal->phys_addr_to_transfer_color(gpu, phy_addr.address);
+            if (page_color != region->color) {
+                continue;
+            }
+
+	        last = i;
+
+            uvm_page_mask_set(&region->page_mask, i);
+            page_start = max(start, va_block->start + PAGE_SIZE * i) + page_offset;
+            page_end = va_block->start + PAGE_SIZE * (i + 1) - 1;
+            page_size = min(left, page_end - page_start + 1);
+            left -= page_size;
+            page_offset = 0;
+        }
+    } else {
+        
+        uvm_page_index_t i;
+
+        for (i = first; i < outer && left != 0; i++) {
+   
+            phy_addr = uvm_va_block_gpu_phys_page_address(va_block, i, gpu);
+
+            page_color = gpu->arch_hal->phys_addr_to_transfer_color(gpu, phy_addr.address);
+            if (page_color != region->color) {
+                continue;
+            }
+	
+	        last = i;
+
+            uvm_page_mask_set(&region->page_mask, i);
+            page_start = max(start, va_block->start + PAGE_SIZE * i) + page_offset;
+            page_end = va_block->start + PAGE_SIZE * (i + 1) - 1;
+            page_size = min(left, page_end - page_start + 1);
+            left -= page_size;
+            page_offset = 0;
+        }
+
+    }
+
+    outer = last + 1;
+
+done:
+    region->region.first = first;
+    region->region.outer = outer;
+
+    region->last_block = va_block;
+
+    return NV_OK;
+}
+
+static NV_STATUS uvm_va_block_memcpy_locked(uvm_va_block_t *src_va_block,
+                                            uvm_va_block_t *dest_va_block,
+                                            uvm_processor_id_t src_id,
+                                            uvm_processor_id_t dest_id,
+                                            uvm_va_block_colored_region_t *src_region,
+                                            uvm_va_block_colored_region_t *dest_region,
+                                            NvU64 *copied,
+                                            uvm_tracker_t *out_tracker)
+{
+    NV_STATUS status = NV_OK;
+    uvm_tracker_t local_tracker = UVM_TRACKER_INIT();
+    NV_STATUS tracker_status;
+
+    status = uvm_update_va_colored_block_region(src_va_block, src_id, src_region);
+    if (status != NV_OK)
+        goto out;
+
+    status =uvm_update_va_colored_block_region(dest_va_block, dest_id, dest_region);
+    if (status != NV_OK)
+        goto out;
+
+    status = block_copy_pages_between(src_va_block,
+                                        dest_va_block,
+                                        src_id,
+                                        dest_id,
+                                        src_region,
+                                        dest_region,
+                                        copied,
+                                        &local_tracker);
+
+out:
+    if (out_tracker) {
+        tracker_status = uvm_tracker_add_tracker_safe(out_tracker, &local_tracker);
+        uvm_tracker_deinit(&local_tracker);
+    } else {
+        // Add everything from the local tracker to the block's tracker.
+        tracker_status = uvm_tracker_add_tracker_safe(&dest_va_block->tracker, &local_tracker);
+        uvm_tracker_deinit(&local_tracker);
+    }
+
+    return status == NV_OK ? tracker_status : status;
+}
+
+static NV_STATUS uvm_memcpy_colored_blocks(uvm_va_space_t *va_space,
+                                           NvU64 srcBase,
+                                           NvU64 destBase,
+                                           NvU64 length,
+                                           NvU32 color,
+                                           uvm_processor_id_t src_id,
+                                           uvm_processor_id_t dest_id,
+                                           uvm_tracker_t *out_tracker)
+{
+    NV_STATUS status;
+    uvm_va_block_retry_t src_va_block_retry, dest_va_block_retry;
+    uvm_block_iter_t src_block_iter, dest_block_iter;
+    uvm_va_block_t *src_va_block, *dest_va_block;
+    NvU64 left = length;
+    NvU64 copied;
+    uvm_va_block_colored_region_t src_region, dest_region;
+
+    status = uvm_block_iter_initialization(va_space, srcBase, &src_block_iter);
+    if (status != NV_OK)
+        return status;
+
+    status = uvm_block_iter_initialization(va_space, destBase, &dest_block_iter);
+    if (status != NV_OK)
+        return status;
+
+    uvm_va_colored_block_region_init(srcBase, length, color, &src_region);
+    uvm_va_colored_block_region_init(destBase, length, color, &dest_region);
+
+
+    while (left != 0) {
+
+        // If current block has been done with, fetch the next block
+        if (uvm_page_mask_empty(&src_region.page_mask)) {
+            status = uvm_block_iter_next_block(&src_block_iter, &src_va_block);
+            if (status != NV_OK)
+                return status;
+        }
+
+        if (uvm_page_mask_empty(&dest_region.page_mask)) {
+            status = uvm_block_iter_next_block(&dest_block_iter, &dest_va_block);
+            if (status != NV_OK)
+                return status;
+        }
+
+        status = UVM_VA_MULTI_BLOCK_LOCK_RETRY(src_va_block, dest_va_block,
+                &src_va_block_retry, &dest_va_block_retry,
+                uvm_va_block_memcpy_locked(src_va_block,
+                    dest_va_block,
+                    src_id,
+                    dest_id,
+                    &src_region,
+                    &dest_region,
+                    &copied,
+                    out_tracker));
+
+        if (status != NV_OK)
+            return status;
+
+        left -= copied;
+    }
+
+    return NV_OK;
+}
+
 static NV_STATUS uvm_migrate_ranges(uvm_va_space_t *va_space,
                                     uvm_va_block_context_t *va_block_context,
                                     uvm_va_range_t *first_va_range,
@@ -409,6 +693,36 @@ static NV_STATUS uvm_migrate(uvm_va_space_t *va_space,
     }
 
     uvm_va_block_context_free(va_block_context);
+
+    if (status != NV_OK)
+        return status;
+
+    return NV_OK;
+}
+
+static NV_STATUS uvm_memcpy_colored(uvm_va_space_t *va_space,
+                                    NvU64 srcBase,
+                                    NvU64 destBase,
+                                    NvU64 length,
+                                    NvU32 color,
+                                    uvm_processor_id_t src_id,
+                                    uvm_processor_id_t dest_id,
+                                    uvm_tracker_t *out_tracker)
+{
+    NV_STATUS status = NV_OK;
+
+    uvm_assert_mmap_sem_locked(&current->mm->mmap_sem);
+    uvm_assert_rwsem_locked(&va_space->lock);
+
+    // TODO: Populate pages and map them
+    status = uvm_memcpy_colored_blocks(va_space,
+                                        srcBase,
+                                        destBase,
+                                        length,
+                                        color,
+                                        src_id,
+                                        dest_id,
+                                        out_tracker);
 
     if (status != NV_OK)
         return status;
@@ -655,6 +969,102 @@ done:
     return status == NV_OK ? tracker_status : status;
 }
 
+NV_STATUS uvm_api_memcpy_colored(UVM_MEMCPY_COLORED_PARAMS *params, struct file *filp)
+{
+    uvm_va_space_t *va_space = uvm_va_space_get(filp);
+    uvm_tracker_t tracker = UVM_TRACKER_INIT();
+    // NULL = CPU
+    uvm_gpu_t *src_gpu = NULL;
+    uvm_gpu_t *dest_gpu = NULL;
+    NvU32 color = 0;
+    NV_STATUS status;
+    NV_STATUS tracker_status = NV_OK;
+
+    // mmap_sem will be needed if we have to create CPU mappings
+    uvm_down_read_mmap_sem(&current->mm->mmap_sem);
+    uvm_va_space_down_read(va_space);
+
+    if (uvm_uuid_is_cpu(&params->srcUuid)) {
+        src_gpu = NULL;
+    }
+    else {
+        src_gpu = uvm_va_space_get_gpu_by_uuid_with_gpu_va_space(va_space, &params->srcUuid);
+
+        if (!src_gpu) {
+            status = NV_ERR_INVALID_DEVICE;
+            goto done;
+        }
+    }
+
+    if (uvm_uuid_is_cpu(&params->destUuid)) {
+        dest_gpu = NULL;
+    }
+    else {
+        dest_gpu = uvm_va_space_get_gpu_by_uuid_with_gpu_va_space(va_space, &params->destUuid);
+
+        if (!dest_gpu) {
+            status = NV_ERR_INVALID_DEVICE;
+            goto done;
+        }
+    }
+
+    // Either atmost one src/dest lie on CPU or both lie on same GPU
+    // Invalid configuration: Both lie on CPU or different GPUs
+    if ((!src_gpu && !dest_gpu) || (src_gpu && dest_gpu && src_gpu->id != dest_gpu->id)) {
+    	status = NV_ERR_INVALID_DEVICE;
+        goto done;
+    }
+
+    // Atleast one is a GPU. Get it's color. If both on same GPU, then also only a single color exists.
+    if (src_gpu) {
+        status = uvm_pmm_get_current_process_color(&src_gpu->pmm, &color);
+        if (status != NV_OK)
+            goto done;
+    } else {
+        status = uvm_pmm_get_current_process_color(&dest_gpu->pmm, &color);
+        if (status != NV_OK)
+            goto done;
+    }
+
+    if (params->length == 0) {
+        status = NV_OK;
+        goto done;
+    }
+
+    // This is synchronous call, so using a tracker.
+    status = uvm_memcpy_colored(va_space, params->srcBase, params->destBase, 
+                                params->length, color, (src_gpu ? src_gpu->id : UVM_CPU_ID),
+                                (dest_gpu ? dest_gpu->id : UVM_CPU_ID),
+                                &tracker);
+
+done:
+    // We only need to hold mmap_sem to create new CPU mappings, so drop it if
+    // we need to wait for the tracker to finish.
+    //
+    // TODO: Bug 1766650: For large migrations with destination CPU, try
+    //       benchmarks to see if a two-pass approach would be faster (first
+    //       pass pushes all GPU work asynchronously, second pass updates CPU
+    //       mappings synchronously).
+    uvm_up_read_mmap_sem_out_of_order(&current->mm->mmap_sem);
+
+    // There was an error or we are sync. Even if there was an error, we
+    // need to wait for work already dispatched to complete. Waiting on
+    // a tracker requires the VA space lock to prevent GPUs being unregistered
+    // during the wait.
+    tracker_status = uvm_tracker_wait_deinit(&tracker);
+
+    uvm_va_space_up_read(va_space);
+
+    // When the UVM driver blocks on a migration, use the opportunity to eagerly dispatch
+    // the migration events once the migration is complete, instead of waiting for a later
+    // event flush to process the events.
+    uvm_tools_flush_events();
+
+    // Only clobber status if we didn't hit an earlier error
+    return status == NV_OK ? tracker_status : status;
+}
+
+
 NV_STATUS uvm_api_migrate_range_group(UVM_MIGRATE_RANGE_GROUP_PARAMS *params, struct file *filp)
 {
     NV_STATUS status = NV_OK;
@@ -718,7 +1128,8 @@ done:
     tracker_status = uvm_tracker_wait_deinit(&local_tracker);
     uvm_va_space_up_read(va_space);
 
-#if 0
+#if 0  // TODO: Find out why this cause non-realtime delays
+       // (I suspect it has something to do with this function using background kernel thread)
     // This API is synchronous, so wait for migrations to finish
     uvm_tools_flush_events();
 #endif

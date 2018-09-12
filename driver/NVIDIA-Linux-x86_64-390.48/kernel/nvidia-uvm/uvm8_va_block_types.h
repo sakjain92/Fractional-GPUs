@@ -62,6 +62,11 @@
     typedef NvU32 uvm_page_index_t;
 #endif
 
+    typedef struct
+{
+    DECLARE_BITMAP(bitmap, PAGES_PER_UVM_VA_BLOCK);
+} uvm_page_mask_t;
+
 // Encapsulates a [first, outer) region of pages within a va block
 typedef struct
 {
@@ -70,10 +75,32 @@ typedef struct
     uvm_page_index_t outer;
 } uvm_va_block_region_t;
 
+// Encapsulates a [first, outer) region of pages within a va block
+// Also encapsulates the start and end offsets within those pages
+// and only highlights the colored pages for a given color in that
+// block
 typedef struct
 {
-    DECLARE_BITMAP(bitmap, PAGES_PER_UVM_VA_BLOCK);
-} uvm_page_mask_t;
+    // Start address
+    NvU64 start;
+
+    NvU32 color;
+
+    // Page offset of the first page in block
+    NvU64 page_offset;
+
+    // Length covered by colored pages between start and end
+    NvU64 length;
+    
+    // Mask for colored pages
+    uvm_page_mask_t page_mask;
+
+    uvm_va_block_region_t region;
+
+    // Last block used to update region
+    uvm_va_block_t *last_block;
+
+} uvm_va_block_colored_region_t;
 
 // Encapsulates a counter tree built on top of a page mask bitmap in
 // which each leaf represents a page in the block. It contains
