@@ -2431,14 +2431,14 @@ update_bits:
 // Copies pages from the src_id processor to the dst_id processor
 //
 // Acquires the block's tracker and adds all of its pushes to the copy_tracker.
-NV_STATUS block_copy_pages_between(uvm_va_block_t *src_block,
-                                    uvm_va_block_t *dest_block,
-                                    uvm_processor_id_t src_id,
-                                    uvm_processor_id_t dest_id,
-                                    uvm_va_block_colored_region_t *src_region,
-                                    uvm_va_block_colored_region_t *dest_region,
-                                    NvU64 *copied,
-                                    uvm_tracker_t *copy_tracker)
+NV_STATUS block_copy_colored_pages_between(uvm_va_block_t *src_block,
+                                            uvm_va_block_t *dest_block,
+                                            uvm_processor_id_t src_id,
+                                            uvm_processor_id_t dest_id,
+                                            uvm_va_block_colored_region_t *src_region,
+                                            uvm_va_block_colored_region_t *dest_region,
+                                            NvU64 *copied,
+                                            uvm_tracker_t *copy_tracker)
 {
     NV_STATUS tracker_status, status = NV_OK;
     uvm_push_t push;
@@ -2503,6 +2503,8 @@ NV_STATUS block_copy_pages_between(uvm_va_block_t *src_block,
             if (status != NV_OK)
                 break;
 
+            // Currently we are not populating blocks so this is not needed
+            // No pending work in the blocks
             //uvm_push_acquire_tracker(&push, &src_block->tracker);
             //uvm_push_acquire_tracker(&push, &dest_block->tracker);
 
@@ -2589,6 +2591,120 @@ NV_STATUS block_copy_pages_between(uvm_va_block_t *src_block,
     //       page. When peer access gets enabled, do a MEMBAR_SYS at that point.
     uvm_push_end(&push);
     tracker_status = uvm_tracker_add_push_safe(copy_tracker, &push);
+    return status == NV_OK ? tracker_status : status;
+}
+
+// Memsets colored pages on a device
+//
+// Acquires the block's tracker and adds all of its pushes to the copy_tracker.
+NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
+                                        uvm_processor_id_t id,
+                                        uvm_va_block_colored_region_t *region,
+                                        NvU8 value,
+                                        NvU64 *covered,
+                                        uvm_tracker_t *out_tracker)
+{
+    NV_STATUS tracker_status, status = NV_OK;
+    uvm_push_t push;
+    uvm_gpu_t *gpu = NULL;
+    uvm_page_index_t page_index;
+    const bool is_phys_contig = uvm_block_is_phys_contig(block, id);
+    uvm_gpu_address_t contig_address = {0};
+    NvU64 page_offset, page_leftover, length;
+
+    *covered = 0;
+
+    page_index = uvm_va_block_first_page_in_mask(region->region, &region->page_mask);
+
+    while (page_index != region->region.outer) {
+
+        // TODO: Add code to populate and add mapping
+        if (!block_processor_page_is_populated(block, id, page_index)) {
+            status = NV_ERR_INVALID_ADDRESS;
+            break;
+        }
+
+        if (!gpu) {
+
+            gpu = uvm_gpu_get(id);
+
+            status = uvm_push_begin_acquire(gpu->channel_manager, 
+                                            UVM_CHANNEL_TYPE_GPU_INTERNAL,
+                                            out_tracker, &push,
+                                            "Colored memset chunk region [0x%llx, 0x%llx) in va block [0x%llx, 0x%llx)",
+                                            uvm_va_block_region_start(block, region->region),
+                                            uvm_va_block_region_end(block, region->region) + 1,
+                                            block->start, block->end + 1);
+
+            // Uncomment this when pages start being populated in memset code path
+            //uvm_push_acquire_tracker(&push, &block->tracker);
+
+            if (is_phys_contig)
+                contig_address = block_phys_page_copy_address(block, block_phys_page(id, 0), gpu);
+        }
+
+        // Pipeline the memsets since they never overlap with each other
+        uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_PIPELINED);
+
+        if (is_phys_contig)
+            UVM_ASSERT(block_phys_copy_contig_check(block, page_index, &contig_address, id, gpu));
+
+
+        {
+            uvm_gpu_address_t address;
+            
+            page_offset = region->page_offset;
+
+            page_leftover = min(PAGE_SIZE - page_offset, region->length);
+
+            if (is_phys_contig) {
+                address = contig_address;
+                address.address += page_index * PAGE_SIZE;
+            }
+            else {
+                address = block_phys_page_copy_address(block, block_phys_page(id, page_index), gpu);
+            }
+
+            address.address += page_offset;
+
+            length = page_leftover;
+
+            uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_MEMBAR_NONE);
+
+            gpu->ce_hal->memset_1(&push, address, value, length);
+        }
+        
+        region->page_offset = (region->page_offset + length) & (PAGE_SIZE - 1);
+
+        region->length -= length;
+
+        *covered += length;
+
+        if (length == page_leftover) {
+            uvm_page_mask_clear(&region->page_mask, page_index);
+            page_index = uvm_va_block_next_page_in_mask(region->region, 
+                &region->page_mask, page_index);
+        }
+    }
+
+    if (!gpu)
+        return status;
+
+    // A membar from this GPU is required between this memset and any PTE write
+    // pointing this or another GPU to this chunk. Otherwise an engine could
+    // read the PTE then access the page before the memset write is visible to
+    // that engine.
+    //
+    // This memset writes GPU memory, so local mappings need only a GPU-local
+    // membar. We can't easily determine here whether a peer GPU will ever map
+    // this page in the future, so always use a sysmembar. uvm_push_end provides
+    // one by default.
+    //
+    // TODO: Bug 1766424: Use GPU-local membars if no peer can currently map
+    //       this page. When peer access gets enabled, do a MEMBAR_SYS at that
+    //       point.
+    uvm_push_end(&push);
+    tracker_status = uvm_tracker_add_push_safe(out_tracker, &push);
     return status == NV_OK ? tracker_status : status;
 }
 

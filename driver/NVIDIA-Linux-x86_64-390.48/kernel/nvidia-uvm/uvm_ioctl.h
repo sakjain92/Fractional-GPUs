@@ -975,7 +975,7 @@ typedef struct
 //
 // UvmGetDeviceColorInfo
 //
-#define UVM_GET_DEVICE_COLOR_INFO                                   UVM_IOCTL_BASE(2043)
+#define UVM_GET_DEVICE_COLOR_INFO                                   UVM_IOCTL_BASE(2042)
 typedef struct
 {
     NvProcessorUuid destinationUuid;                            // IN
@@ -992,7 +992,7 @@ typedef struct
 //
 // UvmGetProcessColorInfo
 //
-#define UVM_GET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2044)
+#define UVM_GET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2043)
 typedef struct
 {
     NvProcessorUuid destinationUuid;                            // IN
@@ -1009,7 +1009,7 @@ typedef struct
 //
 // UvmSetProcessColorInfo
 //
-#define UVM_SET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2045)
+#define UVM_SET_PROCESS_COLOR_INFO                                  UVM_IOCTL_BASE(2044)
 typedef struct
 {
     NvProcessorUuid destinationUuid;                            // IN
@@ -1033,7 +1033,7 @@ typedef struct
 // UvmMemcpyColored
 //
 
-#define UVM_MEMCPY_COLORED                                          UVM_IOCTL_BASE(2046)
+#define UVM_MEMCPY_COLORED                                          UVM_IOCTL_BASE(2045)
 typedef struct
 {
     NvU64           srcBase           NV_ALIGN_BYTES(8); // IN
@@ -1043,6 +1043,28 @@ typedef struct
     NvU64           length            NV_ALIGN_BYTES(8); // IN
     NV_STATUS       rmStatus;                            // OUT
 } UVM_MEMCPY_COLORED_PARAMS;
+
+//
+// Memset a memory region on device (must be a GPU)
+// If coloring is enabled, copies only colored pages as specified by 
+// set color of the process.
+// This function doesn't deal with unified memory semantics. Semantics are just
+// like cudaMemset(), except coloring is supported.
+//
+
+//
+// UvmMemsetColored
+//
+
+#define UVM_MEMSET_COLORED                                          UVM_IOCTL_BASE(2046)
+typedef struct
+{
+    NvU64           base              NV_ALIGN_BYTES(8); // IN
+    NvProcessorUuid uuid;                                // IN
+    NvU64           length            NV_ALIGN_BYTES(8); // IN
+    NvU8            value;                               // IN
+    NV_STATUS       rmStatus;                            // OUT
+} UVM_MEMSET_COLORED_PARAMS;
 
 //
 // Temporary ioctls which should be removed before UVM 8 release

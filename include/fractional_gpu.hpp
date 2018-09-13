@@ -69,6 +69,7 @@ int fgpu_memory_prefetch_to_device_async(void *p, size_t len);
 int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type);
+int fgpu_memory_memset_async(void *address, int value, size_t count);
 
 #ifdef FGPU_COMP_COLORING_ENABLE
 

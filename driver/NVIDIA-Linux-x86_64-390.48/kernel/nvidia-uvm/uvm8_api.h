@@ -150,4 +150,5 @@ NV_STATUS uvm_api_get_device_color_info(UVM_GET_DEVICE_COLOR_INFO_PARAMS *params
 NV_STATUS uvm_api_get_process_color_info(UVM_GET_PROCESS_COLOR_INFO_PARAMS *params, struct file *filp);
 NV_STATUS uvm_api_set_process_color_info(UVM_SET_PROCESS_COLOR_INFO_PARAMS *params, struct file *filp);
 NV_STATUS uvm_api_memcpy_colored(UVM_MEMCPY_COLORED_PARAMS *params, struct file *filp);
+NV_STATUS uvm_api_memset_colored(UVM_MEMSET_COLORED_PARAMS *params, struct file *filp);
 #endif // __UVM8_API_H__

@@ -880,3 +880,8 @@ int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
 {
     return fgpu_memory_copy_async_internal(dst, src, count, type, color_stream);
 }
+
+int fgpu_memory_memset_async(void *address, int value, size_t count)
+{
+    return fgpu_memory_memset_async_internal(address, value, count, color_stream);
+}

@@ -774,6 +774,7 @@ static long uvm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned lon
         UVM_ROUTE_CMD_STACK(UVM_GET_PROCESS_COLOR_INFO,         uvm_api_get_process_color_info);
         UVM_ROUTE_CMD_STACK(UVM_SET_PROCESS_COLOR_INFO,         uvm_api_set_process_color_info);
         UVM_ROUTE_CMD_STACK(UVM_MEMCPY_COLORED,                 uvm_api_memcpy_colored);
+        UVM_ROUTE_CMD_STACK(UVM_MEMSET_COLORED,                 uvm_api_memset_colored);
     }
 
     // Try the test ioctls if none of the above matched

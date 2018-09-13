@@ -452,14 +452,22 @@ void uvm_va_block_exit(void);
 bool uvm_block_is_phys_contig(uvm_va_block_t *block, uvm_processor_id_t id);
 
 // Copies colored data between two blocks based on masked region provided
-NV_STATUS block_copy_pages_between(uvm_va_block_t *src_block,
-                                    uvm_va_block_t *dest_block,
-                                    uvm_processor_id_t src_id,
-                                    uvm_processor_id_t dest_id,
-                                    uvm_va_block_colored_region_t *src_region,
-                                    uvm_va_block_colored_region_t *dest_region,
-                                    NvU64 *copied,
-                                    uvm_tracker_t *copy_tracker);
+NV_STATUS block_copy_colored_pages_between(uvm_va_block_t *src_block,
+                                            uvm_va_block_t *dest_block,
+                                            uvm_processor_id_t src_id,
+                                            uvm_processor_id_t dest_id,
+                                            uvm_va_block_colored_region_t *src_region,
+                                            uvm_va_block_colored_region_t *dest_region,
+                                            NvU64 *copied,
+                                            uvm_tracker_t *copy_tracker);
+
+// Memsets colored data in a block based on masked region provided
+NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
+                                        uvm_processor_id_t id,
+                                        uvm_va_block_colored_region_t *region,
+                                        NvU8 value,
+                                        NvU64 *covered,
+                                        uvm_tracker_t *out_tracker);
 
 // Allocates and initializes the block. The block's ref count is initialized to
 // 1. The caller is responsible for inserting the block into its parent

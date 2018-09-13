@@ -633,12 +633,39 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK) {
+    if (params.rmStatus != NV_OK)
         return -1;
-    }
 
     return 0;
 }
+
+int fgpu_memory_memset_async_internal(void *address, int value, size_t count, cudaStream_t stream)
+{
+    /* XXX: Currently, not sure how to use stream? */
+    UVM_MEMSET_COLORED_PARAMS params;
+    int ret;
+
+    ret = get_device_UUID(FGPU_DEVICE_NUMBER, &params.uuid);
+    if (ret < 0)
+        return ret;
+        
+    params.base = (NvU64)fgpu_color_device_true_virt_addr((uint64_t)g_memory_ctx.base_addr,
+                                                          (uint64_t)g_memory_ctx.base_phy_addr,
+                                                          g_memory_ctx.color,
+                                                          address);
+    params.value = value;
+    params.length = count;
+
+    ret = ioctl(g_uvm_fd, UVM_MEMSET_COLORED, &params);
+    if (ret < 0)
+        return ret;
+
+    if (params.rmStatus != NV_OK)
+        return -1;
+
+    return 0;
+}
+
 #else /* FGPU_USER_MEM_COLORING_ENABLED */
 
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
@@ -662,4 +689,10 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
         return -1;
     }   
 }
+
+int fgpu_memory_memset_async_internal(void *address, int value, size_t count, cudaStream_t stream)
+{
+    return gpuErrCheck(cudaMemsetAsync(address, value, count, stream));
+}
+
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */
