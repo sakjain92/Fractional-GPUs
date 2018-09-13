@@ -2610,7 +2610,9 @@ NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
     uvm_page_index_t page_index;
     const bool is_phys_contig = uvm_block_is_phys_contig(block, id);
     uvm_gpu_address_t contig_address = {0};
-    NvU64 page_offset, page_leftover, length;
+    NvU64 page_offset, length;
+    NvU32 num_pages;
+    uvm_va_block_region_t sub_region;
 
     *covered = 0;
 
@@ -2635,6 +2637,8 @@ NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
                                             uvm_va_block_region_start(block, region->region),
                                             uvm_va_block_region_end(block, region->region) + 1,
                                             block->start, block->end + 1);
+            if (status != NV_OK)
+                break;
 
             // Uncomment this when pages start being populated in memset code path
             //uvm_push_acquire_tracker(&push, &block->tracker);
@@ -2655,7 +2659,18 @@ NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
             
             page_offset = region->page_offset;
 
-            page_leftover = min(PAGE_SIZE - page_offset, region->length);
+            num_pages = 1;
+            
+            // Try to consolidate contiguous memory
+            if (is_phys_contig) {
+                uvm_page_index_t next_unset_page = 
+                    uvm_va_block_next_unset_page_in_mask(region->region,
+                            &region->page_mask,
+                            page_index);
+                num_pages = next_unset_page - page_index;
+            }
+
+            length = min(num_pages * PAGE_SIZE - page_offset, region->length);
 
             if (is_phys_contig) {
                 address = contig_address;
@@ -2666,8 +2681,6 @@ NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
             }
 
             address.address += page_offset;
-
-            length = page_leftover;
 
             uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_MEMBAR_NONE);
 
@@ -2680,11 +2693,12 @@ NV_STATUS block_memset_colored_pages(uvm_va_block_t *block,
 
         *covered += length;
 
-        if (length == page_leftover) {
-            uvm_page_mask_clear(&region->page_mask, page_index);
-            page_index = uvm_va_block_next_page_in_mask(region->region, 
-                &region->page_mask, page_index);
-        }
+        sub_region.first = page_index;
+        sub_region.outer = page_index + num_pages;
+        uvm_page_mask_region_clear(&region->page_mask, sub_region);
+
+        page_index = uvm_va_block_next_page_in_mask(region->region, 
+            &region->page_mask, page_index);
     }
 
     if (!gpu)
