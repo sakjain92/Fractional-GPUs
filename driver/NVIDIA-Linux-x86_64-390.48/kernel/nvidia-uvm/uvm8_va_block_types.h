@@ -97,8 +97,8 @@ typedef struct
 
     uvm_va_block_region_t region;
 
-    // Last block used to update region
-    uvm_va_block_t *last_block;
+    // Last block start address
+    NvU64 last_block_start;
 
 } uvm_va_block_colored_region_t;
 

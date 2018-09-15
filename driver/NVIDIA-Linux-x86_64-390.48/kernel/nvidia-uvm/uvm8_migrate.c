@@ -256,37 +256,112 @@ static NV_STATUS uvm_va_range_migrate(uvm_va_range_t *va_range,
     return NV_OK;
 }
 
+static void uvm_block_iter_deinitialization(uvm_block_iter_t *iter)
+{
+    struct page *page;
+    NvU32 i;
+
+    if (iter->cpu_block) {
+        
+        if (iter->cpu_block->cpu.pages) {
+
+            // Release all pinned pages if any
+            for (i = 0; i < PAGES_PER_UVM_VA_BLOCK; i++) {
+                page = iter->cpu_block->cpu.pages[i];
+                if (page) {
+                    put_page(page);
+                    iter->cpu_block->cpu.pages[i]= NULL;
+                }
+            }
+
+            kfree(iter->cpu_block->cpu.pages);
+            iter->cpu_block->cpu.pages = NULL;
+        }
+
+        kfree(iter->cpu_block);
+        iter->cpu_block = NULL;
+    }
+}
+
 // Iterate over all managed contiguous va_blocks till "length" is covered
 // Length is in terms of color mem size
 static NV_STATUS uvm_block_iter_initialization(uvm_va_space_t *va_space,
                                                 NvU64 start,
+                                                uvm_processor_id_t id,
                                                 uvm_block_iter_t *iter)
 {
+    NV_STATUS status = NV_OK;
     uvm_va_range_t *first_va_range;
     size_t block_index, range_end_block_index;
+    struct page **page_array;
 
     uvm_assert_rwsem_locked(&va_space->lock);
 
+    iter->start = start;
+    iter->va_range = NULL;
+    iter->cpu_block = NULL;
+
     first_va_range = uvm_va_space_iter_first(va_space, start, start);
-    if (!first_va_range || first_va_range->type != UVM_VA_RANGE_TYPE_MANAGED)
-        return NV_ERR_INVALID_ADDRESS;
+
+    // If block not exists in uvm but lies on CPU, maybe it is backed by linux
+    // pages
+    // TODO: It can be that the start block is not within any range but
+    // the subsequent blocks might be. We need to handle this behaviour
+    if (!first_va_range & (id == UVM_CPU_ID)) {
+
+        iter->cpu_block = kmalloc(sizeof(uvm_va_block_t), GFP_KERNEL);
+        if (!iter->cpu_block) {
+            status = NV_ERR_NO_MEMORY;
+            goto err;
+        }
+
+        iter->cpu_block->is_linux_backed = true;
+
+        page_array = kzalloc(sizeof(struct page *) * PAGES_PER_UVM_VA_BLOCK, GFP_KERNEL);
+        if (!page_array) {
+            status = NV_ERR_NO_MEMORY;
+            goto err;
+        }
+
+        iter->cpu_block->cpu.pages = page_array;
+
+        iter->next_block_index = start / UVM_VA_BLOCK_SIZE;
+        iter->range_end_block_index = (size_t)-1;
+        return NV_OK;
+    }
+
+    if (!first_va_range || first_va_range->type != UVM_VA_RANGE_TYPE_MANAGED) {
+        status = NV_ERR_INVALID_ADDRESS;
+        goto err;
+    }
 
     block_index = uvm_va_range_block_index(first_va_range, max(start, first_va_range->node.start));
     range_end_block_index = uvm_va_range_block_index(first_va_range, first_va_range->node.end);
-
-    iter->start = start;
 
     iter->va_range = first_va_range;
     iter->next_block_index = block_index;
     iter->range_end_block_index = range_end_block_index;    
 
     return NV_OK;
+
+err:
+    uvm_block_iter_deinitialization(iter);
+    return status;
 }
 
 static NV_STATUS uvm_block_iter_next_block(uvm_block_iter_t *iter,
-                                uvm_va_block_t **va_block)
+                                uvm_va_block_t **out_block)
 {
-    NV_STATUS status;
+    NV_STATUS status = NV_OK;
+
+    if (iter->cpu_block) {
+        iter->cpu_block->start = iter->next_block_index * UVM_VA_BLOCK_SIZE;
+        iter->cpu_block->end = iter->cpu_block->start + UVM_VA_BLOCK_SIZE - 1;
+
+        *out_block = iter->cpu_block;
+
+        goto out;
+    }
 
     // Reached end of current range?
     if (iter->next_block_index > iter->range_end_block_index) {
@@ -303,14 +378,14 @@ static NV_STATUS uvm_block_iter_next_block(uvm_block_iter_t *iter,
         iter->va_range = va_range;
     }
 
-    status = uvm_va_range_block_create(iter->va_range, iter->next_block_index, va_block);
+    status = uvm_va_range_block_create(iter->va_range, iter->next_block_index, out_block);
     if (status != NV_OK) {
         return status;
     }
 
+out:
     iter->next_block_index++;
-
-    return NV_OK;
+    return status;
 }
 
 void uvm_va_colored_block_region_init(NvU64 start, NvU64 length, NvU32 color,
@@ -325,7 +400,7 @@ void uvm_va_colored_block_region_init(NvU64 start, NvU64 length, NvU32 color,
     
     uvm_page_mask_zero(&region->page_mask);
 
-    region->last_block = NULL;
+    region->last_block_start = 0;
 }
 
 // Update a block color range for a va block
@@ -343,10 +418,8 @@ NV_STATUS uvm_update_va_colored_block_region(uvm_va_block_t *va_block,
     NvU64 page_start, page_end, page_size, page_offset;
     NvU32 page_color;
 
-    uvm_assert_mutex_locked(&va_block->lock);
-
     // No update needed if current block same as last block
-    if (region->last_block && region->last_block->start == va_block->start)
+    if (region->last_block_start && region->last_block_start == va_block->start)
         return NV_OK;
 
     uvm_page_mask_zero(&region->page_mask);
@@ -355,6 +428,9 @@ NV_STATUS uvm_update_va_colored_block_region(uvm_va_block_t *va_block,
 
     // No coloring on CPU side
     if (id == UVM_CPU_ID) {
+        int ret, i;
+        struct page *page;
+
         start = max(va_block->start, region->start) + page_offset;
         end = min(va_block->end, start + region->length - 1);
 
@@ -363,8 +439,29 @@ NV_STATUS uvm_update_va_colored_block_region(uvm_va_block_t *va_block,
 
         uvm_page_mask_fill(&region->page_mask, first, outer);
 
+        // Only linux backed pages need to be locked
+        if (va_block->is_linux_backed) {
+            // Release all previously pinned pages
+            for (i = 0; i < PAGES_PER_UVM_VA_BLOCK; i++) {
+                page = va_block->cpu.pages[i];
+                if (page) {
+                    put_page(page);
+                    va_block->cpu.pages[i]= NULL;
+                }
+            }
+
+            // Try pinning pages
+            ret = NV_GET_USER_PAGES(va_block->start + first * PAGE_SIZE,
+                    outer - first, true, false, &va_block->cpu.pages[first], NULL);
+            if (ret < 0) {
+                return NV_ERR_INVALID_ADDRESS;
+            }
+        }
         goto done;
     }
+
+    // Only blocks on CPU can be linux backed
+    UVM_ASSERT(!va_block->is_linux_backed);
 
     start = max(va_block->start, region->start);
     first = uvm_va_block_cpu_page_index(va_block, start);
@@ -428,7 +525,7 @@ done:
     region->region.first = first;
     region->region.outer = outer;
 
-    region->last_block = va_block;
+    region->last_block_start = va_block->start;
 
     return NV_OK;
 }
@@ -520,21 +617,22 @@ static NV_STATUS uvm_memcpy_colored_blocks(uvm_va_space_t *va_space,
                                            uvm_processor_id_t dest_id,
                                            uvm_tracker_t *out_tracker)
 {
-    NV_STATUS status;
-    uvm_va_block_retry_t src_va_block_retry, dest_va_block_retry;
+    NV_STATUS status = NV_OK;
     uvm_block_iter_t src_block_iter, dest_block_iter;
     uvm_va_block_t *src_va_block, *dest_va_block;
     NvU64 left = length;
     NvU64 copied;
     uvm_va_block_colored_region_t src_region, dest_region;
 
-    status = uvm_block_iter_initialization(va_space, srcBase, &src_block_iter);
+    status = uvm_block_iter_initialization(va_space, srcBase, src_id, &src_block_iter);
     if (status != NV_OK)
         return status;
 
-    status = uvm_block_iter_initialization(va_space, destBase, &dest_block_iter);
-    if (status != NV_OK)
+    status = uvm_block_iter_initialization(va_space, destBase, dest_id, &dest_block_iter);
+    if (status != NV_OK) {
+        uvm_block_iter_deinitialization(&src_block_iter);
         return status;
+    }
 
     uvm_va_colored_block_region_init(srcBase, length, color, &src_region);
     uvm_va_colored_block_region_init(destBase, length, color, &dest_region);
@@ -546,17 +644,17 @@ static NV_STATUS uvm_memcpy_colored_blocks(uvm_va_space_t *va_space,
         if (uvm_page_mask_empty(&src_region.page_mask)) {
             status = uvm_block_iter_next_block(&src_block_iter, &src_va_block);
             if (status != NV_OK)
-                return status;
+                goto out;
         }
 
         if (uvm_page_mask_empty(&dest_region.page_mask)) {
             status = uvm_block_iter_next_block(&dest_block_iter, &dest_va_block);
             if (status != NV_OK)
-                return status;
+                goto out;
         }
 
-        status = UVM_VA_MULTI_BLOCK_LOCK_RETRY(src_va_block, dest_va_block,
-                &src_va_block_retry, &dest_va_block_retry,
+        status = UVM_VA_GENERIC_MULTI_BLOCK_LOCK_RETRY(src_va_block, dest_va_block,
+                NULL, NULL,
                 uvm_va_block_memcpy_colored_locked(src_va_block,
                     dest_va_block,
                     src_id,
@@ -567,12 +665,16 @@ static NV_STATUS uvm_memcpy_colored_blocks(uvm_va_space_t *va_space,
                     out_tracker));
 
         if (status != NV_OK)
-            return status;
+            goto out;
 
         left -= copied;
     }
 
-    return NV_OK;
+out:
+    uvm_block_iter_deinitialization(&src_block_iter);
+    uvm_block_iter_deinitialization(&dest_block_iter);
+
+    return status;
 }
 
 static NV_STATUS uvm_memset_colored_blocks(uvm_va_space_t *va_space,
@@ -584,16 +686,15 @@ static NV_STATUS uvm_memset_colored_blocks(uvm_va_space_t *va_space,
                                             uvm_tracker_t *out_tracker)
 {
     NV_STATUS status;
-    uvm_va_block_retry_t va_block_retry;
     uvm_block_iter_t block_iter;
     uvm_va_block_t *va_block;
     NvU64 left = length;
     NvU64 covered;
     uvm_va_block_colored_region_t region;
 
-    status = uvm_block_iter_initialization(va_space, base, &block_iter);
+    status = uvm_block_iter_initialization(va_space, base, id, &block_iter);
     if (status != NV_OK)
-        return status;
+        goto out;
 
     uvm_va_colored_block_region_init(base, length, color, &region);
 
@@ -603,10 +704,10 @@ static NV_STATUS uvm_memset_colored_blocks(uvm_va_space_t *va_space,
         if (uvm_page_mask_empty(&region.page_mask)) {
             status = uvm_block_iter_next_block(&block_iter, &va_block);
             if (status != NV_OK)
-                return status;
+                goto out;
         }
 
-        status = UVM_VA_BLOCK_LOCK_RETRY(va_block, &va_block_retry,
+        status = UVM_VA_BLOCK_LOCK_RETRY(va_block, NULL,
                 uvm_va_block_memset_colored_locked(va_block,
                                                     id,
                                                     &region,
@@ -615,12 +716,15 @@ static NV_STATUS uvm_memset_colored_blocks(uvm_va_space_t *va_space,
                                                     out_tracker));
 
         if (status != NV_OK)
-            return status;
+            goto out;
 
         left -= covered;
     }
 
-    return NV_OK;
+out:
+    uvm_block_iter_deinitialization(&block_iter);
+
+    return status;
 }
 
 static NV_STATUS uvm_migrate_ranges(uvm_va_space_t *va_space,

@@ -28,6 +28,7 @@
 #include "uvm8_range_tree.h"
 #include "uvm8_forward_decl.h"
 #include "uvm8_lock.h"
+#include "uvm8_va_block.h"
 
 typedef struct uvm_range_group_struct
 {
@@ -85,14 +86,15 @@ typedef struct uvm_block_iter_struct
 {
     NvU64 start;
 
-    // Whether the iterator is pointing to a valid element.
-    // Set to false when iteration moves past the last element.
-    bool valid;
 
     uvm_va_range_t *va_range;
 
     size_t next_block_index;
     size_t range_end_block_index;
+
+    // Incase id == CPU_ID and no uvm block exists, create a pseduo-block
+    // with linux backed pages
+    uvm_va_block_t *cpu_block;
 
 } uvm_block_iter_t;
 

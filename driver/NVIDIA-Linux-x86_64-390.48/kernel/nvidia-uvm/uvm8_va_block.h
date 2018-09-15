@@ -279,6 +279,9 @@ struct uvm_va_block_struct
     // is held in write mode.
     uvm_va_range_t *va_range;
 
+    // Is block is not supported by uvm pages but by linux pages?
+    NvBool is_linux_backed;
+
     // Virtual address [start, end] covered by this block. These fields can be
     // read while holding either the block lock or just the VA space lock in
     // read mode, since they can only change when the VA space lock is held in
@@ -417,6 +420,9 @@ struct uvm_va_block_struct
     bool inject_eviction_error;
 };
 
+// Incase the memory on CPU is not uvm but memory allocated by linux,
+// we can't use 'struct uvm_va_block_struct' because most of the data is not valid
+// hence use a generic 
 // Tracking needed for supporting allocation-retry of user GPU memory
 typedef struct
 {
@@ -1729,6 +1735,39 @@ uvm_prot_t uvm_va_block_page_compute_highest_permission(uvm_va_block_t *va_block
     status;                                                         \
 })
 
+
+// A helper macro for handling allocation-retry
+//
+// The macro takes two VA block, two uvm_va_block_retry_t struct and a function call
+// to retry as long as it returns NV_ERR_MORE_PROCESSING_REQUIRED. The blocks
+// can be linux pages backed blocks in which case mutex locking is not required
+//
+// block_retry can be NULL if it's not necessary for the function call,
+// otherwise it will be initialized and deinitialized by the macro.
+//
+// The macro also locks and unlocks the two block's lock internally as it's expected
+// that each block's lock has been unlocked and relocked whenever the function call
+// returns NV_ERR_MORE_PROCESSING_REQUIRED and this makes it clear that the
+// each block's state is not locked across these calls.
+#define UVM_VA_GENERIC_MULTI_BLOCK_LOCK_RETRY(va_block1, va_block2, block_retry1, block_retry2, call) ({     \
+                                                                        \
+    NV_STATUS status;                                                   \
+    uvm_va_block_t *___block1 = (va_block1);                            \
+    uvm_va_block_t *___block2 = (va_block2);                            \
+    uvm_va_block_retry_t *___retry1 = (block_retry1);                   \
+    uvm_va_block_retry_t *___retry2 = (block_retry2);                   \
+                                                                        \
+    if (___block1->is_linux_backed && ___block2->is_linux_backed) {     \
+        status = (call);                                                \
+    } else if (___block1->is_linux_backed) {                            \
+        status = UVM_VA_BLOCK_LOCK_RETRY(___block2, ___retry2, (call)); \
+    } else if (___block2->is_linux_backed) {                            \
+        status = UVM_VA_BLOCK_LOCK_RETRY(___block1, ___retry1, (call)); \
+    } else {                                                            \
+        status = UVM_VA_MULTI_BLOCK_LOCK_RETRY(___block1, ___block2, ___retry1, ___retry2, (call));     \
+    }                                                                   \
+    status;                                                             \
+})
 
 // A helper macro for handling allocation-retry
 //
