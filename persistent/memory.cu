@@ -46,6 +46,8 @@
 
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
+
+#include <fgpu_internal_allocator.hpp>
 #include <fgpu_internal_memory.hpp>
 
 #ifdef FGPU_MEM_COLORING_ENABLED
@@ -90,12 +92,7 @@ struct {
 
     int color;
 
-    /* 
-     * TODO: Use better data structures for memory management
-     * TODO: Support alignment etc.
-     */
-    uintptr_t cur_addr;
-    size_t left;
+    allocator_t *allocator;
 
 } g_memory_ctx;
 
@@ -427,9 +424,13 @@ static int set_process_color_info(int device, int color, size_t req_length,
     g_memory_ctx.reserved_len = req_length;
     g_memory_ctx.color = color;
 
-    g_memory_ctx.cur_addr = (uintptr_t)g_memory_ctx.base_addr;
-    g_memory_ctx.left = req_length;
-
+    /* Add '1' to address so that NULL pointer is never returned during allocation */
+    g_memory_ctx.allocator = allocator_init((void *)((uintptr_t)g_memory_ctx.base_addr + 1), 
+            req_length - 1, FGPU_DEVICE_ADDRESS_ALIGNMENT);
+    if (!g_memory_ctx.allocator) {
+        fprintf(stderr, "FGPU:Allocator Initialization Failed\n");
+        return -EINVAL;
+    }
     return 0;
 }
 
@@ -456,6 +457,9 @@ void fgpu_memory_deinit(void)
     if (!g_memory_ctx.is_initialized)
         return;
 
+    if (g_memory_ctx.allocator)
+        allocator_deinit(g_memory_ctx.allocator);
+
     cudaFree(g_memory_ctx.base_addr);
 
     g_memory_ctx.is_initialized = false;
@@ -463,25 +467,26 @@ void fgpu_memory_deinit(void)
 
 int fgpu_memory_allocate(void **p, size_t len)
 {
+    void *ret_addr;
+
     if (!g_memory_ctx.is_initialized) {
         fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
     }
 
 
-    if (g_memory_ctx.left < len) {
+    ret_addr = allocator_alloc(g_memory_ctx.allocator, len);
+    if (!ret_addr) {
         fprintf(stderr, "FGPU:Can't allocate device memory\n");
         return -ENOMEM;
     }
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
-    *p = (void *)(g_memory_ctx.cur_addr - (uintptr_t)g_memory_ctx.base_addr);
+    *p = (void *)((uintptr_t)ret_addr - (uintptr_t)g_memory_ctx.base_addr);
 #else
-    *p = (void *)g_memory_ctx.cur_addr;
+    *p = ret_addr;
 #endif
-
-    g_memory_ctx.cur_addr += len;
-    g_memory_ctx.left -= len;
+    
     return 0;
 }
 
@@ -491,6 +496,12 @@ int fgpu_memory_free(void *p)
         fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
     }
+
+#if defined(FGPU_USER_MEM_COLORING_ENABLED)
+    p = (void *)((uintptr_t)p + (uintptr_t)g_memory_ctx.base_addr);
+#endif
+
+    allocator_free(g_memory_ctx.allocator, p);
 
     return 0;
 }

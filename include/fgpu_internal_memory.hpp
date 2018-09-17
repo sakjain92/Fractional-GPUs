@@ -2,6 +2,8 @@
 #ifndef __FGPU_INTERNAL_MEMORY_HPP__
 #define __FGPU_INTERNAL_MEMORY_HPP__
 
+#include <fractional_gpu.hpp>
+
 #include <fgpu_internal_common.hpp>
 
 #ifdef FGPU_MEM_COLORING_ENABLED
@@ -10,7 +12,9 @@ int fgpu_memory_set_colors_info(int device, int color, size_t length, cudaStream
 void fgpu_memory_deinit(void);
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
+
 int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx);
+
 #endif /* FGPU_USER_MEM_COLORING_ENABLED */
 
 #endif /* FGPU_MEM_COLORING_ENABLED */

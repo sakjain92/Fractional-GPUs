@@ -18,9 +18,9 @@
 #include <cuda.h>
 
 #include <fgpu_internal_common.hpp>
-#include <fractional_gpu.hpp>
 #include <fgpu_internal_memory.hpp>
 #include <fgpu_internal_persistent.hpp>
+#include <fractional_gpu.hpp>
 
 /* TODO: Add support for multithreaded applications */
 
@@ -226,7 +226,18 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
 	    return ret;
     }
 
-    num_colors = mem_colors < num_colors ? mem_colors : num_colors;
+    /* 
+     * When memory coloring enabled, the total number of colors available is 
+     * equal to memory coloring.
+     * TODO: Allow different memory and computational colors
+     */
+    if (num_colors < mem_colors) {
+        fprintf(stderr, "FGPU:Memory coloring enabled but too less computational colors\n");
+	    return -EINVAL;
+    }
+
+    num_colors = mem_colors;
+
 #endif
 
     if (num_colors <= 0) {

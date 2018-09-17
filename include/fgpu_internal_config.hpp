@@ -8,6 +8,9 @@
 /* Cache line size on GPU. Needed for performance improvement. */
 #define FGPU_DEVICE_CACHELINE_SIZE      32
 
+/* Each memory allocation needs to be aliged to a boundary */
+#define FGPU_DEVICE_ADDRESS_ALIGNMENT   16
+
 /* Maximum number of colors supported */
 #define FGPU_MAX_NUM_COLORS             8
 
