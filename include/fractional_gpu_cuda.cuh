@@ -225,7 +225,7 @@ inline void *fgpu_color_device_true_virt_addr(const uint64_t start_virt_addr,
 {
     uint64_t true_virt_addr;
     uint64_t start_idx = start_phy_addr >> FGPU_DEVICE_COLOR_SHIFT;
-	uint64_t c_virt_offset = (uint64_t)virt_addr - start_virt_addr;
+	uint64_t c_virt_offset = (uint64_t)virt_addr;
 	uint64_t idx = ((c_virt_offset >> FGPU_DEVICE_COLOR_SHIFT) << 1);
 	uint32_t pattern = (idx + start_idx) & FGPU_DEVICE_COLOR_PATTERN;
 	uint8_t parity = __builtin_popcount(pattern) & 0x1;

@@ -883,16 +883,6 @@ int fgpu_num_colors(void)
     return g_host_ctx->num_colors;
 }
 
-int fgpu_memory_prefetch_to_device_async(void *p, size_t len)
-{
-    return gpuErrCheck(cudaMemPrefetchAsync(p, len, FGPU_DEVICE_NUMBER, color_stream));
-}
-
-int fgpu_memory_prefetch_from_device_async(void *p, size_t len)
-{
-    return gpuErrCheck(cudaMemPrefetchAsync(p, len, CU_DEVICE_CPU, color_stream));
-}
-
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type)
 {

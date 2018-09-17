@@ -51,62 +51,44 @@ void compare(double2 *cpu, double2 *gpu, int n)
 
 int runTest(void)
 {
-    double2 *h_a, *h_b, *c_cpu, *h_c_gpu;
-    double2 *d_a, *d_b, *d_c_gpu;
+    double2 *a, *b, *c_cpu, *c_gpu;
+    double2 *d_a, *d_b, *d_c;
     int size = N * sizeof( double2 );
     int ret;
 
-    ret = fgpu_memory_allocate((void **)&h_a, size);
-    if (ret < 0)
-        return ret;
-    
-    ret = fgpu_memory_get_device_pointer((void **)&d_a, h_a);
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_memory_allocate((void **)&h_b, size);
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_memory_get_device_pointer((void **)&d_b, h_b);
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_memory_allocate((void **)&h_c_gpu, size);
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_memory_get_device_pointer((void **)&d_c_gpu, h_c_gpu);
-    if (ret < 0)
-        return ret;
-
+    a = (double2 *)malloc( size );
+    b = (double2 *)malloc( size );
     c_cpu = (double2 *)malloc( size );
-    if (c_cpu == NULL)
-        return -1;
+    c_gpu = (double2 *)malloc( size );
 
     for( int i = 0; i < N; i++ )
     {
-        h_a[i].x = h_b[i].x = i;
-        h_a[i].y = h_b[i].y = i + 1;
+        a[i].x = b[i].x = i;
+        a[i].y = b[i].y = i + 1;
 
-        c_cpu[i].x = h_c_gpu[i].x = 0;
-        c_cpu[i].y = h_c_gpu[i].y = 0;
+        c_cpu[i].x = c_gpu[i].x = 0;
+        c_cpu[i].y = c_gpu[i].y = 0;
     }
 
-    serial_add(h_a, h_b, c_cpu, N);
+    serial_add(a, b, c_cpu, N);
 
-    dim3 threads(THREADS_PER_BLOCK, 1);
-    dim3 grid((N + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, 1);
-
-    ret = fgpu_memory_prefetch_to_device_async(h_a, size);
+    ret = fgpu_memory_allocate((void **)&d_a, size);
     if (ret < 0)
         return ret;
     
-    ret = fgpu_memory_prefetch_to_device_async(h_b, size);
+    ret = fgpu_memory_allocate((void **)&d_b, size);
     if (ret < 0)
         return ret;
-    
-    ret = fgpu_memory_prefetch_to_device_async(h_c_gpu, size);
+
+    ret = fgpu_memory_allocate((void **)&d_c, size);
+    if (ret < 0)
+        return ret;
+
+    ret = fgpu_memory_copy_async(d_a, a, size, FGPU_COPY_CPU_TO_GPU);
+    if (ret < 0)
+        return ret;
+
+    ret = fgpu_memory_copy_async(d_b, b, size, FGPU_COPY_CPU_TO_GPU);
     if (ret < 0)
         return ret;
 
@@ -114,7 +96,10 @@ int runTest(void)
     if (ret < 0)
         return ret;
 
-    ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
+    dim3 threads(THREADS_PER_BLOCK, 1);
+    dim3 grid((N + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, 1);
+
+    ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
     if (ret < 0)
         return ret;
 
@@ -122,23 +107,16 @@ int runTest(void)
     if (ret < 0)
         return ret;
 
-    ret = fgpu_memory_prefetch_from_device_async(h_c_gpu, size);
+    ret = fgpu_memory_copy_async(c_gpu, d_c, size, FGPU_COPY_GPU_TO_CPU);
     if (ret < 0)
         return ret;
+
 
     ret = fgpu_color_stream_synchronize();
     if (ret < 0)
         return ret;
 
-    compare(c_cpu, h_c_gpu, N);
-
-    ret = fgpu_memory_prefetch_to_device_async(h_c_gpu, size);
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_color_stream_synchronize();
-    if (ret < 0)
-        return ret;
+    compare(c_cpu, c_gpu, N);
 
 
     // Execute the kernel
@@ -149,7 +127,7 @@ int runTest(void)
     // Warmup
     for (int i = 0; i < nIter; i++) {
         start = dtime_usec(0);
-        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
         if (ret < 0)
             return ret;
 
@@ -165,7 +143,7 @@ int runTest(void)
     pstats_init(&stats);
     for (int i = 0; i < nIter; i++) {
         double sub_start = dtime_usec(0);
-        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
         if (ret < 0)
             return ret;
 
@@ -179,7 +157,7 @@ int runTest(void)
 
     // Ending
     for (int i = 0; i < nIter; i++) {
-        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c_gpu, N );
+        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
         if (ret < 0)
             return ret;
 
@@ -188,10 +166,13 @@ int runTest(void)
         	return ret;
     }
 
-    fgpu_memory_free(h_a);
-    fgpu_memory_free(h_b);
-    fgpu_memory_free(h_c_gpu);
+    free(a);
+    free(b);
     free(c_cpu);
+    free(c_gpu);
+    fgpu_memory_free(d_a);
+    fgpu_memory_free(d_b);
+    fgpu_memory_free(d_c);
 
     return 0;
 }

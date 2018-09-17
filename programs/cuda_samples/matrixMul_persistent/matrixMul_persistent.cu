@@ -113,23 +113,34 @@ int matrixMultiply(void)
     // Allocate host memory for matrices A and B
     unsigned int size_A = dimsA.x * dimsA.y;
     unsigned int mem_size_A = sizeof(float) * size_A;
+    float *h_A = (float *)malloc(mem_size_A);
     unsigned int size_B = dimsB.x * dimsB.y;
     unsigned int mem_size_B = sizeof(float) * size_B;
+    float *h_B = (float *)malloc(mem_size_B);
 
     // Initialize host memory
     const float valB = 0.01f;
+    constantInit(h_A, size_A, 1.0f);
+    constantInit(h_B, size_B, valB);
 
     // Allocate device memory
-    float *h_A, *h_B, *h_C;
     float *d_A, *d_B, *d_C;
 
     // Allocate host matrix C
     dim3 dimsC(dimsB.x, dimsA.y, 1);
     unsigned int mem_size_C = dimsC.x * dimsC.y * sizeof(float);
+    float *h_C = (float *) malloc(mem_size_C);
+
+    if (h_C == NULL)
+    {
+        fprintf(stderr, "Failed to allocate host matrix C!\n");
+        exit(EXIT_FAILURE);
+    }
+
 
     int ret;
     
-    ret = fgpu_memory_allocate((void **) &h_A, mem_size_A);
+    ret = fgpu_memory_allocate((void **) &d_A, mem_size_A);
 
     if (ret < 0)
     {
@@ -137,7 +148,7 @@ int matrixMultiply(void)
         exit(EXIT_FAILURE);
     }
 
-    ret = fgpu_memory_allocate((void **) &h_B, mem_size_B);
+    ret = fgpu_memory_allocate((void **) &d_B, mem_size_B);
 
     if (ret < 0)
     {
@@ -145,7 +156,7 @@ int matrixMultiply(void)
         exit(EXIT_FAILURE);
     }
 
-    ret = fgpu_memory_allocate((void **) &h_C, mem_size_C);
+    ret = fgpu_memory_allocate((void **) &d_C, mem_size_C);
 
     if (ret < 0)
     {
@@ -153,31 +164,16 @@ int matrixMultiply(void)
         exit(EXIT_FAILURE);
     }
 
-    constantInit(h_A, size_A, 1.0f);
-    constantInit(h_B, size_B, valB);
-
     // copy host memory to device
-    ret = fgpu_memory_prefetch_to_device_async(h_A, mem_size_A);
-
-    if (ret < 0)
-    {
-        printf("fgpu_memory_prefetch_to_device_async (h_A) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+    ret = fgpu_memory_copy_async(d_A, h_A, mem_size_A, FGPU_COPY_CPU_TO_GPU);
+    if (ret < 0) {
+        printf("fgpu_memory_copy_async h_A returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
-    ret = fgpu_memory_prefetch_to_device_async(h_B, mem_size_B);
-
-    if (ret < 0)
-    {
-        printf("fgpu_memory_prefetch_to_device_async (h_B) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
-        exit(EXIT_FAILURE);
-    }
-
-    ret = fgpu_memory_prefetch_to_device_async(h_C, mem_size_C);
-
-    if (ret < 0)
-    {
-        printf("fgpu_memory_prefetch_to_device_async (h_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+    ret = fgpu_memory_copy_async(d_B, h_B, mem_size_B, FGPU_COPY_CPU_TO_GPU);
+    if (ret < 0) {
+         printf("fgpu_memory_copy_async h_A returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -188,24 +184,6 @@ int matrixMultiply(void)
         exit(EXIT_FAILURE);
     }
 
-    /* Get the device pointers */
-    ret = fgpu_memory_get_device_pointer((void **)&d_A, h_A);
-    if (ret < 0) {
-        printf("fgpu_memory_get_device_pointer (d_A) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
-        exit(EXIT_FAILURE);
-    }
-
-    ret = fgpu_memory_get_device_pointer((void **)&d_B, h_B);
-    if (ret < 0) {
-        printf("fgpu_memory_get_device_pointer (d_B) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
-        exit(EXIT_FAILURE);
-    }
-
-    ret = fgpu_memory_get_device_pointer((void **)&d_C, h_C);
-    if (ret < 0) {
-        printf("fgpu_memory_get_device_pointer (d_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
-        exit(EXIT_FAILURE);
-    }
 
     // Setup execution parameters
     dim3 threads(block_size, block_size);
@@ -233,7 +211,7 @@ int matrixMultiply(void)
         if (ret < 0)
             return ret;
 	
-	ret = fgpu_color_stream_synchronize();
+	    ret = fgpu_color_stream_synchronize();
     	if (ret < 0)
         	return ret;
 
@@ -299,10 +277,9 @@ int matrixMultiply(void)
     }
 
     // Copy result from device to host
-    ret = fgpu_memory_prefetch_from_device_async(h_C, mem_size_C);
-    if (ret < 0)
-    {
-        printf("fgpu_memory_prefetch_from_device_async (h_C) returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
+    ret = fgpu_memory_copy_async(h_C, d_C, mem_size_C, FGPU_COPY_GPU_TO_CPU);
+    if (ret < 0) {
+         printf("fgpu_memory_copy_async h_A returned error %s (code %d), line(%d)\n", strerror(errno), ret, __LINE__);
         exit(EXIT_FAILURE);
     }
 
@@ -337,9 +314,12 @@ int matrixMultiply(void)
     printf("%s\n", correct ? "Result = PASS" : "Result = FAIL");
 
     // Clean up memory
-    fgpu_memory_free(h_A);
-    fgpu_memory_free(h_B);
-    fgpu_memory_free(h_C);
+    free(h_A);
+    free(h_B);
+    free(h_C);
+    fgpu_memory_free(d_A);
+    fgpu_memory_free(d_B);
+    fgpu_memory_free(d_C);
 
     printf("\nNOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.\n");
 

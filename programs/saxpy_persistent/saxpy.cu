@@ -49,14 +49,14 @@ int main(int argc, char **argv)
   if (ret < 0)
     return ret;
 
-  float *x, *y, *h_x, *h_y, *d_x, *d_y;
+  float *x, *y, *d_x, *d_y;
   x = (float*)malloc(N*sizeof(float));
   y = (float*)malloc(N*sizeof(float));
 
-  ret = fgpu_memory_allocate((void **) &h_x, N*sizeof(float));
+  ret = fgpu_memory_allocate((void **) &d_x, N*sizeof(float));
   if (ret < 0)
     return ret;
-  ret = fgpu_memory_allocate((void **) &h_y, N*sizeof(float));
+  ret = fgpu_memory_allocate((void **) &d_y, N*sizeof(float));
   if (ret < 0)
     return ret;
 
@@ -65,27 +65,18 @@ int main(int argc, char **argv)
     y[i] = 2.0f;
   }
 
-  ret = fgpu_memory_copy_async(h_x, x, N*sizeof(float), FGPU_COPY_CPU_TO_GPU);
+  ret = fgpu_memory_copy_async(d_x, x, N*sizeof(float), FGPU_COPY_CPU_TO_GPU);
   if (ret < 0)
       return ret;
 
-  ret = fgpu_memory_copy_async(h_y, y, N*sizeof(float), FGPU_COPY_CPU_TO_GPU);
+  ret = fgpu_memory_copy_async(d_y, y, N*sizeof(float), FGPU_COPY_CPU_TO_GPU);
   if (ret < 0)
       return ret;
-
-
-  ret = fgpu_memory_get_device_pointer((void **)&d_x, h_x);
-  if (ret < 0)
-    return ret;
-
-  ret = fgpu_memory_get_device_pointer((void **)&d_y, h_y);
-  if (ret < 0)
-    return ret;
 
   // Functional test
   FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);
   
-  ret = fgpu_memory_copy_async(y, h_y, N*sizeof(float), FGPU_COPY_GPU_TO_CPU);
+  ret = fgpu_memory_copy_async(y, d_y, N*sizeof(float), FGPU_COPY_GPU_TO_CPU);
   if (ret < 0)
       return ret;
 
@@ -133,8 +124,8 @@ int main(int argc, char **argv)
     cudaDeviceSynchronize();
   }
     
-  fgpu_memory_free(h_x);
-  fgpu_memory_free(h_y);
+  fgpu_memory_free(d_x);
+  fgpu_memory_free(d_y);
   free(x);
   free(y);
 

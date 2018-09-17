@@ -73,18 +73,9 @@ int main()
         printf("Dummy Time:%f\n", dtime_usec(start));
     }
 */
-    uint32_t *h_out, *d_out;
+    uint32_t *d_out;
     size_t sz = 2 * 1024 * 1024;
-    ret = fgpu_memory_allocate((void **)&h_out, sz);
-    if (ret < 0)
-        return ret;
-    ret = fgpu_memory_prefetch_to_device_async(h_out, sz);
-    if (ret < 0)
-        return ret;
-    ret = fgpu_color_stream_synchronize();
-    if (ret < 0)
-        return ret;
-    ret = fgpu_memory_get_device_pointer((void **)&d_out, h_out);
+    ret = fgpu_memory_allocate((void **)&d_out, sz);
     if (ret < 0)
         return ret;
 
@@ -96,7 +87,9 @@ int main()
     	assert(ret == 0);
         printf("Simple Time:%f\n", dtime_usec(start));
     }
-   
+
+    fgpu_memory_free(d_out);
+
     fgpu_deinit();
     return 0;
 

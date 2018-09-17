@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     if (ret < 0)
          return ret;
 
-    uint *h_InputKey, *h_InputVal,    *h_OutputKey,    *h_OutputVal;
+    uint *h_InputKey, *h_InputVal,    *h_OutputKeyGPU,    *h_OutputValGPU;
     uint *d_InputKey, *d_InputVal,    *d_OutputKey,    *d_OutputVal;
     StopWatchInterface *hTimer = NULL;
 
@@ -75,26 +75,11 @@ int main(int argc, char **argv)
 
     printf("Allocating and initializing host arrays...\n\n");
     sdkCreateTimer(&hTimer);
+    h_InputKey     = (uint *)malloc(N * sizeof(uint));
+    h_InputVal     = (uint *)malloc(N * sizeof(uint));
+    h_OutputKeyGPU = (uint *)malloc(N * sizeof(uint));
+    h_OutputValGPU = (uint *)malloc(N * sizeof(uint));
     srand(2001);
-
-    printf("Allocating and initializing CUDA arrays...\n\n");
-    ret = fgpu_memory_allocate((void **)&h_InputKey,  N * sizeof(uint));
-    assert(ret == 0);
-    ret = fgpu_memory_allocate((void **)&h_InputVal,  N * sizeof(uint));
-    assert(ret == 0);
-    ret = fgpu_memory_allocate((void **)&h_OutputKey, N * sizeof(uint));
-    assert(ret == 0);
-    ret = fgpu_memory_allocate((void **)&h_OutputVal, N * sizeof(uint));
-    assert(ret == 0);
-
-    ret = fgpu_memory_get_device_pointer((void **)&d_InputKey, h_InputKey);
-    assert(ret == 0);
-    ret = fgpu_memory_get_device_pointer((void **)&d_InputVal, h_InputVal);
-    assert(ret == 0);
-    ret = fgpu_memory_get_device_pointer((void **)&d_OutputKey, h_OutputKey);
-    assert(ret == 0);
-    ret = fgpu_memory_get_device_pointer((void **)&d_OutputVal, h_OutputVal);
-    assert(ret == 0);
 
     for (uint i = 0; i < N; i++)
     {
@@ -102,20 +87,23 @@ int main(int argc, char **argv)
         h_InputVal[i] = i;
     }
 
-    ret = fgpu_memory_prefetch_to_device_async(h_InputKey,  N * sizeof(uint));
+    printf("Allocating and initializing CUDA arrays...\n\n");
+    ret = fgpu_memory_allocate((void **)&d_InputKey,  N * sizeof(uint));
     assert(ret == 0);
-    ret = fgpu_memory_prefetch_to_device_async(h_InputVal,  N * sizeof(uint));
+    ret = fgpu_memory_allocate((void **)&d_InputVal,  N * sizeof(uint));
     assert(ret == 0);
-    ret = fgpu_memory_prefetch_to_device_async(h_OutputKey, N * sizeof(uint));
+    ret = fgpu_memory_allocate((void **)&d_OutputKey, N * sizeof(uint));
     assert(ret == 0);
-    ret = fgpu_memory_prefetch_to_device_async(h_OutputVal, N * sizeof(uint));
+    ret = fgpu_memory_allocate((void **)&d_OutputVal, N * sizeof(uint));
     assert(ret == 0);
-    ret = fgpu_color_stream_synchronize();
+    
+    ret = fgpu_memory_copy_async(d_InputKey, h_InputKey, N * sizeof(uint), FGPU_COPY_CPU_TO_GPU);
+    assert(ret == 0);
+    ret = fgpu_memory_copy_async(d_InputVal, h_InputVal, N * sizeof(uint), FGPU_COPY_CPU_TO_GPU);
     assert(ret == 0);
 
     int flag = 1;
     printf("Running GPU bitonic sort (%u identical iterations)...\n\n", numIterations);
-
 
     for (arrayLength = 64; arrayLength <= N; arrayLength *= 2)
     {
@@ -152,33 +140,16 @@ int main(int argc, char **argv)
 
         printf("\nValidating the results...\n");
         printf("...reading back GPU results\n");
-
-
-        ret = fgpu_memory_prefetch_from_device_async(h_InputKey, N * sizeof(uint));
+        ret = fgpu_memory_copy_async(h_OutputKeyGPU, d_OutputKey, N * sizeof(uint), FGPU_COPY_GPU_TO_CPU);
         assert(ret == 0);
-        ret = fgpu_memory_prefetch_from_device_async(h_InputVal, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_memory_prefetch_from_device_async(h_OutputKey, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_memory_prefetch_from_device_async(h_OutputVal, N * sizeof(uint));
+        ret = fgpu_memory_copy_async(h_OutputValGPU, d_OutputVal, N * sizeof(uint), FGPU_COPY_GPU_TO_CPU);
         assert(ret == 0);
         ret = fgpu_color_stream_synchronize();
         assert(ret == 0);
 
-        int keysFlag = validateSortedKeys(h_OutputKey, h_InputKey, N / arrayLength, arrayLength, numValues, DIR);
-        int valuesFlag = validateValues(h_OutputKey, h_OutputVal, h_InputKey, N / arrayLength, arrayLength);
+        int keysFlag = validateSortedKeys(h_OutputKeyGPU, h_InputKey, N / arrayLength, arrayLength, numValues, DIR);
+        int valuesFlag = validateValues(h_OutputKeyGPU, h_OutputValGPU, h_InputKey, N / arrayLength, arrayLength);
         flag = flag && keysFlag && valuesFlag;
-
-        ret = fgpu_memory_prefetch_to_device_async(h_InputKey, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_memory_prefetch_to_device_async(h_InputVal, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_memory_prefetch_to_device_async(h_OutputKey, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_memory_prefetch_to_device_async(h_OutputVal, N * sizeof(uint));
-        assert(ret == 0);
-        ret = fgpu_color_stream_synchronize();
-        assert(ret == 0);
 
         printf("\n");
     }
@@ -211,6 +182,7 @@ int main(int argc, char **argv)
         total = dtime_usec(start);
         printf("Wamup:Array Length: %d, Time:%f us\n", N, total);
     }
+
 
     // Measurements
     pstats_init(&stats);
@@ -258,10 +230,14 @@ int main(int argc, char **argv)
 
     printf("Shutting down...\n");
     sdkDeleteTimer(&hTimer);
-    fgpu_memory_free(h_OutputVal);
-    fgpu_memory_free(h_OutputKey);
-    fgpu_memory_free(h_InputVal);
-    fgpu_memory_free(h_InputKey);
+    fgpu_memory_free(d_OutputVal);
+    fgpu_memory_free(d_OutputKey);
+    fgpu_memory_free(d_InputVal);
+    fgpu_memory_free(d_InputKey);
+    free(h_OutputValGPU);
+    free(h_OutputKeyGPU);
+    free(h_InputVal);
+    free(h_InputKey);
 
     fgpu_deinit();
 

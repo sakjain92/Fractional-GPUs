@@ -61,12 +61,9 @@ int fgpu_memory_get_device_info(int *num_colors, size_t *max_len);
 
 int fgpu_memory_allocate(void **p, size_t len);
 int fgpu_memory_free(void *p);
-int fgpu_memory_get_device_pointer(void **d_p, void *h_p);
 
 void *fgpu_memory_get_phy_address(void *addr);
 
-int fgpu_memory_prefetch_to_device_async(void *p, size_t len);
-int fgpu_memory_prefetch_from_device_async(void *p, size_t len);
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
                            enum fgpu_memory_copy_type type);
 int fgpu_memory_memset_async(void *address, int value, size_t count);

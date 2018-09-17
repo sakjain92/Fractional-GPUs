@@ -56,32 +56,22 @@ int runCUDA(int width, int height)
   size_t buffer_size = sizeof(char) * width * height * 3;
 
   int ret;
+  char *image;
   int nIter = 10000;
   double start, total;
 
-
-  char *host_image, *device_image;
-
-  ret = fgpu_memory_allocate((void **)&host_image, buffer_size);
-  if (ret < 0)
-    return ret;
-  ret = fgpu_memory_get_device_pointer((void **)&device_image, host_image);
+  ret = fgpu_memory_allocate((void **)&image, buffer_size);
   if (ret < 0)
     return ret;
 
-  ret = fgpu_memory_prefetch_to_device_async(host_image, buffer_size);
-  if (ret < 0)
-    return ret;
-  ret = fgpu_color_stream_synchronize();
-  if (ret < 0)
-    return ret;
-
+  
+  char *host_image = (char *) malloc(buffer_size);
 
   dim3 blockDim(16, 16, 1);
   dim3 gridDim(width / blockDim.x, height / blockDim.y, 1);
   
   start = dtime_usec(0);
-  FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, device_image, width, height);
+  FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, image, width, height);
   ret = fgpu_color_stream_synchronize();
   if (ret < 0)
       return ret;
@@ -93,7 +83,7 @@ int runCUDA(int width, int height)
   start = dtime_usec(0);
   for (int i = 0; i < nIter; i++) {
     start = dtime_usec(0);
-    FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, device_image, width, height);
+    FGPU_LAUNCH_KERNEL(render, gridDim, blockDim, 0, image, width, height);
     ret = fgpu_color_stream_synchronize();
     if (ret < 0)
         return ret;
@@ -108,7 +98,7 @@ int runCUDA(int width, int height)
 
   printf("Avg Time:%f us\n", total / nIter);
 
-  ret = fgpu_memory_prefetch_from_device_async(host_image, buffer_size);
+  ret = fgpu_memory_copy_async(host_image, image, buffer_size, FGPU_COPY_GPU_TO_CPU);
   if (ret < 0)
     return ret;
   ret = fgpu_color_stream_synchronize();
@@ -118,7 +108,8 @@ int runCUDA(int width, int height)
   // Now write the file
   write_bmp("output.bmp", width, height, host_image);
 
-  fgpu_memory_free(host_image);
+  fgpu_memory_free(image);
+  free(host_image);
   return 0;
 }
 

@@ -58,6 +58,8 @@
 #define IOCTL_GET_DEVICE_COLOR_INFO     _IOC(0, 0, UVM_GET_DEVICE_COLOR_INFO, 0)
 #define IOCTL_GET_PROCESS_COLOR_INFO    _IOC(0, 0, UVM_GET_PROCESS_COLOR_INFO, 0)
 #define IOCTL_SET_PROCESS_COLOR_INFO    _IOC(0, 0, UVM_SET_PROCESS_COLOR_INFO, 0)
+#define IOCTL_MEMCPY_COLORED            _IOC(0, 0, UVM_MEMCPY_COLORED, 0)
+#define IOCTL_MEMSET_COLORED            _IOC(0, 0, UVM_MEMSET_COLORED, 0)
 
 /* UVM device fd */
 static int g_uvm_fd = -1;
@@ -472,7 +474,12 @@ int fgpu_memory_allocate(void **p, size_t len)
         return -ENOMEM;
     }
 
+#if defined(FGPU_USER_MEM_COLORING_ENABLED)
+    *p = (void *)(g_memory_ctx.cur_addr - (uintptr_t)g_memory_ctx.base_addr);
+#else
     *p = (void *)g_memory_ctx.cur_addr;
+#endif
+
     g_memory_ctx.cur_addr += len;
     g_memory_ctx.left -= len;
     return 0;
@@ -520,16 +527,6 @@ void *fgpu_memory_get_phy_address(void *addr)
 #endif /* FGPU_MEM_COLORING_ENABLED */
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
-int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
-{
-    if (!g_memory_ctx.is_initialized) {
-        fprintf(stderr, "FGPU:Initialization not done\n");
-        return -EBADF;
-    }
-
-    *d_p = (void *)((uintptr_t)h_p - (uintptr_t)g_memory_ctx.base_addr);
-    return 0;
-}
 
 int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx)
 {
@@ -668,7 +665,7 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
 
     params.length = count;
 
-    ret = ioctl(g_uvm_fd, UVM_MEMCPY_COLORED, &params);
+    ret = ioctl(g_uvm_fd, IOCTL_MEMCPY_COLORED, &params);
     if (ret < 0)
         return ret;
 
@@ -697,7 +694,7 @@ int fgpu_memory_memset_async_internal(void *address, int value, size_t count, cu
     params.value = value;
     params.length = count;
 
-    ret = ioctl(g_uvm_fd, UVM_MEMSET_COLORED, &params);
+    ret = ioctl(g_uvm_fd, IOCTL_MEMSET_COLORED, &params);
     if (ret < 0)
         return ret;
 
@@ -710,12 +707,6 @@ int fgpu_memory_memset_async_internal(void *address, int value, size_t count, cu
 }
 
 #else /* FGPU_USER_MEM_COLORING_ENABLED */
-
-int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
-{
-    *d_p = h_p;
-    return 0;
-}
 
 int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, enum fgpu_memory_copy_type type, cudaStream_t stream)
 {

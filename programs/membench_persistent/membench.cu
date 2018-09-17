@@ -18,24 +18,6 @@ void transfer_one(void *dst, void *src, size_t size, enum fgpu_memory_copy_type 
         exit(-1);
 }
 
-void transfer_managed_one(void *ptr, size_t size, enum fgpu_memory_copy_type kind)
-{
-    int ret;
-
-    if (kind == FGPU_COPY_CPU_TO_GPU)
-        ret = fgpu_memory_prefetch_to_device_async(ptr, size);
-    else
-        ret = fgpu_memory_prefetch_from_device_async(ptr, size);
-
-     if (ret == 0)
-        exit(-1);
-
-    fgpu_color_stream_synchronize();
-
-    if (ret == 0)
-        exit(-1);
-}
-
 double bandwidth(double time)
 {
     return ((double)N) / time / 1000;
@@ -83,7 +65,6 @@ int main(int argc, char *argv[])
         /* Test one way transfer */
         transfer_one(d_x, x, N, FGPU_COPY_CPU_TO_GPU);
         transfer_one(h_x, d_x, N, FGPU_COPY_GPU_TO_CPU);
-        transfer_managed_one(d_x, N, FGPU_COPY_CPU_TO_GPU);
     }
 
     printf("Warmup done\n");
@@ -112,9 +93,6 @@ int main(int argc, char *argv[])
         for (int i = 0; i < N; i += PAGE_SIZE)
             d_x[i] = 0;
 
-        start = dtime_usec(0);
-        transfer_managed_one(d_x, N, FGPU_COPY_CPU_TO_GPU);
-        printf("MemprefetchToDevice: Bandwidth:%f GB/s\n", bandwidth(dtime_usec(start)));
 
         printf("\n\n");
     }
