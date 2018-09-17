@@ -424,9 +424,8 @@ static int set_process_color_info(int device, int color, size_t req_length,
     g_memory_ctx.reserved_len = req_length;
     g_memory_ctx.color = color;
 
-    /* Add '1' to address so that NULL pointer is never returned during allocation */
-    g_memory_ctx.allocator = allocator_init((void *)((uintptr_t)g_memory_ctx.base_addr + 1), 
-            req_length - 1, FGPU_DEVICE_ADDRESS_ALIGNMENT);
+    g_memory_ctx.allocator = allocator_init(g_memory_ctx.base_addr, 
+            req_length, FGPU_DEVICE_ADDRESS_ALIGNMENT);
     if (!g_memory_ctx.allocator) {
         fprintf(stderr, "FGPU:Allocator Initialization Failed\n");
         return -EINVAL;
@@ -481,11 +480,7 @@ int fgpu_memory_allocate(void **p, size_t len)
         return -ENOMEM;
     }
 
-#if defined(FGPU_USER_MEM_COLORING_ENABLED)
-    *p = (void *)((uintptr_t)ret_addr - (uintptr_t)g_memory_ctx.base_addr);
-#else
     *p = ret_addr;
-#endif
     
     return 0;
 }
@@ -496,10 +491,6 @@ int fgpu_memory_free(void *p)
         fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
     }
-
-#if defined(FGPU_USER_MEM_COLORING_ENABLED)
-    p = (void *)((uintptr_t)p + (uintptr_t)g_memory_ctx.base_addr);
-#endif
 
     allocator_free(g_memory_ctx.allocator, p);
 
@@ -628,6 +619,20 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
 }
 */
 
+/* Check if given address lies on GPU */
+static bool is_address_on_gpu(const void *address)
+{
+
+    if ((uintptr_t)address < (uintptr_t)g_memory_ctx.base_addr)
+        return false;
+    
+    if ((uintptr_t)address >= (uintptr_t)g_memory_ctx.base_addr + 
+            g_memory_ctx.reserved_len)
+        return false;
+
+    return true;
+}
+
 int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
                                     enum fgpu_memory_copy_type type,
                                     cudaStream_t stream)
@@ -642,7 +647,8 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
     }
 
     /* Source is GPU? */
-    if (type == FGPU_COPY_GPU_TO_CPU || type == FGPU_COPY_GPU_TO_GPU) {
+    if (type == FGPU_COPY_GPU_TO_CPU || type == FGPU_COPY_GPU_TO_GPU ||
+            (type == FGPU_COPY_DEFAULT && is_address_on_gpu(src))) {
         
         ret = get_device_UUID(FGPU_DEVICE_NUMBER, &params.srcUuid);
         if (ret < 0)
@@ -659,7 +665,8 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
     }
 
     /* Destination is GPU? */
-    if (type == FGPU_COPY_CPU_TO_GPU || type == FGPU_COPY_GPU_TO_GPU) {
+    if (type == FGPU_COPY_CPU_TO_GPU || type == FGPU_COPY_GPU_TO_GPU ||
+            (type == FGPU_COPY_DEFAULT && is_address_on_gpu(dst))) {
         ret = get_device_UUID(FGPU_DEVICE_NUMBER, &params.destUuid);
         if (ret < 0)
             return ret;
@@ -730,6 +737,8 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
         return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDeviceToDevice, stream));
     case FGPU_COPY_CPU_TO_CPU:
         return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToHost, stream));
+    case FGPU_COPY_DEFAULT:
+        return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, stream));
     default:
         assert(0);
         return -1;
