@@ -69,9 +69,9 @@ string(APPEND CMAKE_CUDA_FLAGS " -m 64 -arch=${TARGET}")
 # Rest of the args are the files to be compiled into target
 function(add_persistent_target target include_dir)
 
-    add_executable(${target} persistent/persistent.cu persistent/memory.cu ${ARGN})
+    add_executable(${target} ${ARGN})
     target_compile_features(${target} PUBLIC cxx_std_11)
-    target_link_libraries(${target} cuda cudart nvidia-ml)
+    target_link_libraries(${target} fractional_gpu cuda cudart nvidia-ml)
     target_include_directories(${target}  PUBLIC ${include_dir})
 
 endfunction(add_persistent_target)
@@ -92,6 +92,7 @@ endfunction(add_native_target)
 add_library(fractional_gpu SHARED
     persistent/persistent.cu
     persistent/memory.cu
+    persistent/allocator.cpp
 )
 set_property(TARGET fractional_gpu PROPERTY VERSION ${PROJECT_VERSION})
 set_property(TARGET fractional_gpu PROPERTY PUBLIC_HEADER
@@ -153,6 +154,8 @@ add_native_target(membench programs/membench
     programs/membench/membench.cu)
 add_persistent_target(membench_persistent programs/membench_persistent
     programs/membench_persistent/membench.cu)
+
+#add_persistent_target(test programs programs/test.cu)
 
 # conjugateGradientMultiBlockCG
 #add_native_target(conjugateGradientMultiBlockCG programs/cuda_samples/conjugateGradientMultiBlockCG
