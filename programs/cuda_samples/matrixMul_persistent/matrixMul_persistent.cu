@@ -4,6 +4,9 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
+
 /**
  * Matrix multiplication (CUDA Kernel) on the device: C = A * B
  * wA is A's width and wB is B's width
@@ -104,7 +107,7 @@ void constantInit(float *data, int size, float val)
 /**
  * Run a simple test of matrix multiplication using CUDA
  */
-int matrixMultiply(void)
+int matrixMultiply(int num_iterations)
 {
     int block_size = 32;
     dim3 dimsA(10 * block_size, 10 * block_size, 1);
@@ -190,7 +193,7 @@ int matrixMultiply(void)
     dim3 grid(dimsB.x / threads.x, dimsA.y / threads.y);
 
     // Execute the kernel
-    int nIter = 10000;
+    int nIter = num_iterations;
 
     double start, total;
     pstats_t stats;
@@ -216,7 +219,7 @@ int matrixMultiply(void)
         	return ret;
 
         total = dtime_usec(start);
-        printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
+        dprintf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
 
     pstats_init(&stats);
@@ -255,26 +258,6 @@ int matrixMultiply(void)
         flopsPerMatrixMul,
         threads.x * threads.y);
 
-    // Terminate - To overlap wth application running in other color for benchmarking
-    for (int j = 0; j < nIter; j++)
-    {
-
-        if (block_size == 16)
-        {
-            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<16>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
-        }
-        else
-        {
-            ret = FGPU_LAUNCH_KERNEL(matrixMulCUDA<32>, grid, threads, 0, d_C, d_A, d_B, dimsA.x, dimsB.x);
-        }
-        if (ret < 0)
-            return ret;
-
-	    ret = fgpu_color_stream_synchronize();
-    	if (ret < 0)
-        	return ret;
-
-    }
 
     // Copy result from device to host
     ret = fgpu_memory_copy_async(h_C, d_C, mem_size_C, FGPU_COPY_GPU_TO_CPU);
@@ -336,30 +319,16 @@ int matrixMultiply(void)
 int main(int argc, char *argv[])
 {
     int ret;
-    int color;
+    int num_iterations;
 
-    if (argc != 2) {
-        fprintf(stderr, "Insufficient number of arguments\n");
-        exit(-1);
-    }
+    test_initialize(argc, argv, &num_iterations);
 
-    color = atoi(argv[1]);
 
-    printf("Color selected:%d\n", color);
-
-    ret = fgpu_init();
+    ret = matrixMultiply(num_iterations);
     if (ret < 0)
         return ret;
 
-    ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
-    if (ret < 0)
-        return ret;
-
-    ret = matrixMultiply();
-    if (ret < 0)
-        return ret;
-
-    fgpu_deinit();
+    test_deinitialize();
 
     return 0;
 }

@@ -9,6 +9,9 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
+
 #include "bmp.h"
 
 __global__
@@ -50,14 +53,13 @@ FGPU_DEFINE_KERNEL(render, char *out, int width, int height) {
   } FGPU_FOR_EACH_END 
 }
 
-int runCUDA(int width, int height)
+int runCUDA(int width, int height, int nIter)
 {
   // Multiply by 3 here, since we need red, green and blue for each pixel
   size_t buffer_size = sizeof(char) * width * height * 3;
 
   int ret;
   char *image;
-  int nIter = 10000;
   double start, total;
 
   ret = fgpu_memory_allocate((void **)&image, buffer_size);
@@ -88,7 +90,7 @@ int runCUDA(int width, int height)
     if (ret < 0)
         return ret;
     total = dtime_usec(start);
-    printf("Time:%f us\n", total);
+    dprintf("Time:%f us\n", total);
   }
   ret = fgpu_color_stream_synchronize();
   if (ret < 0)
@@ -113,30 +115,14 @@ int runCUDA(int width, int height)
   return 0;
 }
 
-int main(int argc, const char * argv[]) {
-  int color, ret;
+int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    fprintf(stderr, "Insufficient number of arguments\n");
-    exit(-1);
-  }
+  int num_iterations;
 
-  ret = fgpu_init();
-  if (ret < 0)
-    return ret;
+  test_initialize(argc, argv, &num_iterations);
 
-  color = atoi(argv[1]);
-  printf("Color selected:%d\n", color);
+  runCUDA(4096, 4096, num_iterations);
 
-  ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
-  if (ret < 0)
-    return ret;
-
-  ret = runCUDA(4096, 4096);
-  if (ret < 0)
-      return ret;
-
-  fgpu_deinit();
-  
+  test_deinitialize();
   return 0;
 }

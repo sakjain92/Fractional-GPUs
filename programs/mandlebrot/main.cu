@@ -6,7 +6,7 @@
 
 #include <cuda.h>
 
-#include <fractional_gpu.hpp>
+#include <testing_framework.hpp>
 
 #include "bmp.h"
 
@@ -40,13 +40,12 @@ __global__ void render(char *out, int width, int height) {
   }
 }
 
-void runCUDA(int width, int height)
+void runCUDA(int width, int height, int nIter)
 {
   // Multiply by 3 here, since we need red, green and blue for each pixel
   size_t buffer_size = sizeof(char) * width * height * 3;
 
   char *image;
-  int nIter = 10000;
   double start, total;
 
   cudaMalloc((void **) &image, buffer_size);
@@ -82,7 +81,14 @@ void runCUDA(int width, int height)
   free(host_image);
 }
 
-int main(int argc, const char * argv[]) {
-  runCUDA(4096, 4096);
+int main(int argc, char **argv) {
+
+  int num_iterations;
+
+  test_initialize(argc, argv, &num_iterations);
+
+  runCUDA(4096, 4096, num_iterations);
+
+  test_deinitialize();
   return 0;
 }

@@ -36,7 +36,7 @@
 #include <helper_functions.h>
 #include <helper_cuda.h>
 
-#include <fractional_gpu.hpp>
+#include <testing_framework.hpp>
 
 /**
  * Matrix multiplication (CUDA Kernel) on the device: C = A * B
@@ -129,8 +129,12 @@ void constantInit(float *data, int size, float val)
 /**
  * Run a simple test of matrix multiplication using CUDA
  */
-int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dimsB)
+int matrixMultiply(int num_iterations)
 {
+    int block_size = 32;
+    dim3 dimsA(10 * block_size, 10 * block_size, 1);
+    dim3 dimsB(20 * block_size, 10 * block_size, 1);
+
     // Allocate host memory for matrices A and B
     unsigned int size_A = dimsA.x * dimsA.y;
     unsigned int mem_size_A = sizeof(float) * size_A;
@@ -209,7 +213,7 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
     printf("Computing result using CUDA Kernel...\n");
 
    // Execute the kernel
-    int nIter = 10000;
+    int nIter = num_iterations;
     double start, total;
     pstats_t stats;
 
@@ -229,7 +233,7 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
 
         cudaDeviceSynchronize();
         total = dtime_usec(start);
-        printf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
+        dprintf("Time:%f, BlockSize:%d, dimA.x:%d, dimA.y:%d, dimB.x:%d, dimB.y:%d\n", total, block_size, dimsA.x, dimsA.y, dimsB.x, dimsB.y);
     }
 
     // Actual
@@ -267,21 +271,6 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
         flopsPerMatrixMul,
         threads.x * threads.y);
 
-    // Termination - To allow other color's application to overlap in time
-    for (int i = 0; i < nIter; i++) {
-
-        // Performs warmup operation using matrixMul CUDA kernel
-        if (block_size == 16)
-        {
-            matrixMulCUDA<16><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
-        }
-        else
-        {
-            matrixMulCUDA<32><<< grid, threads >>>(d_C, d_A, d_B, dimsA.x, dimsB.x);
-        }
-
-        cudaDeviceSynchronize();
-    }
 
     // Copy result from device to host
     error = cudaMemcpy(h_C, d_C, mem_size_C, cudaMemcpyDeviceToHost);
@@ -341,61 +330,17 @@ int matrixMultiply(int argc, char **argv, int block_size, dim3 &dimsA, dim3 &dim
  */
 int main(int argc, char **argv)
 {
-    printf("[Matrix Multiply Using CUDA] - Starting...\n");
+    int ret;
+    int num_iterations;
 
-    if (checkCmdLineFlag(argc, (const char **)argv, "help") ||
-        checkCmdLineFlag(argc, (const char **)argv, "?"))
-    {
-        printf("Usage -device=n (n >= 0 for deviceID)\n");
-        printf("      -wA=WidthA -hA=HeightA (Width x Height of Matrix A)\n");
-        printf("      -wB=WidthB -hB=HeightB (Width x Height of Matrix B)\n");
-        printf("  Note: Outer matrix dimensions of A & B matrices must be equal.\n");
+    test_initialize(argc, argv, &num_iterations);
 
-        exit(EXIT_SUCCESS);
-    }
 
-    // This will pick the best possible CUDA capable device, otherwise override the device ID based on input provided at the command line
-    int dev = findCudaDevice(argc, (const char **)argv);
+    ret = matrixMultiply(num_iterations);
+    if (ret < 0)
+        return ret;
 
-    int block_size = 32;
+    test_deinitialize();
 
-    dim3 dimsA(10 * block_size, 10 * block_size, 1);
-    dim3 dimsB(20 * block_size, 10 * block_size, 1);
-
-    // width of Matrix A
-    if (checkCmdLineFlag(argc, (const char **)argv, "wA"))
-    {
-        dimsA.x = getCmdLineArgumentInt(argc, (const char **)argv, "wA");
-    }
-
-    // height of Matrix A
-    if (checkCmdLineFlag(argc, (const char **)argv, "hA"))
-    {
-        dimsA.y = getCmdLineArgumentInt(argc, (const char **)argv, "hA");
-    }
-
-    // width of Matrix B
-    if (checkCmdLineFlag(argc, (const char **)argv, "wB"))
-    {
-        dimsB.x = getCmdLineArgumentInt(argc, (const char **)argv, "wB");
-    }
-
-    // height of Matrix B
-    if (checkCmdLineFlag(argc, (const char **)argv, "hB"))
-    {
-        dimsB.y = getCmdLineArgumentInt(argc, (const char **)argv, "hB");
-    }
-
-    if (dimsA.x != dimsB.y)
-    {
-        printf("Error: outer matrix dimensions must be equal. (%d != %d)\n",
-               dimsA.x, dimsB.y);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("MatrixA(%d,%d), MatrixB(%d,%d)\n", dimsA.x, dimsA.y, dimsB.x, dimsB.y);
-
-    int matrix_result = matrixMultiply(argc, argv, block_size, dimsA, dimsB);
-
-    exit(matrix_result);
+    return 0;
 }

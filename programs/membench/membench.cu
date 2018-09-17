@@ -4,6 +4,7 @@
 
 #include <fractional_gpu.hpp>
 
+#include <testing_framework.hpp>
 #define N                   (128 * 1024 * 1024)
 #define PAGE_SIZE           (4 * 1024)
 #define LARGE_PAGE_SIZE     (2 * 1024 * 1024)
@@ -45,12 +46,17 @@ double bandwidth(double time)
 {
     return ((double)N) / time / 1000;
 }
-int main(void)
+int main(int argc, char *argv[])
 {
     char *x, *y, *h_x, *h_y, *d_x, *d_y, *m_x, *m_y;
     cudaStream_t stream_x;
     cudaStream_t stream_y;
     double start;
+
+    int num_iterations;
+
+    test_initialize(argc, argv, &num_iterations);
+
 
     gpuErrAssert(cudaStreamCreate(&stream_x));
     gpuErrAssert(cudaStreamCreate(&stream_y));
@@ -151,4 +157,5 @@ int main(void)
     cudaFree(m_x);
     cudaFree(m_y);
 
+    test_deinitialize();
 }

@@ -5,6 +5,9 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
+
 #define N                   (128 * 1024 * 1024)
 #define PAGE_SIZE           (4 * 1024)
 
@@ -27,27 +30,10 @@ int main(int argc, char *argv[])
 {
     char *x, *h_x, *d_x;
     double start;
-
     int ret;
-    int color;
+    int num_iterations;
 
-    if (argc != 2) {
-        fprintf(stderr, "Insufficient number of arguments\n");
-        exit(-1);
-    }
-
-    color = atoi(argv[1]);
-
-    printf("Color selected:%d\n", color);
-
-    ret = fgpu_init();
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
-    if (ret < 0)
-        return ret;
-
+    test_initialize(argc, argv, &num_iterations);
 
     x = (char *)malloc(N*sizeof(char));
     assert(x);
@@ -101,4 +87,5 @@ int main(int argc, char *argv[])
     cudaFreeHost(h_x);
     fgpu_memory_free(d_x);
 
+    test_deinitialize();
 }

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <fractional_gpu.hpp>
+#include <testing_framework.hpp>
 
 #define N (1024*1024*4)
 #define THREADS_PER_BLOCK 1024
@@ -38,7 +38,7 @@ void compare(double *cpu, double *gpu, int n)
     printf("Comparision success\n");
 }
 
-int main()
+int runTest(int num_iterations)
 {
     double *a, *b, *c_cpu, *c_gpu;
     int size = N * sizeof( double );
@@ -73,22 +73,19 @@ int main()
     compare(c_cpu, c_gpu, N);
 
     // Execute the kernel
-    int nIter = 10000;
-    double start, total;
     pstats_t stats;
 
     // Warmup
-    for (int i = 0; i < nIter; i++) {
-        start = dtime_usec(0);
+    for (int i = 0; i < num_iterations; i++) {
+        double sub_start = dtime_usec(0);
         vector_add<<< (N + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >>>( d_a, d_b, d_c, N );
         cudaDeviceSynchronize();
-        total = dtime_usec(start);
-        printf("Time:%f\n", total);
+        dprintf("Time:%f\n", dtime_usec(sub_start));
     }
 
     // Measurements
     pstats_init(&stats);
-    for (int i = 0; i < nIter; i++) {
+    for (int i = 0; i < num_iterations; i++) {
         double sub_start = dtime_usec(0);
         vector_add<<< (N + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >>>( d_a, d_b, d_c, N );
         cudaDeviceSynchronize();
@@ -96,12 +93,6 @@ int main()
     }
     
     pstats_print(&stats);
-
-    // Ending
-    for (int i = 0; i < nIter; i++) {
-        vector_add<<< (N + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK, THREADS_PER_BLOCK >>>( d_a, d_b, d_c, N );
-        cudaDeviceSynchronize();
-    }
 
     free(a);
     free(b);
@@ -112,4 +103,18 @@ int main()
     cudaFree( d_c );
 
     return 0;
-} 
+}
+
+int main(int argc, char **argv)
+{
+    int ret;
+    int num_iterations;
+
+    test_initialize(argc, argv, &num_iterations);
+
+    ret = runTest(num_iterations);
+    if (ret < 0)
+        return ret;
+
+    test_deinitialize();
+}

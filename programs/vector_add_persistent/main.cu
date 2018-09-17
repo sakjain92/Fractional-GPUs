@@ -7,6 +7,9 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
+
 #define N (1024*1024*2)
 #define THREADS_PER_BLOCK 1024
 
@@ -49,7 +52,7 @@ void compare(double2 *cpu, double2 *gpu, int n)
     printf("Comparision success\n");
 }
 
-int runTest(void)
+int runTest(int num_iterations)
 {
     double2 *a, *b, *c_cpu, *c_gpu;
     double2 *d_a, *d_b, *d_c;
@@ -120,13 +123,11 @@ int runTest(void)
 
 
     // Execute the kernel
-    int nIter = 132000;
-    double start, total;
     pstats_t stats;
 
     // Warmup
-    for (int i = 0; i < nIter; i++) {
-        start = dtime_usec(0);
+    for (int i = 0; i < num_iterations; i++) {
+        double sub_start = dtime_usec(0);
         ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
         if (ret < 0)
             return ret;
@@ -135,13 +136,12 @@ int runTest(void)
     	if (ret < 0)
         	return ret;
 
-        total = dtime_usec(start);
-        printf("Time:%f\n", total);
+        dprintf("Time:%f\n", dtime_usec(sub_start));
     }
 
     // Measurements
     pstats_init(&stats);
-    for (int i = 0; i < nIter; i++) {
+    for (int i = 0; i < num_iterations; i++) {
         double sub_start = dtime_usec(0);
         ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
         if (ret < 0)
@@ -154,17 +154,6 @@ int runTest(void)
     }
     
     pstats_print(&stats);
-
-    // Ending
-    for (int i = 0; i < nIter; i++) {
-        ret = FGPU_LAUNCH_KERNEL(vector_add, grid, threads, 0, d_a, d_b, d_c, N );
-        if (ret < 0)
-            return ret;
-
-	    ret = fgpu_color_stream_synchronize();
-    	if (ret < 0)
-        	return ret;
-    }
 
     free(a);
     free(b);
@@ -179,29 +168,14 @@ int runTest(void)
 
 int main(int argc, char **argv)
 {
-    int ret, color;
+    int ret;
+    int num_iterations;
 
-    if (argc != 2) {
-        fprintf(stderr, "Insufficient number of arguments\n");
-        exit(-1);
-    }
+    test_initialize(argc, argv, &num_iterations);
 
-    color = atoi(argv[1]);
-
-    printf("Color selected:%d\n", color);
-
-    ret = fgpu_init();
+    ret = runTest(num_iterations);
     if (ret < 0)
         return ret;
 
-    ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
-    if (ret < 0)
-        return ret;
-
-    ret = runTest();
-    if (ret < 0)
-        return ret;
-
-    fgpu_deinit();
-
+    test_deinitialize();
 }

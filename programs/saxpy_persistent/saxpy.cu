@@ -3,6 +3,8 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
 
 __global__
 FGPU_DEFINE_KERNEL(saxpy, int n, float a, float *x, float *y)
@@ -24,31 +26,14 @@ FGPU_DEFINE_KERNEL(saxpy, int n, float a, float *x, float *y)
 int main(int argc, char **argv)
 {
   int N = 1<<20;
-  int nIter = 10000;
-  double start, total;
+  int nIter;
   pstats_t stats;
+  int ret;
+
+  test_initialize(argc, argv, &nIter);
 
   dim3 grid((N+255)/256, 1, 1), threads(256, 1, 1);
-  int ret;
-  int color;
-
-  if (argc != 2) {
-    fprintf(stderr, "Insufficient number of arguments\n");
-    exit(-1);
-  }
-
-  color = atoi(argv[1]);
-
-  printf("Color selected:%d\n", color);
-
-  ret = fgpu_init();
-  if (ret < 0)
-    return ret;
-
-  ret = fgpu_set_color_prop(color, 128 * 1024 * 1024);
-  if (ret < 0)
-    return ret;
-
+  
   float *x, *y, *d_x, *d_y;
   x = (float*)malloc(N*sizeof(float));
   y = (float*)malloc(N*sizeof(float));
@@ -92,18 +77,16 @@ int main(int argc, char **argv)
   // Warmup
   for (int i = 0; i < nIter; i++) {
 
-    start = dtime_usec(0);
+    double sub_start = dtime_usec(0);
     
     FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);
     cudaDeviceSynchronize();
 
-    total = dtime_usec(start);
-    printf("Time:%f\n", total);
+    dprintf("Time:%f\n", dtime_usec(sub_start));
   }
 
   // Actual
   pstats_init(&stats);
-  start = dtime_usec(0);
   for (int j = 0; j < nIter; j++)
   {
     double sub_start = dtime_usec(0);
@@ -113,21 +96,13 @@ int main(int argc, char **argv)
   }
     
   cudaDeviceSynchronize();
-  total = dtime_usec(start);
 
   pstats_print(&stats);
 
-  // Termination - To allow other color's application to overlap in time
-  for (int j = 0; j < nIter; j++)
-  {
-    FGPU_LAUNCH_KERNEL(saxpy, grid, threads, 0, N, 2.0f, d_x, d_y);    
-    cudaDeviceSynchronize();
-  }
-    
   fgpu_memory_free(d_x);
   fgpu_memory_free(d_y);
   free(x);
   free(y);
 
-  fgpu_deinit();
+  test_deinitialize();
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-#include <fractional_gpu.hpp>
+#include <testing_framework.hpp>
+
 __global__
 void saxpy(int n, float a, float *x, float *y)
 {
@@ -8,13 +9,13 @@ void saxpy(int n, float a, float *x, float *y)
   if (i < n) y[i] = a*x[i] + y[i];
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
   int N = 1<<20;
-  int nIter = 10000;
-  double start, total;
+  int nIter;
   pstats_t stats;
 
+  test_initialize(argc, argv, &nIter);
   float *x, *y, *d_x, *d_y;
   x = (float*)malloc(N*sizeof(float));
   y = (float*)malloc(N*sizeof(float));
@@ -46,18 +47,16 @@ int main(void)
   // Warmup
   for (int i = 0; i < nIter; i++) {
 
-    start = dtime_usec(0);
+    double sub_start = dtime_usec(0);
         
     saxpy<<<(N+255)/256, 256>>>(N, 2.0f, d_x, d_y);
     cudaDeviceSynchronize();
 
-    total = dtime_usec(start);
-    printf("Time:%f\n", total);
+    dprintf("Time:%f\n", dtime_usec(start));
   }
 
   // Actual
   pstats_init(&stats);
-  start = dtime_usec(0);
   for (int j = 0; j < nIter; j++)
   {
     double sub_start = dtime_usec(0);
@@ -67,19 +66,13 @@ int main(void)
   }
     
   cudaDeviceSynchronize();
-  total = dtime_usec(start);
 
   pstats_print(&stats);
 
-  // Termination - To allow other color's application to overlap in time
-  for (int j = 0; j < nIter; j++)
-  {
-    saxpy<<<(N+255)/256, 256>>>(N, 2.0f, d_x, d_y);
-    cudaDeviceSynchronize();
-  }
-    
   cudaFree(d_x);
   cudaFree(d_y);
   free(x);
   free(y);
+
+  test_deinitialize();
 }

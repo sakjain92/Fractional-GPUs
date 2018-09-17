@@ -3,6 +3,9 @@
 #include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 
+#define USE_FGPU
+#include <testing_framework.hpp>
+
 FGPU_DEFINE_KERNEL(info, int A)
 {
     fgpu_dev_ctx_t *ctx;
@@ -41,20 +44,15 @@ FGPU_DEFINE_KERNEL(simple, uint32_t *out)
     } FGPU_FOR_EACH_END;
 }
 
-int main()
+int main(int argc, char **argv)
 {
     int ret;
     dim3 threads(32, 32, 1);
     dim3 grid(20, 10);
     double start;
+    int num_iterations;
 
-    ret = fgpu_init();
-    if (ret < 0)
-        return ret;
-
-    ret = fgpu_set_color_prop(0, 128 * 1024 * 1024);
-    if (ret < 0)
-        return ret;
+    test_initialize(argc, argv, &num_iterations);
 
     ret = FGPU_LAUNCH_KERNEL(info, grid, threads, 0, 100);
     if (ret < 0)
@@ -79,7 +77,7 @@ int main()
     if (ret < 0)
         return ret;
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < num_iterations; i++) {
         start = dtime_usec(0);
         ret = FGPU_LAUNCH_KERNEL(simple, grid, threads, 0, d_out);
         assert(ret == 0);
@@ -90,7 +88,7 @@ int main()
 
     fgpu_memory_free(d_out);
 
-    fgpu_deinit();
+    test_deinitialize();
     return 0;
 
 }
