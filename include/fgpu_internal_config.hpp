@@ -8,7 +8,7 @@
 /* Cache line size on GPU. Needed for performance improvement. */
 #define FGPU_DEVICE_CACHELINE_SIZE      32
 
-/* Maximum number of colors supported - This is also limited by number of streams */
+/* Maximum number of colors supported */
 #define FGPU_MAX_NUM_COLORS             8
 
 /* Maximum number of persistent blocks */

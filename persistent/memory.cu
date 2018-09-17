@@ -133,8 +133,10 @@ static int init(bool do_post_init)
     if (ret < 0)
         return ret;
     
-    if (g_init_failed)
-        return -1;
+    if (g_init_failed) {
+        fprintf(stderr, "FGPU:Initialization failed\n");
+        return -EINVAL;
+    }
     
     if (!do_post_init)
         return 0;
@@ -143,8 +145,10 @@ static int init(bool do_post_init)
     if (ret < 0)
         return ret;
     
-    if (g_init_failed)
-        return -1;
+    if (g_init_failed) {
+        fprintf(stderr, "FGPU:Initialization failed\n");
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -168,17 +172,23 @@ static int get_device_UUID(int device, NvProcessorUuid *uuid)
 
     /* Get PCI ID from the device handle and then use NVML library to get UUID */
     ccode = cudaDeviceGetPCIBusId(pciID, sizeof(pciID), device);
-    if (ccode != cudaSuccess)
-        return -1;
+    if (ccode != cudaSuccess) {
+        fprintf(stderr, "FGPU:Couldn't find PCI Bus ID\n");
+        return -EINVAL;
+    }
 
     ncode = nvmlDeviceGetHandleByPciBusId(pciID, &handle);
-    if (ncode != NVML_SUCCESS)
-        return -1;
+    if (ncode != NVML_SUCCESS){
+        fprintf(stderr, "FGPU:Couldn't get Device Handle\n");
+        return -EINVAL;
+    }
 
      
     ncode = nvmlDeviceGetUUID(handle, buf, sizeof(buf));
-    if (ncode != NVML_SUCCESS)
-        return -1;
+    if (ncode != NVML_SUCCESS){
+        fprintf(stderr, "FGPU:Couldn't find device UUID\n");
+        return -EINVAL;
+    }
 
     if (strncmp(buf, gpu_prefix, gpu_prefix_len != 0))
         return 0;
@@ -203,14 +213,18 @@ static int get_device_UUID(int device, NvProcessorUuid *uuid)
                 uuid->uuid[uindex] = (uint8_t)strtol(hex, NULL, 16);
                 uindex++;
                 hindex = 0;
-                if (uindex > needed_bytes)
-                    return -1;
+                if (uindex > needed_bytes) {
+                    fprintf(stderr, "FGPU:Invalid device UUID\n");
+                    return -EINVAL;
+                }  
             }
         }
     }
 
-    if (uindex != needed_bytes)
-        return -1;
+    if (uindex != needed_bytes) {
+        fprintf(stderr, "FGPU:Invalid device UUID\n");
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -271,8 +285,10 @@ static int get_device_color_info(int device, int *num_colors, size_t *max_len)
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK)
-        return -1;
+    if (params.rmStatus != NV_OK) {
+        fprintf(stderr, "FGPU:Couldn't get device color info\n");
+        return -EINVAL;
+    }
 
     if (num_colors)
         *num_colors = params.numColors;
@@ -293,8 +309,10 @@ int fgpu_memory_get_device_info(int *num_colors, size_t *max_len)
     if (ret < 0)
         return ret;
 
-    if (g_uvm_fd < 0)
+    if (g_uvm_fd < 0) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
+    }
 
     return get_device_color_info(FGPU_DEVICE_NUMBER, num_colors, max_len);
 
@@ -314,8 +332,10 @@ static int get_process_color_info(int device, int *color, size_t *length)
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK)
-        return -1;
+    if (params.rmStatus != NV_OK) {
+        fprintf(stderr, "FGPU:Couldn't get process color property\n");
+        return -EINVAL;
+    }
 
     if (color)
         *color = params.color;
@@ -335,8 +355,10 @@ int fgpu_process_get_colors_info(int device, int *color, size_t *length)
     if (ret < 0)
         return ret;
 
-    if (g_uvm_fd < 0)
+    if (g_uvm_fd < 0) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
+    }
 
     return get_process_color_info(device, color, length);
 }
@@ -350,8 +372,10 @@ static int set_process_color_info(int device, int color, size_t req_length,
     int ret;
 
     /* Color can only be set once */
-    if (g_memory_ctx.is_initialized)
-        return -1;
+    if (g_memory_ctx.is_initialized) {
+        fprintf(stderr, "FGPU:Process color already set\n");
+        return -EINVAL;
+    }
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
     int num_colors;
@@ -373,8 +397,10 @@ static int set_process_color_info(int device, int color, size_t req_length,
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK)
-        return -1;
+    if (params.rmStatus != NV_OK) {
+        fprintf(stderr, "FGPU:Couldn't set process color property\n");
+        return -EINVAL;
+    }
 
     ret = gpuErrCheck(cudaMallocManaged(&g_memory_ctx.base_addr, actual_length));
     if (ret < 0)
@@ -415,8 +441,10 @@ int fgpu_memory_set_colors_info(int device, int color, size_t length,
     if (ret < 0)
         return ret;
 
-    if (g_uvm_fd < 0)
+    if (g_uvm_fd < 0) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
         return -EBADF;
+    }
 
     return set_process_color_info(device, color, length, stream);
 }
@@ -433,11 +461,16 @@ void fgpu_memory_deinit(void)
 
 int fgpu_memory_allocate(void **p, size_t len)
 {
-    if (!g_memory_ctx.is_initialized)
-        return -1;
+    if (!g_memory_ctx.is_initialized) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
+        return -EBADF;
+    }
 
-    if (g_memory_ctx.left < len)
-        return -1;
+
+    if (g_memory_ctx.left < len) {
+        fprintf(stderr, "FGPU:Can't allocate device memory\n");
+        return -ENOMEM;
+    }
 
     *p = (void *)g_memory_ctx.cur_addr;
     g_memory_ctx.cur_addr += len;
@@ -447,8 +480,10 @@ int fgpu_memory_allocate(void **p, size_t len)
 
 int fgpu_memory_free(void *p)
 {
-    if (!g_memory_ctx.is_initialized)
-        return -1;
+    if (!g_memory_ctx.is_initialized) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
+        return -EBADF;
+    }
 
     return 0;
 }
@@ -487,8 +522,10 @@ void *fgpu_memory_get_phy_address(void *addr)
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
 int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
 {
-    if (!g_memory_ctx.is_initialized)
-        return -1;
+    if (!g_memory_ctx.is_initialized) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
+        return -EBADF;
+    }
 
     *d_p = (void *)((uintptr_t)h_p - (uintptr_t)g_memory_ctx.base_addr);
     return 0;
@@ -496,8 +533,10 @@ int fgpu_memory_get_device_pointer(void **d_p, void *h_p)
 
 int fgpu_get_memory_info(uintptr_t *start_virt_addr, uintptr_t *start_idx)
 {
-    if (!g_memory_ctx.is_initialized)
-        return -1;
+    if (!g_memory_ctx.is_initialized) {
+        fprintf(stderr, "FGPU:Initialization not done\n");
+        return -EBADF;
+    }
 
     *start_virt_addr = (uintptr_t)g_memory_ctx.base_addr;
     *start_idx = ((uintptr_t)g_memory_ctx.base_phy_addr) >> FGPU_DEVICE_COLOR_SHIFT;
@@ -633,8 +672,10 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count,
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK)
-        return -1;
+    if (params.rmStatus != NV_OK) {
+        fprintf(stderr, "FGPU:Memcpy failed\n");
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -660,8 +701,10 @@ int fgpu_memory_memset_async_internal(void *address, int value, size_t count, cu
     if (ret < 0)
         return ret;
 
-    if (params.rmStatus != NV_OK)
-        return -1;
+    if (params.rmStatus != NV_OK) {
+        fprintf(stderr, "FGPU:Memcpy failed\n");
+        return -EINVAL;
+    } 
 
     return 0;
 }
@@ -686,6 +729,7 @@ int fgpu_memory_copy_async_internal(void *dst, const void *src, size_t count, en
     case FGPU_COPY_CPU_TO_CPU:
         return gpuErrCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyHostToHost, stream));
     default:
+        assert(0);
         return -1;
     }   
 }

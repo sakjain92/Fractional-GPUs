@@ -1,6 +1,7 @@
 /* This file contains API for persistent kernels */
 #include <assert.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -112,6 +113,7 @@ static bool is_mps_enabled(void)
     struct stat st;
     cudaDeviceProp device_prop;
 
+    /* Check if default file created by MPS exists ? */
     ret = stat(FGPU_MPS_CONTROL_NAME, &st);
     if (ret < 0)
         return false;
@@ -134,19 +136,19 @@ static int init_shared_mutex(pthread_mutex_t *lock)
     
     ret = pthread_mutexattr_init(&attr);
     if (ret < 0) {
-        fprintf(stderr, "Mutex attr failed to initialize\n");
+        fprintf(stderr, "FGPU:Mutex attr failed to initialize\n");
         return ret;
     }
 
     ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
     if (ret < 0) {
-        fprintf(stderr, "Mutex attr couldn't be set to be shared\n");
+        fprintf(stderr, "FGPU:Mutex attr couldn't be set to be shared\n");
         return ret;
     }
 
     ret = pthread_mutex_init(lock, &attr);
     if (ret < 0) {
-        fprintf(stderr, "Mutex can't be initialized\n");
+        fprintf(stderr, "FGPU:Mutex can't be initialized\n");
         return ret;
     }
 
@@ -162,19 +164,19 @@ static int init_shared_condvar(pthread_cond_t *cond)
     
     ret = pthread_condattr_init(&attr);
     if (ret < 0) {
-        fprintf(stderr, "Condvar attr failed to initialize\n");
+        fprintf(stderr, "FGPU:Condvar attr failed to initialize\n");
         return ret;
     }
 
     ret = pthread_condattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
     if (ret < 0) {
-        fprintf(stderr, "Condvar attr couldn't be set to be shared\n");
+        fprintf(stderr, "FGPU:Condvar attr couldn't be set to be shared\n");
         return ret;
     }
 
     ret = pthread_cond_init(cond, &attr);
     if (ret < 0) {
-        fprintf(stderr, "Condvar can't be initialized\n");
+        fprintf(stderr, "FGPU:Condvar can't be initialized\n");
         return ret;
     }
 
@@ -199,8 +201,8 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
     }
 
     if (!supported) {
-        fprintf(stderr, "Unknown CUDA device\n");
-        return -1;
+        fprintf(stderr, "FGPU:Unknown CUDA device\n");
+        return -ENXIO;
     }
 
     /* 
@@ -220,32 +222,32 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
     int mem_colors;
     int ret = fgpu_memory_get_device_info(&mem_colors, NULL);
     if (ret < 0) {
-        fprintf(stderr, "Memory coloring enabled but can't set colors in kernel driver\n");
-	return ret;
+        fprintf(stderr, "FGPU:Memory coloring enabled but can't set colors in kernel driver\n");
+	    return ret;
     }
 
     num_colors = mem_colors < num_colors ? mem_colors : num_colors;
 #endif
 
     if (num_colors <= 0) {
-        fprintf(stderr, "Too less colors for coloring\n");
-        return -1;
+        fprintf(stderr, "FGPU:Too less colors for coloring\n");
+        return -EINVAL;
     }
 
     host_ctx->num_colors  = num_colors;
 
     /*
-     * Due to integer division, all colors might not be balanced perfectly
+     * Due to integer division, all colors might not be balanced perfectly.
      * Currently we are treating all colors equally. This is not neccesary.
      */
     sm_per_color = num_sm / num_colors;
 
     if (sm_per_color == 0) {
-        fprintf(stderr, "Too few SMs/Too many colors\n");
-        return -1;
+        fprintf(stderr, "FGPU:Too few SMs/Too many colors\n");
+        return -EINVAL;
     }
 
-    printf("Device: \"%s\", Number of Colors:%d\n", device_prop->name, num_colors);
+    printf("FGPU:Device: \"%s\", Number of Colors:%d\n", device_prop->name, num_colors);
     for (int i = 0; i < num_colors; i++) {
         int start_sm;
         int end_sm;
@@ -256,11 +258,7 @@ static int init_color_info(fgpu_host_ctx_t *host_ctx, int device,
             end_sm = num_sm - 1;
 
         host_ctx->color_to_sms[i] = std::make_pair(start_sm, end_sm);
-//        if (i == 0)
-//            host_ctx->color_to_sms[i] = std::make_pair(0, 14);
-//        else
-//            host_ctx->color_to_sms[i] = std::make_pair(15, 15);
-        printf("Color:%d, SMs:(%d->%d)\n", i, start_sm, end_sm);
+        printf("FGPU:Color:%d, SMs:(%d->%d)\n", i, start_sm, end_sm);
     }
 
     return 0;
@@ -278,11 +276,14 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
         return ret;
 
     if (deviceCount == 0) {
-        fprintf(stderr, "Couldn't find any CUDA devices\n");    
-        return -1;
+        fprintf(stderr, "FGPU:Couldn't find any CUDA devices\n");    
+        return -ENXIO;
     }
 
-    assert(deviceCount > FGPU_DEVICE_NUMBER);
+    if (deviceCount <= FGPU_DEVICE_NUMBER) {
+        fprintf(stderr, "FGPU:Couldn't find CUDA device\n");    
+        return -ENXIO;
+    }
 
     ret = gpuErrCheck(cudaSetDevice(FGPU_DEVICE_NUMBER));
     if (ret < 0)
@@ -296,13 +297,13 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
         device_prop.multiProcessorCount;
 
     if (max_threads > FGPU_MAX_NUM_PBLOCKS * FGPU_MIN_BLOCKDIMS) {
-        fprintf(stderr, "Too many SMs/Threads in CUDA device\n");
-        return -1;
+        fprintf(stderr, "FGPU:Too many SMs/Threads in CUDA device\n");
+        return -EINVAL;
     }
 
     if (device_prop.warpSize != FGPU_MIN_BLOCKDIMS) {
-        fprintf(stderr, "Warp size of CUDA device is not correct\n");
-        return -1;
+        fprintf(stderr, "FGPU:Warp size of CUDA device is not correct\n");
+        return -EINVAL;
     }
 
     host_ctx->device = FGPU_DEVICE_NUMBER;
@@ -335,7 +336,8 @@ int fgpu_server_init(void)
     ret = shmem_fd = shm_open(FGPU_SHMEM_NAME,
             O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (ret < 0) {
-        fprintf(stderr, "Couldn't open shmem\n");
+        fprintf(stderr, "FGPU:Couldn't create shmem file."
+                " Please delete file (%s) if exists\n", FGPU_SHMEM_NAME);
         goto err;
     }
 
@@ -345,16 +347,15 @@ int fgpu_server_init(void)
 
     ret = ftruncate(shmem_fd, shmem_size);
     if (ret < 0) {
-        fprintf(stderr, "Can't truncate shmem file\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't truncate shmem file\n");
         goto err;
     }
 
     g_host_ctx = (fgpu_host_ctx_t *)mmap(NULL, shmem_size,
                     PROT_READ | PROT_WRITE, MAP_SHARED, shmem_fd, 0);
     if (g_host_ctx == NULL) {
-        fprintf(stderr, "Can't map shmem\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't map shmem\n");
+        ret = -errno;
         goto err;
     }
 
@@ -376,7 +377,8 @@ int fgpu_server_init(void)
     ret = shmem_host_fd = shm_open(FGPU_SHMEM_HOST_NAME,
             O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (ret < 0) {
-        fprintf(stderr, "Couldn't open shmem\n");
+        fprintf(stderr, "FGPU:Couldn't create shmem file."
+                " Please delete file (%s) if exists\n", FGPU_SHMEM_HOST_NAME);
         goto err;
     }
 
@@ -384,16 +386,15 @@ int fgpu_server_init(void)
 
     ret = ftruncate(shmem_host_fd, shmem_size);
     if (ret < 0) {
-        fprintf(stderr, "Can't truncate shmem (host) file\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't truncate shmem (host) file\n");
         goto err;
     }
 
     h_indicators = (volatile fgpu_indicators_t *)mmap(NULL, shmem_size,
                     PROT_READ | PROT_WRITE, MAP_SHARED, shmem_host_fd, 0);
     if (h_indicators == NULL) {
-        fprintf(stderr, "Can't map shmem\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't map shmem\n");
+        ret = -errno;
         goto err;
     }
 
@@ -443,7 +444,7 @@ int fgpu_server_init(void)
 
     g_host_ctx->is_lauchpad_free = true;
     g_host_ctx->last_num_pblocks_launched = 0;
-    g_host_ctx->last_color = -1;
+    g_host_ctx->last_color = FGPU_INVALID_COLOR;
 
     ret = init_shared_mutex(&g_host_ctx->streams_lock);
     if (ret < 0)
@@ -457,8 +458,8 @@ int fgpu_server_init(void)
     }
      
     if (!is_mps_enabled()) {
-        fprintf(stderr, "MPS is not enabled\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:MPS is not enabled\n");
+        ret = -EIO;
         goto err;
     }
 
@@ -476,7 +477,7 @@ err:
 /* Deinitializes */
 void fgpu_server_deinit(void)
 {
-    printf("Server Terminating. Waiting for device to be free\n");
+    printf("FGPU:Server Terminating. Waiting for device to be free\n");
     gpuErrCheck(cudaDeviceSynchronize());
 
     if (d_bindexes != NULL)
@@ -512,7 +513,7 @@ int fgpu_init(void)
     /* Create the shared memory */
     ret = shmem_fd = shm_open(FGPU_SHMEM_NAME, O_RDWR, S_IRUSR | S_IWUSR);
     if (ret < 0) {
-        fprintf(stderr, "Couldn't open shmem\n");
+        fprintf(stderr, "FGPU:Couldn't open shmem\n");
         goto err;
     }
 
@@ -522,14 +523,14 @@ int fgpu_init(void)
     g_host_ctx = (fgpu_host_ctx_t *)mmap(NULL, shmem_size,
                     PROT_READ | PROT_WRITE, MAP_SHARED, shmem_fd, 0);
     if (g_host_ctx == NULL) {
-        fprintf(stderr, "Can't map shmem\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't map shmem\n");
+        ret = -errno;
         goto err;
     }
 
     ret = shmem_host_fd = shm_open(FGPU_SHMEM_HOST_NAME, O_RDWR, S_IRUSR | S_IWUSR);
     if (ret < 0) {
-        fprintf(stderr, "Couldn't open shmem\n");
+        fprintf(stderr, "FGPU:Couldn't open shmem\n");
         goto err;
     }
 
@@ -538,8 +539,8 @@ int fgpu_init(void)
     h_indicators = (volatile fgpu_indicators_t *)mmap(NULL, shmem_size,
             PROT_READ | PROT_WRITE, MAP_SHARED, shmem_host_fd, 0);
     if (h_indicators == NULL) {
-        fprintf(stderr, "Can't map shmem (host pinned)\n");
-        ret = -1;
+        fprintf(stderr, "FGPU:Can't map shmem (host pinned)\n");
+        ret = -errno;
         goto err;
     }
 
@@ -574,7 +575,8 @@ int fgpu_init(void)
         return ret;
 
     if (!is_mps_enabled()) {
-        fprintf(stderr, "MPS is not enabled\n");
+        fprintf(stderr, "FGPU:MPS is not enabled\n");
+        ret = -EIO;
         goto err;
     }
 
@@ -648,18 +650,18 @@ bool fgpu_is_init_complete(void)
 int fgpu_set_color_prop(int color, size_t mem_size)
 {
     if (!is_initialized()) {
-        fprintf(stderr, "fgpu module not initialized\n");
-        return -1;
+        fprintf(stderr, "FGPU:fgpu module not initialized\n");
+        return -EINVAL;
     }
 
     if (is_color_set()) {
-        fprintf(stderr, "Color can be only set once\n");
-        return -1;
+        fprintf(stderr, "FGPU:Color can be only set once\n");
+        return -EINVAL;
     }
 
     if (color >= g_host_ctx->num_colors || color < 0) {
-        fprintf(stderr, "Invalid color\n");
-        return -1;
+        fprintf(stderr, "FGPU:Invalid color\n");
+        return -EINVAL;
     }
 
 #ifdef FGPU_MEM_COLORING_ENABLED
@@ -737,8 +739,8 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
     int ret;
 
     if (!is_color_set()) {
-        fprintf(stderr, "Colors not set\n");
-        return -1;
+        fprintf(stderr, "FGPU:Colors not set\n");
+        return -EINVAL;
     }
 
     g_host_ctx->last_color = ctx->color;
@@ -778,26 +780,37 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t
     uint32_t num_pblocks;
 
     if (!is_color_set()) {
-        fprintf(stderr, "Colors not set\n");
+        fprintf(stderr, "FGPU:Colors not set\n");
         return -1;
     }
 
     num_blocks = ctx->gridDim.x * ctx->gridDim.y * ctx->gridDim.z;
-    if (num_blocks == 0)
-        return -1;
+    if (num_blocks == 0) {
+        fprintf(stderr, "FGPU:Invalid number of blocks\n");
+        return -EINVAL;
+    }
 
     num_threads = ctx->blockDim.x * ctx->blockDim.y * ctx->blockDim.z;
-    if (num_threads == 0 || num_threads > g_host_ctx->max_num_threads_per_sm)
-        return -1;
+    if (num_threads == 0 || num_threads > g_host_ctx->max_num_threads_per_sm) {
+        fprintf(stderr, "Invalid number of threads in a block\n");
+        return -EINVAL;
+    }
 
     /* Num threads should be power of 2 */
     /* TODO: Relax this constraint */
-    if (num_threads & (num_threads - 1) != 0)
-        return -1;
+    if (num_threads & (num_threads - 1) != 0) {
+        fprintf(stderr, "Invalid number of threads in a block\n");
+        return -EINVAL;
+    }
 
-    /* TODO: This is not neccesary condition */
-    if (num_threads < FGPU_MIN_BLOCKDIMS)
-        return -1;
+    /* 
+     * We can't mask threads - Hardware can
+     * TODO: Add support for this
+     */
+    if (num_threads < FGPU_MIN_BLOCKDIMS) {
+        fprintf(stderr, "Invalid number of threads in a block\n");
+        return -EINVAL;
+    }
    
     wait_for_last_complete(g_color);
 
@@ -836,8 +849,8 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t
 int fgpu_color_stream_synchronize(void)
 {
     if (!is_color_set()) {
-        fprintf(stderr, "Colors not set\n");
-        return -1;
+        fprintf(stderr, "FGPU:Colors not set\n");
+        return -EINVAL;
     }
 
     return gpuErrCheck(cudaStreamSynchronize(color_stream));
@@ -846,8 +859,13 @@ int fgpu_color_stream_synchronize(void)
 int fgpu_num_sm(int color, int *num_sm)
 {
     if (!is_initialized()) {
-        fprintf(stderr, "fgpu module not initialized\n");
-        return -1;
+        fprintf(stderr, "FGPU:fgpu module not initialized\n");
+        return -EINVAL;
+    }
+
+    if (color >= g_host_ctx->num_colors) {
+        fprintf(stderr, "FGPU: Invalid Color\n");
+        return -EINVAL;
     }
 
     *num_sm = g_host_ctx->color_to_sms[color].second - 
@@ -858,8 +876,8 @@ int fgpu_num_sm(int color, int *num_sm)
 int fgpu_num_colors(void)
 {
     if (!is_initialized()) {
-        fprintf(stderr, "fgpu module not initialized\n");
-        return -1;
+        fprintf(stderr, "FGPU:fgpu module not initialized\n");
+        return -EINVAL;
     }
 
     return g_host_ctx->num_colors;
