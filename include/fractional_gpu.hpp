@@ -66,8 +66,10 @@ int fgpu_memory_free(void *p);
 void *fgpu_memory_get_phy_address(void *addr);
 
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
-                           enum fgpu_memory_copy_type type);
-int fgpu_memory_memset_async(void *address, int value, size_t count);
+                           enum fgpu_memory_copy_type type,
+                           cudaStream_t stream = NULL);
+int fgpu_memory_memset_async(void *address, int value, size_t count,
+                            cudaStream_t stream = NULL);
 
 #ifdef FGPU_COMP_COLORING_ENABLE
 

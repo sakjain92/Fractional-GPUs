@@ -899,12 +899,27 @@ int fgpu_num_colors(void)
 }
 
 int fgpu_memory_copy_async(void *dst, const void *src, size_t count,
-                           enum fgpu_memory_copy_type type)
+                           enum fgpu_memory_copy_type type,
+                           cudaStream_t stream)
 {
-    return fgpu_memory_copy_async_internal(dst, src, count, type, color_stream);
+    /* 
+     * Instead of using default stream (which caused device wide synchronization)
+     * Use process specific stream.
+     */
+    if (stream == NULL)
+        stream = color_stream;
+    return fgpu_memory_copy_async_internal(dst, src, count, type, stream);
 }
 
-int fgpu_memory_memset_async(void *address, int value, size_t count)
+int fgpu_memory_memset_async(void *address, int value, size_t count,
+                            cudaStream_t stream)
 {
-    return fgpu_memory_memset_async_internal(address, value, count, color_stream);
+    /* 
+     * Instead of using default stream (which caused device wide synchronization)
+     * Use process specific stream.
+     */
+    if (stream == NULL)
+        stream = color_stream;
+
+    return fgpu_memory_memset_async_internal(address, value, count, stream);
 }
