@@ -9,6 +9,7 @@ option(FGPU_COMP_COLORING_ENABLE "Enable computational coloring" ON)
 option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
 option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
+option(FGPU_PARANOID_CHECK_ENABLED "Enable checks that are not strictly neccesary" OFF)
 
 # Check for contraints on configurations
 
