@@ -10,6 +10,7 @@
 #include "caffe/util/math_functions.hpp"
 
 #ifdef USE_FGPU
+#include <fractional_gpu.hpp>
 #include <fractional_gpu_cuda.cuh>
 #endif
 
@@ -727,7 +728,8 @@ void caffe_gpu_axpy<double>(int n, double alpha, double const *x, double *y)
 
 void caffe_gpu_memcpy(const size_t N, const void* X, void* Y) {
   if (X != Y) {
-    CUDA_CHECK(cudaMemcpy(Y, X, N, cudaMemcpyDefault));  // NOLINT(caffe/alt_fn)
+    FGPU_CHECK(fgpu_memory_copy_async(Y, X, N, FGPU_COPY_DEFAULT));
+    FGPU_CHECK(fgpu_color_stream_synchronize());
   }
 }
 
@@ -924,7 +926,8 @@ void caffe_gpu_set(const int N, const Dtype alpha, Dtype* Y) {
   dim3 grid(CAFFE_GET_BLOCKS(N)), threads(CAFFE_CUDA_NUM_THREADS);
 
   if (alpha == 0) {
-    CUDA_CHECK(cudaMemset(Y, 0, sizeof(Dtype) * N));  // NOLINT(caffe/alt_fn)
+    FGPU_CHECK(fgpu_memory_memset_async(Y, 0, sizeof(Dtype) * N));
+    FGPU_CHECK(fgpu_color_stream_synchronize());
     return;
   }
     

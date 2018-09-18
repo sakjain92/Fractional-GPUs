@@ -6,6 +6,9 @@
 #include "caffe/common.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#ifdef USE_FGPU
+#include <fractional_gpu.hpp>
+#endif
 
 namespace caffe {
 
@@ -87,8 +90,13 @@ void caffe_copy(const int N, const Dtype* X, Dtype* Y) {
   if (X != Y) {
     if (Caffe::mode() == Caffe::GPU) {
 #ifndef CPU_ONLY
+#ifdef USE_FGPU
+      FGPU_CHECK(fgpu_memory_copy_async(Y, X, sizeof(Dtype) * N, FGPU_COPY_DEFAULT));
+      FGPU_CHECK(fgpu_color_stream_synchronize());
+#else
       // NOLINT_NEXT_LINE(caffe/alt_fn)
       CUDA_CHECK(cudaMemcpy(Y, X, sizeof(Dtype) * N, cudaMemcpyDefault));
+#endif
 #else
       NO_GPU;
 #endif

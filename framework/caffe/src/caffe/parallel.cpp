@@ -1,3 +1,5 @@
+// TODO: This file uses caffe_copy - Need to use special gpu/host allocation here
+// TODO: This file uses streams - Need to handle this for FGPU specially
 #ifdef USE_NCCL
 
 #include <cuda_runtime.h>
@@ -10,6 +12,10 @@
 #include "caffe/caffe.hpp"
 #include "caffe/parallel.hpp"
 #include "caffe/sgd_solvers.hpp"
+
+#ifdef USE_FGPU
+#include <fractional_gpu.hpp>
+#endif
 
 namespace caffe {
 
@@ -80,14 +86,22 @@ GPUParams<Dtype>::GPUParams(shared_ptr<Solver<Dtype> > root_solver, int device)
 
   // Allocate device buffers
   CUDA_CHECK(cudaSetDevice(device));
+#ifdef USE_FGPU
+  FGPU_CHECK(fgpu_memory_allocate(&data_, size_ * sizeof(Dtype)));
+#else
   CUDA_CHECK(cudaMalloc(&data_, size_ * sizeof(Dtype)));
+#endif
 
   // Copy blob values
   const vector<Blob<Dtype>*>& net =
     root_solver->net()->learnable_params();
   apply_buffers(net, data_, size_, copy);
 
+#ifdef USE_FGPU
+  FGPU_CHECK(fgpu_memory_allocate(&diff_, size_ * sizeof(Dtype)));
+#else
   CUDA_CHECK(cudaMalloc(&diff_, size_ * sizeof(Dtype)));
+#endif
   caffe_gpu_set(size_, Dtype(0), diff_);
 
   CUDA_CHECK(cudaSetDevice(initial_device));
@@ -95,8 +109,14 @@ GPUParams<Dtype>::GPUParams(shared_ptr<Solver<Dtype> > root_solver, int device)
 
 template<typename Dtype>
 GPUParams<Dtype>::~GPUParams() {
+
+#ifdef USE_FGPU
+  FGPU_CHECK(fgpu_memory_free(data_));
+  FGPU_CHECK(fgpu_memory_free(diff_));
+#else
   CUDA_CHECK(cudaFree(data_));
   CUDA_CHECK(cudaFree(diff_));
+#endif
 }
 
 template<typename Dtype>

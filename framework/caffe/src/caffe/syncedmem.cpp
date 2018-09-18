@@ -2,6 +2,10 @@
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
 
+#ifdef USE_FGPU
+#include <fractional_gpu.hpp>
+#endif
+
 namespace caffe {
 SyncedMemory::SyncedMemory()
   : cpu_ptr_(NULL), gpu_ptr_(NULL), size_(0), head_(UNINITIALIZED),
@@ -31,7 +35,11 @@ SyncedMemory::~SyncedMemory() {
 
 #ifndef CPU_ONLY
   if (gpu_ptr_ && own_gpu_data_) {
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_free(gpu_ptr_));
+#else
     CUDA_CHECK(cudaFree(gpu_ptr_));
+#endif
   }
 #endif  // CPU_ONLY
 }
@@ -68,14 +76,22 @@ inline void SyncedMemory::to_gpu() {
 #ifndef CPU_ONLY
   switch (head_) {
   case UNINITIALIZED:
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_allocate(&gpu_ptr_, size_));
+#else
     CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
+#endif    
     caffe_gpu_memset(size_, 0, gpu_ptr_);
     head_ = HEAD_AT_GPU;
     own_gpu_data_ = true;
     break;
   case HEAD_AT_CPU:
     if (gpu_ptr_ == NULL) {
-      CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_allocate(&gpu_ptr_, size_));
+#else
+    CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
+#endif 
       own_gpu_data_ = true;
     }
     caffe_gpu_memcpy(size_, cpu_ptr_, gpu_ptr_);
@@ -123,7 +139,11 @@ void SyncedMemory::set_gpu_data(void* data) {
 #ifndef CPU_ONLY
   CHECK(data);
   if (own_gpu_data_) {
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_free(gpu_ptr_));
+#else
     CUDA_CHECK(cudaFree(gpu_ptr_));
+#endif
   }
   gpu_ptr_ = data;
   head_ = HEAD_AT_GPU;
@@ -157,11 +177,20 @@ void SyncedMemory::async_gpu_push(const cudaStream_t& stream) {
   check_device();
   CHECK(head_ == HEAD_AT_CPU);
   if (gpu_ptr_ == NULL) {
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_allocate(&gpu_ptr_, size_));
+#else
     CUDA_CHECK(cudaMalloc(&gpu_ptr_, size_));
+#endif
     own_gpu_data_ = true;
   }
-  const cudaMemcpyKind put = cudaMemcpyHostToDevice;
-  CUDA_CHECK(cudaMemcpyAsync(gpu_ptr_, cpu_ptr_, size_, put, stream));
+#ifdef USE_FGPU
+    FGPU_CHECK(fgpu_memory_copy_async(gpu_ptr_, cpu_ptr_, size_,
+                           FGPU_COPY_CPU_TO_GPU, stream));
+#else
+  CUDA_CHECK(cudaMemcpyAsync(gpu_ptr_, cpu_ptr_, size_,
+              cudaMemcpyHostToDevice, stream));
+#endif
   // Assume caller will synchronize on the stream before use
   head_ = SYNCED;
 }
