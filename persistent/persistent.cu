@@ -126,6 +126,10 @@ static bool is_mps_enabled(void)
     if (device_prop.computeMode != cudaComputeModeExclusiveProcess)
         return false;
     return true;
+
+    /* XXX: All these conditions still now sufficient - Need to check to see
+     *  if MPS process is running or not also.
+     */
 }
 
 /* Initializes mutex for use in shared memory */
@@ -348,7 +352,7 @@ int fgpu_server_init(void)
             O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (ret < 0) {
         fprintf(stderr, "FGPU:Couldn't create shmem file."
-                " Please delete file (%s) if exists\n", FGPU_SHMEM_NAME);
+                " Please delete file (%s) if exists\n", "/dev/shm/" FGPU_SHMEM_NAME);
         goto err;
     }
 
@@ -389,7 +393,7 @@ int fgpu_server_init(void)
             O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (ret < 0) {
         fprintf(stderr, "FGPU:Couldn't create shmem file."
-                " Please delete file (%s) if exists\n", FGPU_SHMEM_HOST_NAME);
+                " Please delete file (%s) if exists\n", "/dev/shm/" FGPU_SHMEM_HOST_NAME);
         goto err;
     }
 

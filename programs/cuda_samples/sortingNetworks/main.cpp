@@ -168,7 +168,7 @@ int main(int argc, char **argv)
     // Measurements
     pstats_init(&stats);
     start = dtime_usec(0);
-    for (uint i = 0; i < numIterations; i++) {
+    for (uint i = 0; i < num_iterations; i++) {
         double sub_start = dtime_usec(0);
         threadCount = bitonicSort(
                 d_OutputKey,

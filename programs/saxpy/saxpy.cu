@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     saxpy<<<(N+255)/256, 256>>>(N, 2.0f, d_x, d_y);
     cudaDeviceSynchronize();
 
-    dprintf("Time:%f\n", dtime_usec(start));
+    dprintf("Time:%f\n", dtime_usec(sub_start));
   }
 
   // Actual

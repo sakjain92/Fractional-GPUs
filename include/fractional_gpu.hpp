@@ -102,7 +102,6 @@ int fgpu_memory_memset_async(void *address, int value, size_t count);
         func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx);       \
         ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
     }                                                                       \
-    fgpu_complete_launch_kernel(&dev_fctx);                                 \
                                                                             \
     ret;                                                                    \
 })
