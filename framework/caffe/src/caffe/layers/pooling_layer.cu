@@ -561,7 +561,7 @@ __global__ FGPU_DEFINE_KERNEL(AvePoolBackward, const int nthreads, const Dtype* 
           int hend = min(hstart + kernel_h, height + pad_h);
           int wend = min(wstart + kernel_w, width + pad_w);
           int pool_size = (hend - hstart) * (wend - wstart);
-          gradient += FGPU_COLOR_LOAD(ctx, &top_diff_slice[ph * pooled_width + pw] / pool_size);
+          gradient += FGPU_COLOR_LOAD(ctx, &top_diff_slice[ph * pooled_width + pw]) / pool_size;
         }
       }
       FGPU_COLOR_STORE(ctx, &bottom_diff[index], gradient);

@@ -221,7 +221,7 @@ __global__ FGPU_DEFINE_KERNEL(kernel_channel_dot, const int num, const int chann
         dot += (FGPU_COLOR_LOAD(ctx, &data_1[(n * channels + c) * spatial_dim + s])
             * FGPU_COLOR_LOAD(ctx, &data_2[(n * channels + c) * spatial_dim + s]));
       }
-      FGPU_COLOR_STORE(ct, &channel_dot[index],  dot);
+      FGPU_COLOR_STORE(ctx, &channel_dot[index],  dot);
     }
 
   }

@@ -842,7 +842,7 @@ __global__ FGPU_DEFINE_KERNEL(asum_kernel, const int n, const Dtype *x,
 
   FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
     CUDA_KERNEL_LOOP(index, n, _blockIdx, _gridDim) {
-      sum += fabs(FGPU_COLOR_LOAD(cxt, &x[index]));
+      sum += fabs(FGPU_COLOR_LOAD(ctx, &x[index]));
     }
   }
 
