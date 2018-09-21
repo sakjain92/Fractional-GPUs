@@ -29,24 +29,25 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 
 
 #if defined(FGPU_PARANOID_CHECK_ENABLED)
-        dev_ctx->d_dev_indicators->indicators[blockIdx.x].started = dev_ctx->launch_index;
+        
+        atomicAdd((int *)&dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index], 1);
 
         /* Pblocks launched on wrong SM have to wait for all other pblocks to be launched */
         if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
-            /* Poll in round robin fashion to avoid all reading same data at once */
-            for (int i = blockIdx.x + 1; i < dev_ctx->num_pblock; i++)
-                while(dev_ctx->d_dev_indicators->indicators[i].started !=  dev_ctx->launch_index)
-
-            for (int i = 0; i < blockIdx.x; i++)
-                while(dev_ctx->d_dev_indicators->indicators[i].started !=  dev_ctx->launch_index);
-
+            while(dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index] != gridDim.x);
         }
+
 #endif
-        /* Note: This is the most time taking process */
 	    dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
 
         /* Prepare for the next function */
-        dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+        if (blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0) {
+            dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+
+#if defined(FGPU_PARANOID_CHECK_ENABLED)
+            dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+#endif
+        }   
     }
 
     if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {

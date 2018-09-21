@@ -57,7 +57,7 @@ cudaStream_t color_stream;
 
 /* Each process maps host pinned memory individually in it's addr space */
 static volatile fgpu_indicators_t *h_indicators;
-static volatile fgpu_indicators_t *d_dev_indicators;
+static volatile fgpu_bindexes_t *d_dev_indicators;
 static volatile fgpu_indicators_t *d_host_indicators;
 static fgpu_bindexes_t *d_bindexes;
 
@@ -417,7 +417,7 @@ int fgpu_server_init(void)
     memset((void *)h_indicators, 0, sizeof(fgpu_indicators_t));
 
     ret = gpuErrCheck(cudaMalloc(&d_dev_indicators,
-                sizeof(fgpu_indicators_t)));
+                sizeof(fgpu_bindexes_t)));
     if (ret < 0)
         goto err;
 
@@ -427,7 +427,7 @@ int fgpu_server_init(void)
         goto err;
 
     ret = gpuErrCheck(cudaMemset((void *)d_dev_indicators, 0,
-                sizeof(fgpu_indicators_t)));
+                sizeof(fgpu_bindexes_t)));
     if (ret < 0)
         goto err;
 

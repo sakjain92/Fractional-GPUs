@@ -14,7 +14,7 @@
 /* This structure is context that is handed over to kernel by host */
 typedef struct fgpu_dev_ctx {
     volatile fgpu_indicators_t *d_host_indicators;  /* Used to indicate launch completion to host */
-    volatile fgpu_indicators_t *d_dev_indicators;   /* Used to indicate launch completion to pblock */
+    volatile fgpu_bindexes_t *d_dev_indicators;     /* Used to indicate launch completion to pblock */
 
     fgpu_bindexes_t *d_bindex;      /* Used to gather block indexes */
     int color;                      /* Color to be used by the kernel */
