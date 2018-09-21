@@ -17,9 +17,6 @@
 /* Maximum number of persistent blocks */
 #define FGPU_MAX_NUM_PBLOCKS            6400
 
-/* Minimum threads in a block - Minimum unit is a warp on CUDA device */
-#define FGPU_MIN_BLOCKDIMS              32
-
 /* Maximum number of pending CUDA tasks */
 #define FGPU_MAX_PENDING_TASKS          100
 

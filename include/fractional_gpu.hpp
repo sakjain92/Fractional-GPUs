@@ -52,7 +52,8 @@ size_t fgpu_get_env_color_mem_size(void);
 bool fgpu_is_init_complete(void);
 int fgpu_set_color_prop(int color, size_t mem_size);
 bool fgpu_is_color_prop_set(void);
-int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t **stream);
+int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func, 
+        size_t shared_mem, dim3 *_gridDim, cudaStream_t **stream);
 int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx);
 int fgpu_color_stream_synchronize(void);
 int fpgpu_num_sm(int color, int *num_sm);
@@ -82,9 +83,11 @@ int fgpu_memory_memset_async(void *address, int value, size_t count,
     cudaStream_t *stream;                                                   \
     fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx =  -1;                                               \
-    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, (const void *)func,         \
+            sharedMem, &_lgridDim, &stream);                                \
     if (ret >= 0) {                                                         \
-        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx, __VA_ARGS__); \
+        func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx,        \
+                __VA_ARGS__);                                               \
         ret = fgpu_complete_launch_kernel(&dev_fctx);                       \
     }                                                                       \
                                                                             \
@@ -99,7 +102,8 @@ int fgpu_memory_memset_async(void *address, int value, size_t count,
     cudaStream_t *stream;                                                   \
     fgpu_set_ctx_dims(&dev_fctx, _gridDim, _blockDim);                      \
     dev_fctx._blockIdx = -1;                                                \
-    ret = fgpu_prepare_launch_kernel(&dev_fctx, &_lgridDim, &stream);       \
+    ret = fgpu_prepare_launch_kernel(&dev_fctx, (const void *)func,         \
+            sharedMem, &_lgridDim, &stream);                                \
     if (ret >= 0) {                                                         \
         func<<<_lgridDim, _blockDim, sharedMem, *stream>>>(dev_fctx);       \
         ret = fgpu_complete_launch_kernel(&dev_fctx);                       \

@@ -284,7 +284,6 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
 {
     int deviceCount = 0;
     cudaDeviceProp device_prop;
-    size_t max_threads;
 
     int ret = gpuErrCheck(cudaGetDeviceCount(&deviceCount));
     if (ret < 0)
@@ -307,19 +306,6 @@ static int init_device_info(fgpu_host_ctx_t *host_ctx)
     ret = gpuErrCheck(cudaGetDeviceProperties(&device_prop, FGPU_DEVICE_NUMBER));
     if (ret < 0)
         return ret;
-
-    max_threads = device_prop.maxThreadsPerMultiProcessor *
-        device_prop.multiProcessorCount;
-
-    if (max_threads > FGPU_MAX_NUM_PBLOCKS * FGPU_MIN_BLOCKDIMS) {
-        fprintf(stderr, "FGPU:Too many SMs/Threads in CUDA device\n");
-        return -EINVAL;
-    }
-
-    if (device_prop.warpSize != FGPU_MIN_BLOCKDIMS) {
-        fprintf(stderr, "FGPU:Warp size of CUDA device is not correct\n");
-        return -EINVAL;
-    }
 
     host_ctx->device = FGPU_DEVICE_NUMBER;
     host_ctx->num_sm = device_prop.multiProcessorCount;
@@ -786,13 +772,15 @@ static void wait_for_last_complete(int color)
     pthread_mutex_unlock(&g_host_ctx->streams_lock);
 }
 
-
 /* Prepare ctx before launch */
-int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t **stream)
+int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
+        size_t shared_mem, dim3 *_gridDim, cudaStream_t **stream)
 {
     uint32_t num_blocks;
     uint32_t num_threads;
     uint32_t num_pblocks;
+    int num_pblocks_per_sm;
+    int ret;
 
     if (!is_color_set()) {
         fprintf(stderr, "FGPU:Colors not set\n");
@@ -811,28 +799,22 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, dim3 *_gridDim, cudaStream_t
         return -EINVAL;
     }
 
-    /* Num threads should be power of 2 */
-    /* TODO: Relax this constraint */
-    if (num_threads & (num_threads - 1) != 0) {
-        fprintf(stderr, "Invalid number of threads in a block\n");
+    ret = 
+        gpuErrCheck(cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(&num_pblocks_per_sm,
+                    func, num_threads, shared_mem, cudaOccupancyDisableCachingOverride));
+    if (ret < 0)
+        return ret;
+
+    num_pblocks = num_pblocks_per_sm * g_host_ctx->num_sm;
+
+    if (num_pblocks > FGPU_MAX_NUM_PBLOCKS) {
+        fprintf(stderr, "FGPU:FGPU_MAX_NUM_PBLOCKS is set too low\n");
         return -EINVAL;
     }
 
-    /* 
-     * We can't mask threads - Hardware can
-     * TODO: Add support for this
-     */
-    if (num_threads < FGPU_MIN_BLOCKDIMS) {
-        fprintf(stderr, "Invalid number of threads in a block\n");
-        return -EINVAL;
-    }
-   
     wait_for_last_complete(g_color);
 
     wait_for_last_start();
-
-    num_pblocks =
-        (g_host_ctx->num_sm * g_host_ctx->max_num_threads_per_sm) / num_threads;
 
     ctx->color = g_color;
     ctx->num_pblock = num_pblocks;
