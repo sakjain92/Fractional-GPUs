@@ -4,7 +4,8 @@
 
 #include <fractional_gpu.hpp>
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
+
 #define N                   (128 * 1024 * 1024)
 #define PAGE_SIZE           (4 * 1024)
 #define LARGE_PAGE_SIZE     (2 * 1024 * 1024)

@@ -31,7 +31,7 @@
 
 #include "sortingNetworks_common.h"
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Test driver

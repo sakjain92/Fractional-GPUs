@@ -6,7 +6,7 @@
 
 #include <cuda.h>
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 #include "bmp.h"
 

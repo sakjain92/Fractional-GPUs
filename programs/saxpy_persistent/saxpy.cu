@@ -4,7 +4,7 @@
 #include <fractional_gpu_cuda.cuh>
 
 #define USE_FGPU
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 __global__
 FGPU_DEFINE_KERNEL(saxpy, int n, float a, float *x, float *y)

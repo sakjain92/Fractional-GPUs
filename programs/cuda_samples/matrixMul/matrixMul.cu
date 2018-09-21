@@ -36,7 +36,7 @@
 #include <helper_functions.h>
 #include <helper_cuda.h>
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 /**
  * Matrix multiplication (CUDA Kernel) on the device: C = A * B

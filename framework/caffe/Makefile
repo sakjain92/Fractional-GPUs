@@ -171,8 +171,9 @@ ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
 endif
 CUDA_LIB_DIR += $(CUDA_DIR)/lib
 
-ifeq ($(USE_FGPU), 1)
+# Some headers file used for benchmarking even when FGPU is not used
 CUDA_INCLUDE_DIR += $(FGPU_DIR)/include/
+ifeq ($(USE_FGPU), 1)
 CUDA_LIB_DIR += $(FGPU_DIR)/build/
 endif
 

@@ -6,7 +6,7 @@
 #include <fractional_gpu_cuda.cuh>
 
 #define USE_FGPU
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 #define N                   (128 * 1024 * 1024)
 #define PAGE_SIZE           (4 * 1024)

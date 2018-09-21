@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 #define N (1024*1024*4)
 #define THREADS_PER_BLOCK 1024

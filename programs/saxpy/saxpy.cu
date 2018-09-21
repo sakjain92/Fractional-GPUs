@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include <testing_framework.hpp>
+#include <fractional_gpu_testing.hpp>
 
 __global__
 void saxpy(int n, float a, float *x, float *y)
