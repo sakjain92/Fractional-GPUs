@@ -133,14 +133,14 @@ void CropLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   int n = top[0]->count();
 #ifndef USE_FGPU
   // NOLINT_NEXT_LINE(whitespace/operators)
-  crop_kernel_forward<<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(n,
+  crop_kernel_forward<Dtype><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(n,
       bottom[0]->num_axes(),
       src_strides_.gpu_data(),
       dest_strides_.gpu_data(),
       offsets.gpu_data(),
       bottom_data, top_data);
 #else
-  FGPU_CHECK(FGPU_LAUNCH_KERNEL(crop_kernel_forward,
+  FGPU_CHECK(FGPU_LAUNCH_KERNEL(crop_kernel_forward<Dtype>,
       CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS, 0, n,
       bottom[0]->num_axes(),
       src_strides_.gpu_data(),
@@ -162,14 +162,14 @@ void CropLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     caffe_gpu_set(bottom[0]->count(), static_cast<Dtype>(0), bottom_diff);
 #ifndef USE_FGPU
     // NOLINT_NEXT_LINE(whitespace/operators)
-    crop_kernel_backward<<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(n,
+    crop_kernel_backward<Dtype><<<CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS>>>(n,
         bottom[0]->num_axes(),
         src_strides_.gpu_data(),
         dest_strides_.gpu_data(),
         offsets.gpu_data(),
         bottom_diff, top_diff);
 #else
-    FGPU_CHECK(FGPU_LAUNCH_KERNEL(crop_kernel_backward,
+    FGPU_CHECK(FGPU_LAUNCH_KERNEL(crop_kernel_backward<Dtype>,
         CAFFE_GET_BLOCKS(n), CAFFE_CUDA_NUM_THREADS, 0, n,
         bottom[0]->num_axes(),
         src_strides_.gpu_data(),
