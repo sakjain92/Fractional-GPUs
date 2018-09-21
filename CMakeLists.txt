@@ -7,9 +7,9 @@ project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU i
 
 option(FGPU_COMP_COLORING_ENABLE "Enable computational coloring" ON)
 option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
-option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" ON)
+option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" OFF)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
-option(FGPU_PARANOID_CHECK_ENABLED "Enable checks that are not strictly neccesary" OFF)
+option(FGPU_PARANOID_CHECK_ENABLED "Enable checks that are not strictly neccesary" ON)
 
 # Check for contraints on configurations
 
@@ -58,7 +58,6 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(CUDA  REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
 include_directories(include)
-include_directories(programs)
 include_directories(programs/cuda_samples/common/inc)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/)
 include_directories(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/)
