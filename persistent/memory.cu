@@ -261,7 +261,7 @@ int connect(int sockfd, const struct sockaddr *addr,
     
     ret = g_orig_connect(sockfd, addr, addrlen);
 
-    if (ret >= 0 && addr && addr->sa_family == AF_LOCAL && 
+    if (ret >= 0 && g_uvm_fd < 0 && addr && addr->sa_family == AF_LOCAL && 
             strncmp(addr->sa_data, NVIDIA_MPS_CONTROL_PATH, strlen(NVIDIA_MPS_CONTROL_PATH)) == 0) {
         g_uvm_fd = sockfd;
     }
