@@ -3,10 +3,7 @@
 
 /* TODO: Add support for CPU also if needed */
 
-/* Uncomment to allow debug prints */
-//#define ENABLE_DEBUG                           1
-
-#if (ENABLE_DEBUG == 1)
+#ifndef NDEBUG
 #define dprintf(...)                        printf(__VA_ARGS__)
 #else
 #define dprintf(...)
