@@ -213,6 +213,10 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t al
     if (ret < 0) {
         fprintf(stderr, "No solutions found\n");
     } else {
+        
+        /* Sort before printing */
+        hash_sort_solutions(hctx);
+
         printf("Hash Function for DRAM Banks:\n");
         hash_print_solutions(hctx);
     }
@@ -231,6 +235,7 @@ void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr,
     a = (uintptr_t)phy_addr1 - data->phy_start + data->virt_start;
     b = (uintptr_t)phy_start_addr - data->phy_start + data->virt_start;
 
+    dprintf("Trying to find pair for %p in the range [%p, %p)\n", phy_addr1, phy_start_addr, phy_end_addr);
     ret_addr = (uintptr_t)device_find_cache_eviction_addr((void * )a, (void *)b, offset, data->running_threshold);
     if (!ret_addr)
         return NULL;
@@ -291,6 +296,9 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
     if (ret < 0) {
         fprintf(stderr, "No solutions found\n");
     } else {
+        /* Sort before printing */
+        hash_sort_solutions(hctx);
+
         printf("Hash Function for Cacheline:\n");
         hash_print_solutions(hctx);
     }
@@ -339,7 +347,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Couldn't find DRAM Banks hash function\n");
         return -1;
     }
-    
+  
     printf("Finding Cacheline hash function\n");
     cache_hctx = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
     if (cache_hctx == NULL) {

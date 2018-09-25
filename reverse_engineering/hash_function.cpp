@@ -18,8 +18,10 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include <vector>
+#include <algorithm>
 
 #include <hash_function.hpp>
 
@@ -194,6 +196,22 @@ static void add_solution_with_permuations(std::vector<solution_t> &perm_sarray, 
     }
 }
 
+/* For a given sets of solutions and a new solution, returns the combinations */
+static void get_solution_permuations(std::vector<solution_t> &perm_sarray,
+        solution_t &new_s, std::vector<solution_t> &output_sarray)
+{
+    int i;
+    size_t num_solutions = perm_sarray.size();
+
+    output_sarray.push_back(new_s);
+
+    for (i = 0; i < num_solutions; i++) {
+        solution_t permuted;
+
+        xor_solutions(perm_sarray[i], new_s, permuted);
+        output_sarray.push_back(permuted);
+    }
+}
 /* Returns the partition number according to the key and hypothesis */
 static int get_partition_num(uintptr_t key, const solution_t &s)
 {
@@ -387,6 +405,58 @@ static void eliminate_duplicate_solutions(std::vector<solution_t> &solutions)
         }
     }
 
+}
+
+static bool solution_sort_cb(solution_t a, solution_t b)
+{
+    assert(a.depth >= 1);
+    assert(b.depth >= 1);
+
+    return a.indexes[0] < b.indexes[0];
+}
+
+/* Given a set of unique solutions, find those permutations that 
+ * give the highest lowest starting indexes.
+ */
+static void sort_solutions(std::vector<solution_t> &solutions)
+{
+    std::vector<solution_t> perm_sarray;
+    std::vector<solution_t>::iterator s, v, v_max;
+    std::vector<solution_t> sorted;
+    int max_index;
+
+    /* First, sort solutions by first index */
+    std::sort (solutions.begin(), solutions.end(), solution_sort_cb);
+
+    for (s = solutions.begin(); s != solutions.end(); s++) {
+
+        std::vector<solution_t> variations;
+
+        /* Get all variations */
+        get_solution_permuations(perm_sarray, *s, variations);
+
+        /* Find the one with highest lowest index */
+        for (v = variations.begin(), max_index = INT_MIN; 
+                v != variations.end(); v++) {
+
+            assert(v->depth >= 1);
+
+            if (v->indexes[0] > max_index) {
+                max_index = v->indexes[0];
+                v_max = v;
+            }
+        }
+
+        sorted.push_back(*v_max);
+
+        /* Collect all the variations */
+        add_solution_with_permuations(perm_sarray, *s);
+    }
+
+    solutions = sorted;
+
+    /* Solutions might get unsorted */
+    std::sort (solutions.begin(), solutions.end(), solution_sort_cb);
 }
 
 /* Eliminate equivalent solutions to get only unique solutions */
@@ -660,6 +730,11 @@ void hash_print_solutions(hash_context_t *ctx)
         print_solution(ctx->solutions[i]);
 }
 
+void hash_sort_solutions(hash_context_t *ctx)
+{
+    sort_solutions(ctx->solutions);
+}
+
 /* Finds common solutions and print them */
 void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
 {
@@ -715,6 +790,9 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
     }
 
     eliminate_duplicate_solutions(common);
+
+    /* Sort before printing */
+    sort_solutions(common);
 
     printf("Number of common solutions found: %zd\n", common.size());
     for (size_t i = 0; i < common.size(); i++)

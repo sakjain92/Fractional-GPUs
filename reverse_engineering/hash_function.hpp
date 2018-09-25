@@ -15,6 +15,8 @@ int hash_find_solutions(hash_context_t *ctx, void *arg,
 int hash_find_solutions2(hash_context_t *ctx, void *arg,
     bool (*check_partition_pair)(void *addr1, void *addr2, void *arg));
 
+void hash_sort_solutions(hash_context_t *ctx);
+
 void hash_print_solutions(hash_context_t *ctx);
 void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2);
 
