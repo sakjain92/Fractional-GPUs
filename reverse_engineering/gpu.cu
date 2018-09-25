@@ -363,7 +363,7 @@ bool is_cacheline_evicted(volatile uint64_t *base, uint64_t count,
         tries++;
 
         lastaddr = base;
-        curindex = *((uint64_t *)base);
+        curindex = __ldcs((uint64_t *)base);
 
 #pragma unroll 1
         /* Read bunch of words */
@@ -379,7 +379,7 @@ bool is_cacheline_evicted(volatile uint64_t *base, uint64_t count,
 
         /* Read first word */
         start_ticks = clock64();
-        curindex = *((uint64_t *)base);
+        curindex = __ldcs((uint64_t *)base);
         sum += curindex;
         ticks = clock64() - start_ticks;
 
@@ -627,7 +627,13 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
         if (index == 0)
             index += ct_offset / sizeof(uint64_t);
 
-        gpu_modify_pointer_chase<<<1, 1>>>((uint64_t *)ct_start_addr, index);
+        /* 
+         * NOTE: We are modifying the second element (not the first).
+         * This is avoid writing to first element (which might mess up the cache)
+         * This is because even though the L2 Cache is LRU, it behaves differently
+         * for reads and writes.
+         */
+        gpu_modify_pointer_chase<<<1, 1>>>((uint64_t *)ct_start_addr + ct_offset, index);
         gpuErrAssert(cudaDeviceSynchronize());
         
         ct_last_start_addr = b;
