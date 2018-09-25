@@ -432,7 +432,6 @@ void cacheline_read_time(volatile uint64_t *base, volatile uint64_t *end_addr,
 
 static uintptr_t ct_start_addr;
 static uintptr_t ct_end_addr;
-static uintptr_t ct_last_modified_addr;     // Last modified address in pchase
 static uintptr_t ct_last_start_addr;        // Last start address for search
 static uintptr_t ct_start_count;
 static size_t ct_offset;
@@ -445,7 +444,7 @@ int device_cacheline_test_init(void *gpu_start_addr, size_t size)
 
     gpu_init_pointer_chase((uint64_t *)gpu_start_addr, size, ct_offset);
 
-    ct_last_modified_addr = ct_last_start_addr = ct_start_addr;
+    ct_last_start_addr = ct_start_addr;
     ct_start_count = 0;
 
     return 0;
@@ -504,17 +503,15 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
     if (b < ct_start_addr || b > ct_end_addr)
         return NULL;
 
-    /* Do we need to reinitialize the p-chase array? */
-    if (b < ct_last_modified_addr || offset != ct_offset) {
-        size_t size = ct_end_addr - ct_start_addr + 1;
-        ct_offset = offset;
-        ct_last_modified_addr = ct_start_addr;
-        gpu_init_pointer_chase((uint64_t *)ct_start_addr, size, ct_offset);
+    /* Currently we only support one fixed offset */
+    if (offset != ct_offset)
+        return NULL;
 
-        ct_last_start_addr = ct_start_addr;
-    }
+    /* b needs to be subsequently keep increasing only */
+    if (b < ct_last_start_addr)
+        return NULL;
 
-    if (b != ct_last_start_addr && b != ct_last_start_addr + GPU_L2_CACHE_LINE_SIZE) {
+    if (b != ct_last_start_addr && b != ct_last_start_addr + ct_offset) {
         index = (b - ct_start_addr) / sizeof(uint64_t);
         if (index == 0)
             index += ct_offset / sizeof(uint64_t);
@@ -534,9 +531,8 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
 
 
     /* Edit p-chase so as to skip last address next time */
-    index = ((uintptr_t)last_addr + GPU_L2_CACHE_LINE_SIZE - ct_start_addr) / sizeof(uint64_t);
-    ct_last_modified_addr = (uintptr_t)last_addr - GPU_L2_CACHE_LINE_SIZE;
-    gpu_modify_pointer_chase<<<1, 1>>>((uint64_t *)ct_last_modified_addr, index);
+    index = ((uintptr_t)last_addr + ct_offset - ct_start_addr) / sizeof(uint64_t);
+    gpu_modify_pointer_chase<<<1, 1>>>((uint64_t *)((uintptr_t)last_addr - ct_offset), index);
     gpuErrAssert(cudaDeviceSynchronize());
 
     ct_last_start_addr = (uintptr_t)last_addr;
