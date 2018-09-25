@@ -324,6 +324,94 @@ double device_find_dram_read_time(void *_a, void *_b, double threshold)
 }
 
 /**************** CACHE LINE HASH FUNCTION HELPER FUNCTIONS *******************/
+
+/* 
+ * Reads a certain number of elements from P-Chase array and checks if it causes
+ * eviction of first element.
+ * Base is the base address of the in-device array. (P-chase array)
+ * Count is the number of elements to read in pchase
+ * Threshold is used to judge if an eviction took place.
+ * Reached end is set to true if we have reached the end of the p-chase array
+ * Ret Addr is the address that caused eviction.
+ * Psum is just to avoid compiler optimizations.
+ * XXX: For some reason, if __noinline__ is not give, the compiler optimizes
+ * away certain part of the function.
+ * XXX: This function seems to be too noisy. For now, we are tring to suppress
+ * the noise via repetition. The noise might be because we don't exactly
+ * understand eviction policy. Eviction policy seems to be close to LRU but
+ * compiler has certain amount of control over the eviction policy.
+ */
+__device__ __noinline__
+bool is_cacheline_evicted(volatile uint64_t *base, uint64_t count, 
+                            uint64_t threshold, bool *reached_end,
+                            uint64_t **ret_addr, volatile uint64_t *psum)
+{
+    volatile uint64_t *lastaddr;
+    uint64_t sum = 0;
+    uint64_t start_ticks, ticks;
+    int confirm = 0;
+    uint64_t curindex;
+    int tries = 0;
+    int limit = GPU_MAX_OUTER_LOOP / 2;
+    int max_tries = 2 * limit;
+
+    *reached_end = false;
+
+    /* 'tries' is used to avoid livelock due to high noise situation */
+    while (confirm < limit && confirm > -1 * limit && tries < max_tries) {
+        
+        tries++;
+
+        lastaddr = base;
+        curindex = *((uint64_t *)base);
+
+#pragma unroll 1
+        /* Read bunch of words */
+        for (int i = 0; i < count && curindex != (uint64_t)-1; i++) {
+            lastaddr = &base[curindex];
+            curindex = __ldcs((uint64_t *)lastaddr);
+            sum += curindex;
+        }
+
+        if (curindex == (uint64_t)-1) {
+            *reached_end = true;
+        }
+
+        /* Read first word */
+        start_ticks = clock64();
+        curindex = *((uint64_t *)base);
+        sum += curindex;
+        ticks = clock64() - start_ticks;
+
+        /* 
+        * Has the word been evicted 
+        * (Reading first time might seem like cache eviction due to cold miss)
+        */
+        if (ticks >= threshold && lastaddr != base) {
+            confirm++;
+            /* Check multiple times if valid solution (to avoid noise effects)*/
+            if (confirm == limit) {
+                *ret_addr = (uint64_t *)lastaddr;
+                *psum = sum;
+                return true;
+            } else {
+                continue;
+            }
+
+        } else {
+            /* Due to noise, false negatives might crop in */
+            confirm--;
+            if (confirm == -1 * limit) {
+                return false;
+            } else {
+                continue;
+            }   
+        }
+    }
+
+    return false;
+}
+
 /* 
  * Keeps reading data from array till a cacheline eviction is noticed.
  * Base is the base address of the in-device array. (P-chase array)
@@ -336,61 +424,80 @@ double device_find_dram_read_time(void *_a, void *_b, double threshold)
  */
 __global__
 void evict_cacheline(volatile uint64_t *base, uint64_t start_count, 
-        volatile uint64_t *end_addr, uint64_t threshold, 
-        uint64_t **ret_addr, uint64_t *ret_count, volatile uint64_t *psum)
+        uint64_t threshold, uint64_t **ret_addr, uint64_t *ret_count, 
+        volatile uint64_t *psum)
 {
-    uint64_t curindex;
-    volatile uint64_t *lastaddr;
-    uint64_t count;
-    uint64_t sum;
-    uint64_t start_ticks, ticks;
-    int confirm = 0;
+    uint64_t local_sum, sum = 0;
+    bool reached_end = false;
+    uint64_t count, offset, lower_bound, upper_bound;
+    uint64_t *addr, *correct_addr = NULL;
+    
+    /* 
+     * Using binary search to find the lastaddr that causes eviction
+     * We don't know the upper bound. So start with doubling lower bound till
+     * we find the upper bound and then narrow in.
+     * Lower bound tracks the last tested value that didn't cause eviction.
+     * Upper bound tracks the value of count we are testing currently. 
+     * If successful eviction, the value we want is in (lower_bound, upper_bound]
+     */
+
+    offset = 1;
+    lower_bound = start_count - 1;
+    upper_bound = count = start_count;
 
 #pragma unroll 1
-    for (sum = 0, count = start_count, lastaddr = base; (uintptr_t)lastaddr < (uintptr_t)end_addr; count++) {
+    while (is_cacheline_evicted(base, count, threshold, &reached_end,
+                &addr, &local_sum) == false && reached_end == false) {
 
-        lastaddr = base;
-        curindex = __ldcs((uint64_t *)base);
+        lower_bound = count;
+        upper_bound = count = start_count + offset;
+        offset *= 2;
 
-#pragma unroll 1
-        /* Read bunch of words */
-        for (int i = 0; (i < count) && ((uintptr_t)lastaddr < (uintptr_t)end_addr); i++) {
-            lastaddr = &base[curindex];
-            curindex = __ldcs((uint64_t *)lastaddr);
-            sum += curindex;
-        }
-
-        /* Read first word */
-        start_ticks = clock64();
-        curindex = __ldcs((uint64_t *)base);
-        sum += curindex;
-        ticks = clock64() - start_ticks;
-
-        /* 
-         * Has the word been evicted 
-         * (Reading first time might seem like cache eviction due to cold miss)
-         */
-        if (ticks >= threshold && lastaddr != base) {
-            confirm++;
-            count--;
-            
-            /* Check multiple times if valid solution (to avoid noise effects)*/
-            if (confirm == GPU_MAX_OUTER_LOOP) {
-                *ret_addr = (uint64_t *)lastaddr;
-                *ret_count = count;
-                *psum = sum;
-                return;
-            }   
-        } else {
-            confirm = 0;
-        }  
-
+        sum += local_sum;
     }
 
+    if (reached_end)
+        goto err;
+
+    correct_addr = addr;
+
+    /* Now do reverse binary search between the two bounds */
+    while (lower_bound < upper_bound) {
+  
+        if (upper_bound == lower_bound + 1)
+            goto success;
+
+        count = (lower_bound + upper_bound) / 2;
+
+        if (is_cacheline_evicted(base, count, threshold, &reached_end,
+                    &addr, &local_sum) == false) {
+
+            lower_bound = count;
+        } else {
+
+            correct_addr = addr;
+            upper_bound = count;
+            correct_addr = addr;
+        }
+    }
+
+err:
     /* Couldn't find an address that causes eviction */
     *psum = sum;
     *ret_addr = NULL;
     *ret_count = 0;
+
+success:
+    /* Just checks */
+    assert(is_cacheline_evicted(base, upper_bound, threshold, &reached_end,
+                &addr, &local_sum) == true);
+    assert(is_cacheline_evicted(base, lower_bound, threshold, &reached_end,
+                &addr, &local_sum) == false);
+    /* Success */
+    *psum = sum;
+    *ret_addr = correct_addr;
+    *ret_count = upper_bound;
+    return;
 }
 
 /*
@@ -512,6 +619,10 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
         return NULL;
 
     if (b != ct_last_start_addr && b != ct_last_start_addr + ct_offset) {
+        
+        /* Round up b */
+        b = ct_start_addr + (((b - ct_start_addr) + ct_offset - 1) / ct_offset) * ct_offset;
+
         index = (b - ct_start_addr) / sizeof(uint64_t);
         if (index == 0)
             index += ct_offset / sizeof(uint64_t);
@@ -524,7 +635,7 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
     }
 
     evict_cacheline<<<1,1>>>((uint64_t *)ct_start_addr, ct_start_count,
-            (uint64_t *)ct_end_addr, threshold, d_last_addr, d_count, d_sum);
+            threshold, d_last_addr, d_count, d_sum);
     gpuErrAssert(cudaDeviceSynchronize());
     gpuErrAssert(cudaMemcpy(&last_addr, d_last_addr, sizeof(uint64_t *), cudaMemcpyDeviceToHost));
     gpuErrAssert(cudaMemcpy(&ct_start_count, d_count, sizeof(uint64_t *), cudaMemcpyDeviceToHost));
