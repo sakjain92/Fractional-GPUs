@@ -38,7 +38,18 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
         }
 
 #endif
-	    dev_ctx->d_host_indicators->indicators[blockIdx.x].started = true;
+
+#if defined(FGPU_COMPUTE_CHECK_ENABLED)
+        if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm)
+    	    dev_ctx->d_host_indicators->indicators[blockIdx.x].started =
+                FGPU_INACTIVE_PBLOCK_STARTED;
+        else
+            dev_ctx->d_host_indicators->indicators[blockIdx.x].started =
+                FGPU_ACTIVE_PBLOCK_STARTED;
+#else
+        dev_ctx->d_host_indicators->indicators[blockIdx.x].started =
+                FGPU_GENERIC_PBLOCK_STARTED;
+#endif
 
         /* Prepare for the next function */
         if (blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0) {

@@ -13,6 +13,11 @@ typedef struct fgpu_bindexes {
     struct fgpu_bindex bindexes[FGPU_MAX_NUM_COLORS];
 } fgpu_bindexes_t;
 
+#define FGPU_NOT_PBLOCK_NOT_STARTED         0
+#define FGPU_ACTIVE_PBLOCK_STARTED          1
+#define FGPU_INACTIVE_PBLOCK_STARTED        2
+#define FGPU_GENERIC_PBLOCK_STARTED         3   /* Either active or inactive */
+
 struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_indicator {
     int started;
 };

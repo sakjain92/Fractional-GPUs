@@ -85,6 +85,7 @@ typedef struct fgpu_host_ctx {
     int cur_launch_index;
     int last_color;
     int last_num_pblocks_launched;
+    int last_num_active_pblocks;
 
     /*
      * Lock to allow only one outstanding operation in each color stream
@@ -696,11 +697,36 @@ static void wait_for_last_start(void)
     g_host_ctx->is_lauchpad_free = false;
     pthread_mutex_unlock(&g_host_ctx->launch_lock);
 
+#if defined(FGPU_COMPUTE_CHECK_ENABLED)
+    int num_active_pblocks = 0;
+#endif
+
     /* Wait for all pblocks to be accounted for */
     for (int i = 0; i < g_host_ctx->last_num_pblocks_launched; i++) {
-        while (!h_indicators->indicators[i].started);
-        h_indicators->indicators[i].started = false;
+        
+        int __attribute__((unused))val;
+        
+        while (h_indicators->indicators[i].started == FGPU_NOT_PBLOCK_NOT_STARTED);
+        
+        val = h_indicators->indicators[i].started;
+    
+#if defined(FGPU_COMPUTE_CHECK_ENABLED)
+        assert(val == FGPU_ACTIVE_PBLOCK_STARTED ||
+                val == FGPU_INACTIVE_PBLOCK_STARTED);
+        
+        if (val == FGPU_ACTIVE_PBLOCK_STARTED)
+            num_active_pblocks++;
+#else
+        assert(val == FGPU_GENERIC_PBLOCK_STARTED);
+#endif
+
+        h_indicators->indicators[i].started = FGPU_NOT_PBLOCK_NOT_STARTED;
     }
+
+#if defined(FGPU_COMPUTE_CHECK_ENABLED)
+    /* Some inactive blocks appear as active blocks */
+    assert(num_active_pblocks >= g_host_ctx->last_num_active_pblocks);
+#endif
 }
 
 /* 
@@ -746,6 +772,7 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
 
     g_host_ctx->last_color = ctx->color;
     g_host_ctx->last_num_pblocks_launched = ctx->num_pblock;
+    g_host_ctx->last_num_active_pblocks = ctx->num_active_pblocks;
 
     pthread_mutex_lock(&g_host_ctx->launch_lock);
     g_host_ctx->is_lauchpad_free = true;
@@ -828,6 +855,8 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
     ctx->d_bindex = d_bindexes;
     ctx->start_sm = g_host_ctx->color_to_sms[g_color].first;
     ctx->end_sm = g_host_ctx->color_to_sms[g_color].second;
+    ctx->num_active_pblocks = num_pblocks_per_sm * (ctx->end_sm - ctx->start_sm + 1);
+
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
     int ret = fgpu_get_memory_info(&ctx->start_virt_addr, &ctx->start_idx);

@@ -26,6 +26,7 @@ typedef struct fgpu_dev_ctx {
     int num_pblock;                 /* Number of persistent thread blocks spawned */
     int start_sm;
     int end_sm;
+    int num_active_pblocks;	    /* Number of pblocks which will do computation */
     int _blockIdx;
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
