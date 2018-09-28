@@ -44,7 +44,7 @@ typedef struct hash_context {
 
     bool is_valid_pair;
 
-    std::vector<std::pair <uintptr_t, uintptr_t>> keys;        /* Keys with same hash */
+    std::vector< std::pair <uintptr_t, uintptr_t> > keys;       /* Keys with same hash */
     std::vector<solution_t> solutions;  /* Valid solutions */
 
 } hash_context_t;
@@ -229,7 +229,7 @@ static int get_partition_num(uintptr_t key, const solution_t &s)
 
 
 /* Checks if a solution is valid for all the keys */
-static bool is_solution_correct(std::vector<std::pair <uintptr_t, uintptr_t>> &keys, const solution_t &s)
+static bool is_solution_correct(std::vector< std::pair <uintptr_t, uintptr_t> > &keys, const solution_t &s)
 {
     size_t i;
     
@@ -252,7 +252,7 @@ static bool is_solution_correct(std::vector<std::pair <uintptr_t, uintptr_t>> &k
  * partition).
  * Return the number of solutions found.
  */
-static int find_new_solutions(std::vector<std::pair <uintptr_t, uintptr_t>> &keys, int min_bit, int max_bit, 
+static int find_new_solutions(std::vector< std::pair <uintptr_t, uintptr_t> > &keys, int min_bit, int max_bit, 
         std::vector<solution_t> &solutions)
 {
     int depth;
@@ -407,12 +407,21 @@ static void eliminate_duplicate_solutions(std::vector<solution_t> &solutions)
 
 }
 
-static bool solution_sort_cb(solution_t a, solution_t b)
+static bool solution_sort_ascending_cb(solution_t a, solution_t b)
 {
     assert(a.depth >= 1);
     assert(b.depth >= 1);
 
     return a.indexes[0] < b.indexes[0];
+}
+
+
+static bool solution_sort_descending_cb(solution_t a, solution_t b)
+{
+    assert(a.depth >= 1);
+    assert(b.depth >= 1);
+
+    return a.indexes[0] > b.indexes[0];
 }
 
 /* Given a set of unique solutions, find those permutations that 
@@ -426,7 +435,7 @@ static void sort_solutions(std::vector<solution_t> &solutions)
     int max_index;
 
     /* First, sort solutions by first index */
-    std::sort (solutions.begin(), solutions.end(), solution_sort_cb);
+    std::sort (solutions.begin(), solutions.end(), solution_sort_ascending_cb);
 
     for (s = solutions.begin(); s != solutions.end(); s++) {
 
@@ -435,7 +444,7 @@ static void sort_solutions(std::vector<solution_t> &solutions)
         /* Get all variations */
         get_solution_permuations(perm_sarray, *s, variations);
 
-        /* Find the one with highest lowest index */
+        /* Find the one with highest lowest index (Don't need to sort - Wasteful) */
         for (v = variations.begin(), max_index = INT_MIN; 
                 v != variations.end(); v++) {
 
@@ -456,7 +465,55 @@ static void sort_solutions(std::vector<solution_t> &solutions)
     solutions = sorted;
 
     /* Solutions might get unsorted */
-    std::sort (solutions.begin(), solutions.end(), solution_sort_cb);
+    std::sort (solutions.begin(), solutions.end(), solution_sort_ascending_cb);
+}
+
+/* 
+ * Finds solutions unique to solutions1 (not present in solutions2) 
+ * and returns them in out 
+ */
+static void get_unique_solutions(std::vector<solution_t> &solutions1,
+        std::vector<solution_t> &solutions2, std::vector<solution_t> &out)
+{
+    std::vector<solution_t> perm_sarray;
+    std::vector<solution_t>::iterator s1, s2;
+
+    out.clear();
+
+    /* Get all permutations of solutions in solution2 */
+    for (s2 = solutions2.begin(); s2 != solutions2.end(); s2++) {
+
+        try {
+            add_solution_with_permuations(perm_sarray, *s2);
+        } catch(...) {
+            /* Out of memory - Permutation grows exponentially */
+            fprintf(stderr, "Out of memory exception\n");
+            return;
+        }
+    }
+
+    /* We want to keep solutions with higher bits */
+    std::sort (solutions1.begin(), solutions1.end(), solution_sort_descending_cb);
+
+    /* A solution in solution1 is unique if it is not found in perm_sarray */
+    for (s1 = solutions1.begin(); s1 != solutions1.end(); s1++) {
+
+        bool is_unique = true;
+        for (s2 = perm_sarray.begin(); s2 != perm_sarray.end(); s2++) {
+            if (are_solutions_same(*s1, *s2)) {
+                is_unique = false;
+                break;
+            }
+        }
+
+        if (!is_unique)
+            continue;
+
+        out.push_back(*s1);
+
+        /* Collect all the variations */
+        add_solution_with_permuations(perm_sarray, *s1);
+    }
 }
 
 /* Eliminate equivalent solutions to get only unique solutions */
@@ -517,7 +574,7 @@ static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
         void *(*find_next_partition_pair)(void *addr1, void *start_addr, 
         void *end_addr, size_t offset, void *arg))
 {
-    std::vector<std::vector<solution_t>> all_new_solutions;
+    std::vector< std::vector<solution_t> > all_new_solutions;
     std::vector<solution_t> new_solutions;
     int ret;
     int num_solutions = ctx->solutions.size();
@@ -552,7 +609,7 @@ static void try_accomodate_new_bit(hash_context_t *ctx, int new_bit, void *arg,
                 (void *)test_addr, (void *)end_addr, offset, arg);
         if (addr) {
             
-            std::vector<std::vector<solution_t>>::iterator s;
+            std::vector< std::vector<solution_t> >::iterator s;
 
             test_addr = (uintptr_t)addr;
             hash_confirm_pair(ctx, base_addr, test_addr);
@@ -735,12 +792,12 @@ void hash_sort_solutions(hash_context_t *ctx)
     sort_solutions(ctx->solutions);
 }
 
-/* Finds common solutions and print them */
+/* Finds common solutions and print them. Also remove the common solutions */
 void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
 {
     std::vector<solution_t> perm_sarray1;
     std::vector<solution_t> perm_sarray2;
-    std::vector<solution_t> common;
+    std::vector<solution_t> common, unique;
     std::vector<solution_t>::iterator s1, s2;
 
     hash_reduce(ctx1);
@@ -791,8 +848,16 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
 
     eliminate_duplicate_solutions(common);
 
+    get_unique_solutions(ctx1->solutions, common, unique);
+    ctx1->solutions = unique;
+
+    get_unique_solutions(ctx2->solutions, common, unique);
+    ctx2->solutions = unique;
+
     /* Sort before printing */
     sort_solutions(common);
+    sort_solutions(ctx1->solutions);
+    sort_solutions(ctx2->solutions);
 
     printf("Number of common solutions found: %zd\n", common.size());
     for (size_t i = 0; i < common.size(); i++)

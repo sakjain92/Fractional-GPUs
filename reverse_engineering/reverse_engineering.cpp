@@ -358,6 +358,12 @@ int main(int argc, char *argv[])
     printf("Finding common solutions between DRAM and Cache\n");
     hash_print_common_solutions(dram_hctx, cache_hctx);
 
+    printf("Unique DRAM bank solutions\n");
+    hash_print_solutions(dram_hctx);
+
+    printf("Unique Cache solutions\n");
+    hash_print_solutions(cache_hctx);
+
     hash_del(dram_hctx);
     hash_del(cache_hctx);
 
