@@ -9,6 +9,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#include <vector>
+
 #include <reverse_engineering.hpp>
 
 #include <fractional_gpu.hpp>
@@ -21,11 +23,15 @@
 /* Device memory */
 static uint64_t *d_sum;
 static uint64_t *d_refresh_v;
+static size_t max_custom_pchase_entires;
+static uint64_t **d_custom_pchase;
+static uint64_t **h_custom_pchase;
 static double *d_ticks;
 static uint64_t **d_last_addr;
 static double *h_ticks;
 static uint64_t *h_a;
 static uint64_t *d_count;
+
 /* 
  * Read enough data to implicitly flush L2 cache.
  * Uses p-chase to make sure compiler/hardware doesn't optimize away the code.
@@ -103,6 +109,27 @@ void gpu_pchase_setup(uint64_t *array, size_t size, size_t offset)
     }
 }
 
+/* Creates a pchase array using base address as 'array' and addresses in 'addresses' */
+__global__
+void gpu_custom_pchase_setup(uint64_t *array, uint64_t **addresses, size_t num_entries)
+{
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    uintptr_t offset = (uintptr_t)addresses[index] - (uintptr_t)array;
+
+    if (index < num_entries - 1) {
+        uint64_t val = (uintptr_t)addresses[index + 1] - (uintptr_t)array;
+
+        assert((uintptr_t)addresses[index] >= (uintptr_t)array);
+        assert((uintptr_t)addresses[index + 1] > (uintptr_t)addresses[index]);
+
+        array[offset / sizeof(uint64_t)] = val / sizeof(uint64_t);
+    }
+
+    if (index == num_entries - 1) {
+        array[offset / sizeof(uint64_t)] = (uintptr_t)-1;
+    }
+}
+
 void gpu_init_pointer_chase(uint64_t *array, size_t size, size_t offset)
 {
     uint64_t num_elem = size / offset;
@@ -114,6 +141,63 @@ void gpu_init_pointer_chase(uint64_t *array, size_t size, size_t offset)
 
     gpu_pchase_setup<<<num_blocks, num_threads>>>(array, size, offset);
     gpuErrAssert(cudaDeviceSynchronize());
+}
+
+/* 
+ * Creates custom pchase. 
+ * Callback function is used to create pchase. Takes an arguemnt and an address.
+ * Returns the next address that should be in pchase.
+ * Also returns the start and end address of pchase.
+ */
+void gpu_init_custom_pointer_chase(void *base_addr, void *(*cb)(void *addr, void *arg),
+        void *arg, void **start_addr, void **end_addr)
+{
+    size_t found = 0;
+    void *next_addr;
+    void *prev_addr = base_addr;
+    size_t num_threads = 32;
+    size_t num_blocks;
+
+    for (found = 0; found < max_custom_pchase_entires; found++) {
+
+        next_addr = cb(prev_addr, arg);
+        if (!next_addr)
+            break;
+
+        assert((uintptr_t)next_addr > (uintptr_t)prev_addr);
+
+        h_custom_pchase[found] = (uint64_t *)next_addr;
+        prev_addr = next_addr;
+    }
+
+    gpuErrAssert(cudaMemcpy(d_custom_pchase, h_custom_pchase, sizeof(uint64_t *) * found, cudaMemcpyHostToDevice));
+    
+    assert(found > 0);
+
+    num_blocks = (found + num_threads - 1) / num_threads;
+    gpu_custom_pchase_setup<<<num_blocks, num_threads>>>(h_custom_pchase[0], d_custom_pchase, found);
+    gpuErrAssert(cudaDeviceSynchronize());
+
+    if (start_addr)
+        *start_addr = (void *)h_custom_pchase[0];
+
+    if (end_addr)
+        *end_addr = (void *)h_custom_pchase[found - 1];
+}
+
+/* 
+ * Creates custom pchase for initialization 
+ * Callback function is used to create pchase. Takes an arguemnt and an address.
+ * Returns the next address that should be in pchase.
+ * Also returns the pchase start and end address.
+ */
+static int device_custom_pchase_init(void *gpu_start_addr, 
+        void *(*cb)(void *addr, void *arg), void *arg,
+        void **start_addr, void **end_addr)
+{
+    gpu_init_custom_pointer_chase(gpu_start_addr, cb, arg, start_addr, end_addr);
+
+    return 0;
 }
 
 /* Modifies one element of p-chase array */
@@ -164,7 +248,15 @@ int device_init(size_t req_reserved_size, size_t *reserved_size)
         return ret;
     }
 
+    /* Enough entries in pchase to evict data out of L2 cache */
+    max_custom_pchase_entires = (l2_size / GPU_L2_CACHE_LINE_SIZE) * 2;
+
     gpuErrAssert(cudaMalloc(&d_refresh_v, l2_size));
+
+    gpuErrAssert(cudaMalloc(&d_custom_pchase, max_custom_pchase_entires * sizeof(uint64_t *)));
+    h_custom_pchase = (uint64_t **)malloc(max_custom_pchase_entires * sizeof(uint64_t *));
+    assert(h_custom_pchase);
+
     gpuErrAssert(cudaMalloc(&d_ticks, (GPU_MAX_OUTER_LOOP) * sizeof(double)));
     gpuErrAssert(cudaMalloc(&d_sum, (GPU_MAX_OUTER_LOOP) * sizeof(uint64_t)));
     gpuErrAssert(cudaMalloc(&d_last_addr, sizeof(void *)));
@@ -416,7 +508,6 @@ bool is_cacheline_evicted(volatile uint64_t *base, uint64_t count,
  * Keeps reading data from array till a cacheline eviction is noticed.
  * Base is the base address of the in-device array. (P-chase array)
  * Start count is the count from which to start searching.
- * End address is the address till where to keep reading.
  * Threshold is used to judge if an eviction took place.
  * Ret Addr is the address that caused eviction.
  * Ret Count is the count taken to find the current solution.
@@ -595,6 +686,7 @@ int device_cacheline_test_find_threshold(size_t sample_size, double *avg)
  * Given an address '_a', finds another address that evicts a word at '_a'
  * from cache. Search for such an address is started after '_b' address and at
  * an offset of 'offset'
+ * Requires the pchase to be contiguous (not user defined)
  */
 void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double threshold)
 {
@@ -655,4 +747,28 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
     ct_last_start_addr = (uintptr_t)last_addr;
 
     return (void *)last_addr;
+}
+
+/*
+ * Finds the number of words in a cacheline. Requires that device must be initilized with
+ * cacheline specific pchase.
+ */
+int device_find_cacheline_words_count(void *gpu_start_addr, double threshold,
+        void *(*cb)(void *addr, void *arg), void *arg, size_t *words)
+{
+    uint64_t count;
+    int ret;
+    void *start_addr;
+
+    ret = device_custom_pchase_init(gpu_start_addr, cb, arg, &start_addr, NULL);
+    if (ret < 0)
+        return ret;
+
+    evict_cacheline<<<1,1>>>((uint64_t *)start_addr, 0, threshold, d_last_addr, 
+            d_count, d_sum);
+    gpuErrAssert(cudaDeviceSynchronize());
+    gpuErrAssert(cudaMemcpy(&count, d_count, sizeof(uint64_t *), cudaMemcpyDeviceToHost));
+
+    *words = count;
+    return 0;
 }

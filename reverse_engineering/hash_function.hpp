@@ -18,7 +18,19 @@ int hash_find_solutions2(hash_context_t *ctx, void *arg,
 void hash_sort_solutions(hash_context_t *ctx);
 
 void hash_print_solutions(hash_context_t *ctx);
-void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2);
+
+hash_context_t *hash_get_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2);
+
+void *hash_get_next_addr(hash_context_t *ctx, void *addr, 
+        void *start_addr, void *end_addr);
+
+void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2, void *addr, 
+        void *start_addr, void *end_addr);
+
+void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2, 
+        hash_context_t *ctx3, void *addr, void *start_addr, void *end_addr);
+
+bool hash_is_same_partition(hash_context_t *ctx, void *addr1, void *addr2);
 
 void hash_del(hash_context *ctx);
 

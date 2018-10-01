@@ -16,6 +16,8 @@
 #include <sys/ioctl.h>
 #include <algorithm>
 
+#include <vector>
+
 #include <reverse_engineering.hpp>
 
 #include <hash_function.hpp>
@@ -30,6 +32,13 @@ typedef struct cb_arg {
     double threshold;
     double running_threshold;
 } cb_arg_t;
+
+typedef struct pchase_cb_arg {
+    uintptr_t phy_start;
+    uintptr_t virt_start;
+    std::vector<hash_context_t *> include;
+    std::vector<hash_context_t *> exclude;
+} pchase_cb_arg_t;
 
 bool is_power_of_2(size_t x)
 {
@@ -249,6 +258,53 @@ void *find_next_cache_partition_pair(void *phy_addr1, void *phy_start_addr,
     return phy_addr2;
 }
 
+/* 
+ * Returns the next word in same partitions start_virt_addr 
+ * according to the 'include' and 'exclude' partitions 
+ */
+void *get_next_word(void *start_virt_addr, void *arg)
+{
+    pchase_cb_arg_t *data = (pchase_cb_arg_t *)arg;
+    uintptr_t start_phy_addr = (uintptr_t)start_virt_addr - data->virt_start + 
+        data->phy_start;
+    uintptr_t next_phy_addr;
+    bool found = false;
+
+    while (!found) {
+
+        if (data->include.size() == 1) {
+            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0], 
+                    (void *)start_phy_addr, (void *)start_phy_addr, (void *)-1);
+        } else if (data->include.size() == 2) {
+            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0],
+                    data->include[1], (void *)start_phy_addr, 
+                    (void *)start_phy_addr, (void *)-1);
+        } else {
+            assert(data->include.size() == 3);
+            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0],
+                    data->include[1], data->include[2], (void *)start_phy_addr, 
+                    (void *)start_phy_addr, (void *)-1);
+        }
+
+        if (!next_phy_addr)
+            return NULL;
+
+        found = true;
+
+        for (int i = 0; i < data->exclude.size(); i++) {
+            if (hash_is_same_partition(data->exclude[i], 
+                        (void *)next_phy_addr, (void *)start_phy_addr)) {
+                found = false;
+                break;
+            }
+        }
+    }
+
+    assert(next_phy_addr > start_phy_addr);
+
+    return (void *)(next_phy_addr - data->phy_start + data->virt_start);
+}
+
 /*
  * Finds the hash function for Cachelines
  * virt start and phy start are virtual/physical start address of a contiguous
@@ -262,6 +318,8 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
     int ret;
     size_t offset = (1ULL << min_bit);
     double avg, running_threshold;
+    size_t num_words;
+    pchase_cb_arg_t pchase_cb_arg;
 
     printf("Doing initialization\n");
     ret = device_cacheline_test_init(virt_start, allocated);
@@ -303,6 +361,19 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
         hash_print_solutions(hctx);
     }
 
+    /* Find the number of words in a cacheline */
+    pchase_cb_arg.virt_start = (uintptr_t)virt_start;
+    pchase_cb_arg.phy_start = (uintptr_t)phy_start;
+    pchase_cb_arg.include.push_back(hctx);
+
+    /* Re-init test */
+    ret = device_find_cacheline_words_count(virt_start, data.running_threshold,
+            get_next_word, &pchase_cb_arg, &num_words);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't find number of words in a cachline\n");
+    }
+    printf("Number of words in a cachline:%zd\n", num_words);
+    
     return hctx;
 }
 
@@ -313,7 +384,7 @@ int main(int argc, char *argv[])
     size_t req_allocated, allocated;
     int ret;
     int max_bit, min_bit;
-    hash_context_t *dram_hctx, *cache_hctx;
+    hash_context_t *dram_hctx, *cache_hctx, *common_hctx;
 
     max_bit = device_max_physical_bit();
     if (max_bit < 0) {
@@ -347,7 +418,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Couldn't find DRAM Banks hash function\n");
         return -1;
     }
-  
+
     printf("Finding Cacheline hash function\n");
     cache_hctx = run_cache_exp(virt_start, phy_start, allocated, min_bit, max_bit);
     if (cache_hctx == NULL) {
@@ -356,7 +427,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Finding common solutions between DRAM and Cache\n");
-    hash_print_common_solutions(dram_hctx, cache_hctx);
+    common_hctx = hash_get_common_solutions(dram_hctx, cache_hctx);
 
     printf("Unique DRAM bank solutions\n");
     hash_print_solutions(dram_hctx);
@@ -366,6 +437,7 @@ int main(int argc, char *argv[])
 
     hash_del(dram_hctx);
     hash_del(cache_hctx);
+    hash_del(common_hctx);
 
     return 0;
 }

@@ -42,8 +42,6 @@ typedef struct hash_context {
     uintptr_t start_addr;               /* Range of permissible addresses */
     uintptr_t end_addr;
 
-    bool is_valid_pair;
-
     std::vector< std::pair <uintptr_t, uintptr_t> > keys;       /* Keys with same hash */
     std::vector<solution_t> solutions;  /* Valid solutions */
 
@@ -98,7 +96,6 @@ static int insert_bit_in_solutions(solution_t &s, int bit)
 
     return 0;
 }
-
 /* 
  * Create arbitary hash function. Should keep calling this function till
  * it returns negative. In that case, size should be incremented
@@ -213,10 +210,10 @@ static void get_solution_permuations(std::vector<solution_t> &perm_sarray,
     }
 }
 /* Returns the partition number according to the key and hypothesis */
-static int get_partition_num(uintptr_t key, const solution_t &s)
+static bool get_partition_num(uintptr_t key, const solution_t &s)
 {
     int i;
-    int partition = 0;
+    bool partition = 0;
     
     assert(s.depth > 0);
 
@@ -227,6 +224,36 @@ static int get_partition_num(uintptr_t key, const solution_t &s)
     return partition;
 }
 
+/* Returns the full partition number according to the key and a set of hypothesis */
+static int get_full_partitions_num(uintptr_t key, std::vector<solution_t> &solutions)
+{
+    int partition = 0;
+
+    /* Check if possible overflow */
+    assert(solutions.size() < sizeof(int) * 8);
+
+    for (int i = 0; i < solutions.size(); i++) {
+        partition |= (int)(get_partition_num(key, solutions[i])) << i;
+    }
+
+    return partition;
+}
+
+/* Finds the minimum bit in a set of solutions */
+static int find_min_bit(std::vector<solution_t> &solutions)
+{
+    /* Bits in solutions are sorted ascendingly */
+    int ret = INT_MAX;
+
+    assert(solutions.size() > 0);
+
+    for (int i = 0; i < solutions.size(); i++) {
+        assert(solutions[i].depth > 0);
+        ret = std::min(ret, solutions[i].indexes[0]);
+    }
+
+    return ret;
+}
 
 /* Checks if a solution is valid for all the keys */
 static bool is_solution_correct(std::vector< std::pair <uintptr_t, uintptr_t> > &keys, const solution_t &s)
@@ -237,8 +264,8 @@ static bool is_solution_correct(std::vector< std::pair <uintptr_t, uintptr_t> > 
 
     for (i = 0; i < keys.size(); i++) {
 
-        int partition1 = get_partition_num(keys[i].first, s);
-        int partition2 = get_partition_num(keys[i].second, s);
+        bool partition1 = get_partition_num(keys[i].first, s);
+        bool partition2 = get_partition_num(keys[i].second, s);
 
         if (partition1 != partition2)
             return false;
@@ -561,8 +588,6 @@ hash_context_t *hash_init(int min_bit, int max_bit,
     ctx->start_addr = (uintptr_t)start_addr;
     ctx->end_addr = (uintptr_t)end_addr;
 
-    ctx->is_valid_pair = false;
-    
     return ctx;
 }
 
@@ -793,8 +818,9 @@ void hash_sort_solutions(hash_context_t *ctx)
 }
 
 /* Finds common solutions and print them. Also remove the common solutions */
-void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
+hash_context_t *hash_get_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
 {
+    hash_context_t *hctx_new;
     std::vector<solution_t> perm_sarray1;
     std::vector<solution_t> perm_sarray2;
     std::vector<solution_t> common, unique;
@@ -810,7 +836,7 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
         } catch(...) {
             /* Out of memory - Permutation grows exponentially */
             fprintf(stderr, "Out of memory exception while hash_reduce\n");
-            return;
+            return NULL;
         }
     }
 
@@ -821,7 +847,7 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
         } catch(...) {
             /* Out of memory - Permutation grows exponentially */
             fprintf(stderr, "Out of memory exception while hash_reduce\n");
-            return;
+            return NULL;
         }
     }
 
@@ -862,9 +888,98 @@ void hash_print_common_solutions(hash_context_t *ctx1, hash_context_t *ctx2)
     printf("Number of common solutions found: %zd\n", common.size());
     for (size_t i = 0; i < common.size(); i++)
         print_solution(common[i]);
+
+    hctx_new = new(hash_context_t);
+    hctx_new->solutions = common;
+    hctx_new->min_bit = std::max(ctx1->min_bit, ctx2->min_bit);
+    hctx_new->max_bit = std::min(ctx1->max_bit, ctx2->max_bit);
+
+    hctx_new->start_addr = std::max(ctx1->start_addr, ctx2->start_addr);
+    hctx_new->end_addr = std::min(ctx1->end_addr, ctx2->end_addr);
+
+    return hctx_new;
 }
 
-void hash_del(hash_context *ctx)
+/* 
+ * Returns a new address (between (start_addr, end_addr]) that matches solutions
+ * and addr
+ */
+static void *get_next_addr(std::vector<solution_t> &solutions, void *_addr, 
+        void *_start_addr, void *_end_addr)
+{
+    uintptr_t start_addr = (uintptr_t)_start_addr;
+    uintptr_t end_addr = (uintptr_t)_end_addr;
+    uintptr_t addr = (uintptr_t)_addr;
+    uintptr_t i;
+    int min_bit = find_min_bit(solutions);
+    size_t min_offset = 1ULL << min_bit;
+    int partition = get_full_partitions_num(addr, solutions);
+
+    /* Round up start_addr */
+    start_addr++;
+    start_addr = (start_addr + min_offset - 1) & ~(min_offset - 1);
+
+    /* Can speedup by finding mininum offset in the solutions */
+    for (i = start_addr; i <= end_addr; i += min_offset) {
+       
+        if (partition == get_full_partitions_num(i, solutions))
+            break;
+    }
+
+    if (i > end_addr)
+        return NULL;
+
+    return (void *)i;
+}
+
+/* 
+ * Returns a new address (between (start_addr, end_addr]) that matches solutions in ctx
+ * and addr
+ */
+
+void *hash_get_next_addr(hash_context_t *ctx, void *addr, 
+        void *start_addr, void *end_addr)
+{
+    return get_next_addr(ctx->solutions, addr, start_addr, end_addr);
+}
+
+/* 
+ * Returns a new address (between (start_addr, end_addr]) that matches solutions in both ctx
+ * and addr
+ */
+
+void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2, void *addr, 
+        void *start_addr, void *end_addr)
+{
+    std::vector<solution_t> solutions = ctx1->solutions;
+    solutions.insert(solutions.end(), ctx2->solutions.begin(), ctx2->solutions.end());
+    
+    return get_next_addr(solutions, addr, start_addr, end_addr);
+}
+
+/* 
+ * Returns a new address (between (start_addr, end_addr]) that matches solutions in all three ctx
+ * and addr
+ */
+
+void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2,
+        hash_context_t *ctx3, void *addr, void *start_addr, void *end_addr)
+{
+    std::vector<solution_t> solutions = ctx1->solutions;
+    solutions.insert(solutions.end(), ctx2->solutions.begin(), ctx2->solutions.end());
+    solutions.insert(solutions.end(), ctx3->solutions.begin(), ctx3->solutions.end());
+
+    return get_next_addr(solutions, addr, start_addr, end_addr);
+}
+
+/* Checks if both address lie on same partition according to set of solutions of ctx */
+bool hash_is_same_partition(hash_context_t *ctx, void *addr1, void *addr2)
+{
+    return get_full_partitions_num((uintptr_t)addr1, ctx->solutions) ==
+        get_full_partitions_num((uintptr_t)addr1, ctx->solutions);
+}
+
+void hash_del(hash_context_t *ctx)
 {
     delete ctx;
 }

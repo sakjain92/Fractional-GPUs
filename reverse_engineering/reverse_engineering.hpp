@@ -68,6 +68,8 @@ int device_cacheline_test_init(void *gpu_start_addr, size_t size);
 int device_cacheline_test_find_threshold(size_t sample_size, double *avg);
 void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double threshold);
 
+int device_find_cacheline_words_count(void *gpu_start_addr, double threshold,
+        void *(*cb)(void *addr, void *arg), void *arg, size_t *words);
 
 inline int ilog2(unsigned int x)
 {
