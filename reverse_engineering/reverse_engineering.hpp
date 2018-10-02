@@ -71,6 +71,10 @@ void *device_find_cache_eviction_addr(void *_a, void *_b, size_t offset, double 
 int device_find_cacheline_words_count(void *gpu_start_addr, double threshold,
         void *(*cb)(void *addr, void *arg), void *arg, size_t *words);
 
+int device_run_interference_exp(void *gpu_start_addr, void *(*cb)(void *addr, void *arg),
+        void *primary_arg, void *secondary_arg, int max_blocks, int loop_count, 
+        std::vector<double> &time);
+
 inline int ilog2(unsigned int x)
 {
     return sizeof(unsigned int) * 8 - __builtin_clz(x) - 1;

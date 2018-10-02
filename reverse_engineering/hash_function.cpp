@@ -904,16 +904,14 @@ hash_context_t *hash_get_common_solutions(hash_context_t *ctx1, hash_context_t *
  * Returns a new address (between (start_addr, end_addr]) that matches solutions
  * and addr
  */
-static void *get_next_addr(std::vector<solution_t> &solutions, void *_addr, 
+static void *get_next_addr(std::vector<solution_t> &solutions, int partition, 
         void *_start_addr, void *_end_addr)
 {
     uintptr_t start_addr = (uintptr_t)_start_addr;
     uintptr_t end_addr = (uintptr_t)_end_addr;
-    uintptr_t addr = (uintptr_t)_addr;
     uintptr_t i;
     int min_bit = find_min_bit(solutions);
     size_t min_offset = 1ULL << min_bit;
-    int partition = get_full_partitions_num(addr, solutions);
 
     /* Round up start_addr */
     start_addr++;
@@ -933,44 +931,58 @@ static void *get_next_addr(std::vector<solution_t> &solutions, void *_addr,
 }
 
 /* 
- * Returns a new address (between (start_addr, end_addr]) that matches solutions in ctx
- * and addr
+ * Returns a new address (between (start_addr, end_addr]) that matches solutions
+ * thr pair of ctx and partitions numbers
  */
 
-void *hash_get_next_addr(hash_context_t *ctx, void *addr, 
-        void *start_addr, void *end_addr)
+void *hash_get_next_addr(std::vector<hash_context_t *> ctx, 
+        std::vector<int> partition, void *start_addr, void *end_addr)
 {
-    return get_next_addr(ctx->solutions, addr, start_addr, end_addr);
-}
+    int min_bit = INT_MAX;
+    int min_index;
+    void *addr;
+    bool found = false;
+    void *prev_addr = start_addr;
 
-/* 
- * Returns a new address (between (start_addr, end_addr]) that matches solutions in both ctx
- * and addr
- */
+    assert(partition.size() == ctx.size());
+    assert(ctx.size() >= 1);
 
-void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2, void *addr, 
-        void *start_addr, void *end_addr)
-{
-    std::vector<solution_t> solutions = ctx1->solutions;
-    solutions.insert(solutions.end(), ctx2->solutions.begin(), ctx2->solutions.end());
+    for (int i = 0; i < ctx.size(); i++) {
+        int c_min_bit = find_min_bit(ctx[i]->solutions);
+        if (c_min_bit < min_bit) {
+            min_index = i;
+            min_bit = c_min_bit;
+        }
+    }
+
+    while (!found) {
+        addr = get_next_addr(ctx[min_index]->solutions, 
+                partition[min_index], prev_addr, end_addr);
+
+        if (!addr)
+            return NULL;
+
+        found = true;
+
+        for (int i = 0; i < ctx.size(); i++) {
+            if (i == min_index)
+                continue;
+            if (get_full_partitions_num((uintptr_t)addr, ctx[i]->solutions) !=
+                    partition[i]) {
+                found = false;
+                break;
+            }
+        }
+
+        prev_addr = addr;
+    }
     
-    return get_next_addr(solutions, addr, start_addr, end_addr);
+    if (addr > end_addr)
+        return NULL;
+
+    return addr;
 }
 
-/* 
- * Returns a new address (between (start_addr, end_addr]) that matches solutions in all three ctx
- * and addr
- */
-
-void *hash_get_next_addr(hash_context_t *ctx1, hash_context_t *ctx2,
-        hash_context_t *ctx3, void *addr, void *start_addr, void *end_addr)
-{
-    std::vector<solution_t> solutions = ctx1->solutions;
-    solutions.insert(solutions.end(), ctx2->solutions.begin(), ctx2->solutions.end());
-    solutions.insert(solutions.end(), ctx3->solutions.begin(), ctx3->solutions.end());
-
-    return get_next_addr(solutions, addr, start_addr, end_addr);
-}
 
 /* Checks if both address lie on same partition according to set of solutions of ctx */
 bool hash_is_same_partition(hash_context_t *ctx, void *addr1, void *addr2)
@@ -983,3 +995,83 @@ void hash_del(hash_context_t *ctx)
 {
     delete ctx;
 }
+
+/* TODO: Below code is just to make testing faster. Remove. */
+#if 0
+hash_context_t *hash_get_dram(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {13, 15, 20, 24, 26, 29, 32}, .depth = 7};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {15, 16, 21, 22, 23, 25, 26, 28, 29}, .depth = 9};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {16, 19, 23, 27, 30}, .depth = 5};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {17, 20, 22, 23, 24, 27, 28, 29, 31}, .depth = 9};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+
+hash_context_t *hash_get_cache(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {7, 8, 16, 17, 23, 26, 31}, .depth = 7};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {8, 10, 12, 16, 17, 21, 24, 25, 26, 27}, .depth = 10};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {9, 10, 18, 25, 29, 30, 31}, .depth = 7};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {13, 14, 20, 23, 28, 29, 30}, .depth = 7};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {14, 15, 17, 20, 21, 23, 24, 28, 31}, .depth = 9};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {15, 16, 19, 20, 23, 24, 25, 26, 28, 29, 30, 32}, .depth = 12};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {16, 17, 18, 19, 21, 22, 23, 25, 27, 28, 30}, .depth = 11};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+
+hash_context_t *hash_get_common(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {10, 12, 16, 20, 23, 26, 29, 30}, .depth = 8};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {11, 12, 13, 15, 17, 20, 21, 23, 25, 26, 30}, .depth = 11};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {12, 13, 18, 19, 22, 25, 26, 27, 30, 31}, .depth = 10};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+#endif

@@ -36,8 +36,8 @@ typedef struct cb_arg {
 typedef struct pchase_cb_arg {
     uintptr_t phy_start;
     uintptr_t virt_start;
-    std::vector<hash_context_t *> include;
-    std::vector<hash_context_t *> exclude;
+    std::vector<hash_context_t *> ctx;
+    std::vector<int> partition;
 } pchase_cb_arg_t;
 
 bool is_power_of_2(size_t x)
@@ -270,37 +270,10 @@ void *get_next_word(void *start_virt_addr, void *arg)
     uintptr_t next_phy_addr;
     bool found = false;
 
-    while (!found) {
-
-        if (data->include.size() == 1) {
-            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0], 
-                    (void *)start_phy_addr, (void *)start_phy_addr, (void *)-1);
-        } else if (data->include.size() == 2) {
-            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0],
-                    data->include[1], (void *)start_phy_addr, 
-                    (void *)start_phy_addr, (void *)-1);
-        } else {
-            assert(data->include.size() == 3);
-            next_phy_addr = (uintptr_t)hash_get_next_addr(data->include[0],
-                    data->include[1], data->include[2], (void *)start_phy_addr, 
-                    (void *)start_phy_addr, (void *)-1);
-        }
-
-        if (!next_phy_addr)
-            return NULL;
-
-        found = true;
-
-        for (int i = 0; i < data->exclude.size(); i++) {
-            if (hash_is_same_partition(data->exclude[i], 
-                        (void *)next_phy_addr, (void *)start_phy_addr)) {
-                found = false;
-                break;
-            }
-        }
-    }
-
-    assert(next_phy_addr > start_phy_addr);
+    next_phy_addr = (uintptr_t)hash_get_next_addr(data->ctx, data->partition, 
+        (void *)start_phy_addr, (void *)-1);
+    if (!next_phy_addr)
+        return NULL;
 
     return (void *)(next_phy_addr - data->phy_start + data->virt_start);
 }
@@ -364,7 +337,8 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
     /* Find the number of words in a cacheline */
     pchase_cb_arg.virt_start = (uintptr_t)virt_start;
     pchase_cb_arg.phy_start = (uintptr_t)phy_start;
-    pchase_cb_arg.include.push_back(hctx);
+    pchase_cb_arg.ctx.push_back(hctx);
+    pchase_cb_arg.partition.push_back(0);
 
     /* Re-init test */
     ret = device_find_cacheline_words_count(virt_start, data.running_threshold,
@@ -375,6 +349,134 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
     printf("Number of words in a cachline:%zd\n", num_words);
     
     return hctx;
+}
+
+static int run_interference_exp_helper(void *virt_start,
+        pchase_cb_arg_t *primary_pchase_cb_arg,
+        pchase_cb_arg_t *secondary_pchase_cb_arg)
+{
+    int ret;
+    std::vector<double> time;
+
+    ret = device_run_interference_exp(virt_start, get_next_word,
+            primary_pchase_cb_arg, secondary_pchase_cb_arg, 32, 1000, 
+            time);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't run interference exp\n");
+        return ret;
+    }
+
+    for (int i = 0; i < time.size(); i++) {
+        printf("Inteference Test: Number of Blocks:%d, Time:%f\n", i + 1, time[i]);
+    }
+
+    return 0;
+}
+
+static int run_interference_exp(void *virt_start, void *phy_start, 
+        hash_context_t *cache_hctx, hash_context_t *dram_hctx, 
+        hash_context_t *common_hctx)
+{
+    pchase_cb_arg_t primary_pchase_cb_arg;
+    pchase_cb_arg_t secondary_pchase_cb_arg;
+    int ret;
+
+    primary_pchase_cb_arg.virt_start = (uintptr_t)virt_start;
+    primary_pchase_cb_arg.phy_start = (uintptr_t)phy_start;
+    secondary_pchase_cb_arg.virt_start = (uintptr_t)virt_start;
+    secondary_pchase_cb_arg.phy_start = (uintptr_t)phy_start;
+    
+    std::vector<double> time;
+
+    primary_pchase_cb_arg.ctx.clear();
+    primary_pchase_cb_arg.partition.clear();
+    primary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    primary_pchase_cb_arg.partition.push_back(0);
+    primary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    primary_pchase_cb_arg.partition.push_back(0);
+    primary_pchase_cb_arg.ctx.push_back(common_hctx);
+    primary_pchase_cb_arg.partition.push_back(0);
+
+    secondary_pchase_cb_arg.ctx.clear();
+    secondary_pchase_cb_arg.partition.clear();
+    secondary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(common_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+
+    printf("Interference Experiment: Same Cacheline, Same DRAM Bank, Same Partition\n");
+    ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
+            &secondary_pchase_cb_arg);
+    if (ret < 0)
+        return ret;
+    
+    secondary_pchase_cb_arg.ctx.clear();
+    secondary_pchase_cb_arg.partition.clear();
+    secondary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    secondary_pchase_cb_arg.partition.push_back(1);
+    secondary_pchase_cb_arg.ctx.push_back(common_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+
+    printf("Interference Experiment: Same Cacheline, Different DRAM Bank, Same Partition\n");
+    ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
+            &secondary_pchase_cb_arg);
+    if (ret < 0)
+        return ret;
+
+    secondary_pchase_cb_arg.ctx.clear();
+    secondary_pchase_cb_arg.partition.clear();
+    secondary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    secondary_pchase_cb_arg.partition.push_back(1);
+    secondary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(common_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+
+    printf("Interference Experiment: Different Cacheline, Same DRAM Bank, Same Partition\n");
+    ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
+            &secondary_pchase_cb_arg);
+    if (ret < 0)
+        return ret;
+
+    secondary_pchase_cb_arg.ctx.clear();
+    secondary_pchase_cb_arg.partition.clear();
+    secondary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    secondary_pchase_cb_arg.partition.push_back(1);
+    secondary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    secondary_pchase_cb_arg.partition.push_back(1);
+    secondary_pchase_cb_arg.ctx.push_back(common_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+
+    printf("Interference Experiment: Different Cacheline, Different DRAM Bank, Same Partition\n");
+    ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
+            &secondary_pchase_cb_arg);
+    if (ret < 0)
+        return ret;
+
+    secondary_pchase_cb_arg.ctx.clear();
+    secondary_pchase_cb_arg.partition.clear();
+    secondary_pchase_cb_arg.ctx.push_back(cache_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(dram_hctx);
+    secondary_pchase_cb_arg.partition.push_back(0);
+    secondary_pchase_cb_arg.ctx.push_back(common_hctx);
+    secondary_pchase_cb_arg.partition.push_back(1);
+
+    /* 
+     * Even if same dram and cache, but in different partition, hence in different
+     * dram and cache partitions.
+     */
+    printf("Interference Experiment: Different Cacheline, Different DRAM Bank, Different Partition\n");
+    ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
+            &secondary_pchase_cb_arg);
+    if (ret < 0)
+        return ret;
+    
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -434,6 +536,14 @@ int main(int argc, char *argv[])
 
     printf("Unique Cache solutions\n");
     hash_print_solutions(cache_hctx);
+
+    printf("Running Interference Tests\n");
+    ret = run_interference_exp(virt_start, phy_start, cache_hctx, dram_hctx, 
+            common_hctx);
+    if (ret < 0) {
+        fprintf(stderr, "Couldn't run interference tests\n");
+        return -1;
+    }
 
     hash_del(dram_hctx);
     hash_del(cache_hctx);

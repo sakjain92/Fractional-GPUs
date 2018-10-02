@@ -150,15 +150,16 @@ void gpu_init_pointer_chase(uint64_t *array, size_t size, size_t offset)
  * Also returns the start and end address of pchase.
  */
 void gpu_init_custom_pointer_chase(void *base_addr, void *(*cb)(void *addr, void *arg),
-        void *arg, void **start_addr, void **end_addr)
+        void *arg, int num_entries, void **start_addr, void **end_addr)
 {
     size_t found = 0;
     void *next_addr;
     void *prev_addr = base_addr;
     size_t num_threads = 32;
     size_t num_blocks;
+    size_t max_entries = std::min((size_t)num_entries, max_custom_pchase_entires);
 
-    for (found = 0; found < max_custom_pchase_entires; found++) {
+    for (found = 0; found < max_entries; found++) {
 
         next_addr = cb(prev_addr, arg);
         if (!next_addr)
@@ -192,10 +193,11 @@ void gpu_init_custom_pointer_chase(void *base_addr, void *(*cb)(void *addr, void
  * Also returns the pchase start and end address.
  */
 static int device_custom_pchase_init(void *gpu_start_addr, 
-        void *(*cb)(void *addr, void *arg), void *arg,
+        void *(*cb)(void *addr, void *arg), void *arg, int num_entries,
         void **start_addr, void **end_addr)
 {
-    gpu_init_custom_pointer_chase(gpu_start_addr, cb, arg, start_addr, end_addr);
+    gpu_init_custom_pointer_chase(gpu_start_addr, cb, arg, num_entries,
+            start_addr, end_addr);
 
     return 0;
 }
@@ -633,6 +635,7 @@ static uintptr_t ct_end_addr;
 static uintptr_t ct_last_start_addr;        // Last start address for search
 static uintptr_t ct_start_count;
 static size_t ct_offset;
+static size_t ct_num_words;                 // Number of words in a cacheline
 
 int device_cacheline_test_init(void *gpu_start_addr, size_t size)
 {
@@ -760,7 +763,7 @@ int device_find_cacheline_words_count(void *gpu_start_addr, double threshold,
     int ret;
     void *start_addr;
 
-    ret = device_custom_pchase_init(gpu_start_addr, cb, arg, &start_addr, NULL);
+    ret = device_custom_pchase_init(gpu_start_addr, cb, arg, INT_MAX, &start_addr, NULL);
     if (ret < 0)
         return ret;
 
@@ -769,6 +772,181 @@ int device_find_cacheline_words_count(void *gpu_start_addr, double threshold,
     gpuErrAssert(cudaDeviceSynchronize());
     gpuErrAssert(cudaMemcpy(&count, d_count, sizeof(uint64_t *), cudaMemcpyDeviceToHost));
 
+    ct_num_words = count;
     *words = count;
+    return 0;
+}
+
+/************************** MISCELLENOUS HELPER FUNCTIONS ***********************/
+
+/* Only allow one block to run on SM0. Rest intereferning blocks should run
+ * on other sms.
+ */
+__global__
+void do_interference_exp(volatile uint64_t **bases, int num_interferening_blocks,
+        int *sm0_blocks_count, int *interfereing_blocks_count, int loop_count,
+        double *out_ticks, volatile uint64_t *psum)
+{
+    volatile uint64_t *base, *addr;
+    uint64_t sum = 0;
+    double start_ticks, ticks, max_ticks, min_ticks, sum_ticks;
+    double avg_ticks;
+    uint64_t curindex;
+    uint sm;
+    int i, count;
+    
+    asm("mov.u32 %0, %smid;" : "=r"(sm));
+
+    base = bases[blockIdx.x];
+
+    sum_ticks = 0;
+    max_ticks = 0;
+    min_ticks = INT_MAX;
+
+    if (sm == 0) {
+        /* Only allow one block in SM0 */
+        int index = atomicAdd(sm0_blocks_count, 1);
+        if (index != 0)
+            return;
+
+        base = bases[0];
+
+#pragma unroll 1
+        for (i = 0; i < loop_count; i++) {
+            /* Read bunch of words */
+            start_ticks = clock64();
+
+            for (curindex = 0, count = 0; curindex != (uint64_t)-1; count++) {
+                addr = &base[curindex];
+                curindex = __ldcs((uint64_t *)addr);
+                sum += curindex;
+            }
+
+            ticks = (clock64() - start_ticks) / count;;
+
+            sum_ticks += ticks;
+            max_ticks = ticks > max_ticks ? ticks : max_ticks;
+            min_ticks = ticks < min_ticks ? ticks : min_ticks;
+        }
+
+        avg_ticks = (double)sum_ticks / loop_count;
+        *out_ticks = avg_ticks;
+
+    } else {
+        /* Keep control over total number of interfering blocks */
+        int index = atomicAdd(interfereing_blocks_count, 1);
+        if (index >= num_interferening_blocks)
+            return;
+
+        base = bases[index];
+
+#pragma unroll 1
+        /* Let the interference run for more time */
+        for (int i = 0; i < 2 * loop_count; i++) {
+
+            start_ticks = clock64();
+
+            for (curindex = 0, count = 0; curindex != (uint64_t)-1; count++) {
+                addr = &base[curindex];
+                curindex = __ldcs((uint64_t *)addr);
+                sum += curindex;
+            }
+
+            ticks = (clock64() - start_ticks) / count;;
+
+            sum_ticks += ticks;
+            max_ticks = ticks > max_ticks ? ticks : max_ticks;
+            min_ticks = ticks < min_ticks ? ticks : min_ticks;
+        }
+
+        avg_ticks = (double)sum_ticks / 2 / loop_count;
+    }
+
+    if (blockIdx.x == 0)
+        dprintf("Interference Exp: Block:%d, Loop Count:%d, Num Blocks:%d, "
+                "Avg Ticks: %f, Min Ticks:%f, Max Ticks:%f\n",
+                blockIdx.x, loop_count, gridDim.x,
+                (double)avg_ticks, (double)min_ticks, (double)max_ticks);
+
+    *psum = sum;
+}
+
+
+/*
+ * Given two pchases, run experiment for measuring time.
+ * Experiment: One thread per SM executes. SM0 runs the first pchase in a loop.
+ * Other SMs run the secondary pchase in a loop.
+ * Number of SMs is increases monotonically from 1 - Number of SMs.
+ * Time taken by primary SM to access a single word is returned across multiple
+ * interfering SMs.
+ */
+int device_run_interference_exp(void *gpu_start_addr, void *(*cb)(void *addr, void *arg),
+        void *primary_arg, void *secondary_arg, int max_blocks, int loop_count, 
+        std::vector<double> &time)
+{
+    void *start_addr;
+    int ret;
+    double ticks;
+    int num_entries;
+    uint64_t **d_base_address, **h_base_address;
+    int i;
+    int *d_inteferening_blocks, *d_sm0_blocks;
+
+
+    /* 
+     * If we know how many words are in cacheline, then use one more than that.
+     * This ensures all data accesses go to DRAM (so Bank conflict issues can
+     * be seen)
+     */
+    if (ct_num_words == 0)
+        num_entries = INT_MAX;
+    else
+        num_entries = ct_num_words + 1;
+
+    gpuErrAssert(cudaMalloc(&d_inteferening_blocks, sizeof(int)));
+    gpuErrAssert(cudaMalloc(&d_sm0_blocks, sizeof(int)));
+    gpuErrAssert(cudaMalloc(&d_base_address, max_blocks * sizeof(uint64_t *)));
+    h_base_address = (uint64_t **)malloc(max_blocks * sizeof(uint64_t *));
+    assert(h_base_address);
+
+    for (start_addr = gpu_start_addr, i = 0; i < max_blocks; i++) {
+        
+        void *arg;
+        void *pchase_start_addr, *pchase_end_addr;
+
+        if (i == 0)
+            arg = primary_arg;
+        else
+            arg = secondary_arg;
+
+        ret = device_custom_pchase_init(start_addr, cb, arg, num_entries,
+            &pchase_start_addr, &pchase_end_addr);
+        if (ret < 0)
+            return ret;
+
+        h_base_address[i] = (uint64_t *)pchase_start_addr;
+
+        start_addr = pchase_end_addr;
+    }
+
+    gpuErrAssert(cudaMemcpy(d_base_address, h_base_address, sizeof(uint64_t *) * max_blocks, cudaMemcpyHostToDevice));
+
+    for (int i = 1; i <= max_blocks; i++) {
+
+        gpuErrAssert(cudaMemset(d_inteferening_blocks, 0, sizeof(int)));
+        gpuErrAssert(cudaMemset(d_sm0_blocks, 0, sizeof(int)));
+
+        /* Launch some extra blocks, just in case. We deal with extra blocks inside kernel */
+        do_interference_exp<<<2 * max_blocks, 1>>>((volatile uint64_t **)d_base_address, i - 1, 
+                d_sm0_blocks, d_inteferening_blocks, loop_count, d_ticks, d_sum);
+        gpuErrAssert(cudaDeviceSynchronize());
+        gpuErrAssert(cudaMemcpy(&ticks, d_ticks, sizeof(double), cudaMemcpyDeviceToHost));
+        time.push_back(ticks);
+    }
+
+    gpuErrAssert(cudaFree(d_base_address));
+    gpuErrAssert(cudaFree(d_inteferening_blocks));
+    gpuErrAssert(cudaFree(d_sm0_blocks));
+
     return 0;
 }
