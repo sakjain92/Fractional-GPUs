@@ -996,7 +996,7 @@ void hash_del(hash_context_t *ctx)
     delete ctx;
 }
 
-/* TODO: Below code is just to make testing faster. Remove. */
+/* TODO: Below code is just to make testing faster. Remove. For GTX 1070*/
 #if 0
 hash_context_t *hash_get_dram(void)
 {
@@ -1069,6 +1069,86 @@ hash_context_t *hash_get_common(void)
     }
     {
         solution_t s = {.indexes = {12, 13, 18, 19, 22, 25, 26, 27, 30, 31}, .depth = 10};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+#endif
+
+/* TODO: Below code is just to make testing faster. Remove. For V100*/
+#if 0
+hash_context_t *hash_get_dram(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {16, 19, 20, 23, 27, 29, 31, 33}, .depth = 8};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {17, 18, 23, 24, 25, 27, 28, 30, 31}, .depth = 9};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {18, 21, 25, 29, 32}, .depth = 5};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {19, 20, 22, 24, 25, 26, 29, 30, 31, 33}, .depth = 10};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+
+hash_context_t *hash_get_cache(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {7, 15, 21, 23, 24, 25, 28, 32}, .depth = 8};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {8, 9, 15, 19, 21, 23, 24, 25, 28, 29, 31}, .depth = 11};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {9, 15, 19, 21, 22, 24, 25, 26, 27, 30, 31, 32, 33}, .depth = 13};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {14, 19, 20, 24, 25, 27, 28, 29, 30, 31, 32, 33}, .depth = 12};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {16, 19, 21, 22, 25, 26, 28, 30, 32}, .depth = 9};
+        ctx->solutions.push_back(s);
+    }
+
+    return ctx;
+}
+
+hash_context_t *hash_get_common(void)
+{
+    hash_context_t *ctx = new(hash_context_t);
+    {
+        solution_t s = {.indexes = {10, 13, 17, 19, 24, 25, 26, 29, 30, 32, 33}, .depth = 11};
+        ctx->solutions.push_back(s);
+    }  
+    {
+        solution_t s = {.indexes = {11, 13, 15, 23, 24, 26, 27, 29, 30, 31}, .depth = 10};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {12, 15, 16, 18, 20, 21, 23, 26, 28, 29, 30}, .depth = 11};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {13, 19, 20, 22, 25, 27, 28, 29}, .depth = 8};
+        ctx->solutions.push_back(s);
+    }
+    {
+        solution_t s = {.indexes = {15, 18, 22, 23, 26, 29, 30, 31, 32, 33}, .depth = 10};
         ctx->solutions.push_back(s);
     }
 
