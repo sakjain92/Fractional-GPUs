@@ -838,7 +838,7 @@ void do_interference_exp(volatile uint64_t **bases, int num_interferening_blocks
         if (index >= num_interferening_blocks)
             return;
 
-        base = bases[index];
+        base = bases[index + 1];
 
 #pragma unroll 1
         /* Let the interference run for more time */
