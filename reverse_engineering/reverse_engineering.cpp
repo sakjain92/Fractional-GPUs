@@ -14,14 +14,21 @@
 #include <sched.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
-#include <algorithm>
+#include <math.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <reverse_engineering.hpp>
 
 #include <hash_function.hpp>
 
+/* TODO:
+ * 1) On GTX 1070, DRAM Bank reverse engineering function get stuck sometime.
+ * Possible bug.
+ * 2) On V100, cache hierarchy is not clear. Number of words is shown as 3.
+ * whereas we expect it to be 48. Where is the factor of 16?
+ */
 typedef struct cb_arg {
     uintptr_t phy_start;
     uintptr_t virt_start;
@@ -39,6 +46,57 @@ typedef struct pchase_cb_arg {
     std::vector<hash_context_t *> ctx;
     std::vector<int> partition;
 } pchase_cb_arg_t;
+
+/* Global configuration parameters */
+
+/* Parameters for DRAM Bank access time histogram */
+static bool g_dram_histogram_enabled = false;
+static int g_dram_histogram_sample_size = 1000;
+static int g_dram_histogram_spacing = 10;
+
+/* Usage for current program */
+void print_usage(char **argv)
+{
+    fprintf(stderr, "Usage: %s [OPTIONS]\n"
+            "-d Number of samples of DRAM histogram. Enables DRAM histogram (Default: %s). Default :%d\n"
+            "-s Spacing for dram histogram. Enables DRAM histogram (Default: %s). Default: %d\n", argv[0],
+            g_dram_histogram_enabled ? "ON" : "OFF", 
+            g_dram_histogram_sample_size,
+            g_dram_histogram_enabled ? "ON" : "OFF",
+            g_dram_histogram_spacing);
+}
+
+void parse_args(int argc, char **argv) 
+{
+    int opt;
+
+    while ((opt = getopt(argc, argv, "d:s:h")) != -1) {
+        
+        switch (opt) {
+        
+        case 'h':
+            print_usage(argv);
+            fprintf(stderr, "Exiting\n");
+            exit(EXIT_SUCCESS);
+
+        case 'd':
+            g_dram_histogram_enabled = true;
+            g_dram_histogram_sample_size = atoi(optarg);
+            break;
+
+        case 's':
+            g_dram_histogram_enabled = true;
+            g_dram_histogram_spacing = atoi(optarg);
+            break;
+
+        default: /* '?' */
+            fprintf(stderr, "Invalid arguments found\n");
+            print_usage(argv);
+            fprintf(stderr, "Exiting\n");
+            exit(EXIT_FAILURE);
+        }
+    }   
+}
 
 bool is_power_of_2(size_t x)
 {
@@ -93,12 +151,29 @@ void *find_next_dram_partition_pair(void *phy_addr1, void *phy_start_addr,
     return NULL;
 }
 
+static double get_histogram_bin(double time, double min_time, int spacing)
+{
+    int min_rounded = ((int)(min_time) / spacing) * spacing;
+    int time_rounded = ((int)(time) / spacing) * spacing;
+
+    return (time_rounded - min_rounded) / spacing;
+}
+
+static double get_histogram_bin_start_time(int bin, double min_time, int spacing)
+{
+    int min_rounded = ((int)(min_time) / spacing) * spacing;
+
+    return (double)(min_rounded + spacing * bin);
+}
+
+
 /*
  * Finds the hash function for DRAM Banks
  * virt start and phy start are virtual/physical start address of a contiguous
  * memory range.
  */
-static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t allocated, int min_bit, int max_bit)
+static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, 
+        size_t allocated, int min_bit, int max_bit)
 {
     void *phy_end;
     size_t min_row_size;
@@ -113,7 +188,17 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t al
     size_t offset = (1ULL << min_bit);
     size_t max_entries = allocated / offset;
     int count = std::min(max_entries, (size_t)THRESHOLD_SAMPLE_SIZE);
-    std::vector<std::pair<void *, int>> times;
+    std::vector<std::pair<void *, double>> times;
+    std::vector<int> dram_histogram;
+
+    if (g_dram_histogram_enabled) {
+        
+        count = std::min(max_entries, (size_t)g_dram_histogram_sample_size);
+        if (count != g_dram_histogram_sample_size) {
+            fprintf(stderr, "WARNING: DRAM histogram sample size will be %d, instead of %d\n",
+                    count, g_dram_histogram_sample_size);
+        }
+    }
 
     // Find running threshold
     min = LONG_MAX;
@@ -129,7 +214,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t al
         sum += time;
         min = time < min ? time : min;
         max = time > max ? time : max;
-        times.push_back(std::pair<void *, int>((void *)b_phy, time));
+        times.push_back(std::pair<void *, double>((void *)b_phy, time));
 
         /* Print progress */
         printf("Done:%.1f%%\r", (float)(i * 100)/(float)(count));
@@ -140,8 +225,46 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start, size_t al
     threshold = avg * THRESHOLD_MULTIPLIER;
     running_threshold = (avg * (100.0 + OUTLIER_DRAM_PERCENTAGE)) / 100.0;
 
-    dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
+    if (g_dram_histogram_enabled) {
+
+        printf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
             threshold, running_threshold, max, min);
+
+        /* Create histogram bins - Add few extra bins at end just for verification by eyeballing */
+        int max_bins = get_histogram_bin(max, min, g_dram_histogram_spacing) + 2;
+        for (int i = 0; i < max_bins; i++) {
+            dram_histogram.push_back(0);
+        }
+
+        /* Print and add to histogram */
+        for (int i = 0; i < times.size(); i++) {
+            int bin;
+
+            if (times[i].second > running_threshold) {
+                printf("DRAM Access Times: %p,\t %p,\t %f us --- Exceeds threashold\n", phy_start,
+                        times[i].first, times[i].second);
+            } else {
+                printf("DRAM Access Times: %p,\t %p,\t %f us\n", phy_start,
+                        times[i].first, times[i].second);
+            }
+
+            bin = get_histogram_bin(times[i].second, min, g_dram_histogram_spacing);
+            dram_histogram[bin]++;
+        }
+
+        /* Print histogram */
+        for (int i = 0; i < max_bins; i++) {
+            double bin_start_time = 
+                get_histogram_bin_start_time(i, min, g_dram_histogram_spacing);
+            printf("DRAM Histogram: Start:%f, End:%f, Count:%d\n",
+                    bin_start_time, bin_start_time + g_dram_histogram_spacing,
+                    dram_histogram[i]);
+        }
+
+    } else {
+        dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
+            threshold, running_threshold, max, min);
+    }
 
     phy_end = (void *)((uintptr_t)phy_start + allocated - device_allocation_overhead());
 
@@ -487,6 +610,8 @@ int main(int argc, char *argv[])
     int ret;
     int max_bit, min_bit;
     hash_context_t *dram_hctx, *cache_hctx, *common_hctx;
+
+    parse_args(argc, argv);
 
     max_bit = device_max_physical_bit();
     if (max_bit < 0) {
