@@ -1,0 +1,22 @@
+# GTX 1070
+DRAM Histogram: Start:485.000000, End:490.000000, Count:3
+DRAM Histogram: Start:490.000000, End:495.000000, Count:1
+DRAM Histogram: Start:495.000000, End:500.000000, Count:7993
+DRAM Histogram: Start:500.000000, End:505.000000, Count:51228
+DRAM Histogram: Start:505.000000, End:510.000000, Count:27491
+DRAM Histogram: Start:510.000000, End:515.000000, Count:7821
+DRAM Histogram: Start:515.000000, End:520.000000, Count:4695
+DRAM Histogram: Start:520.000000, End:525.000000, Count:0
+DRAM Histogram: Start:525.000000, End:530.000000, Count:0
+DRAM Histogram: Start:530.000000, End:535.000000, Count:0
+DRAM Histogram: Start:535.000000, End:540.000000, Count:0
+DRAM Histogram: Start:540.000000, End:545.000000, Count:0
+DRAM Histogram: Start:545.000000, End:550.000000, Count:0
+DRAM Histogram: Start:550.000000, End:555.000000, Count:0
+DRAM Histogram: Start:555.000000, End:560.000000, Count:0
+DRAM Histogram: Start:560.000000, End:565.000000, Count:0
+DRAM Histogram: Start:565.000000, End:570.000000, Count:545
+DRAM Histogram: Start:570.000000, End:575.000000, Count:223
+DRAM Histogram: Start:575.000000, End:580.000000, Count:0
+
+
