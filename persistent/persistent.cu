@@ -46,7 +46,7 @@
 #define FGPU_DEFAULT_COLOR_MEM_SIZE     (1024 * 1024 * 1024) /* 1 GB */
 
 /* List of supported GPUs */
-static std::string supported_gpus[] = {"GeForce GTX 1070", "Tesla V100-SXM2-16GB"};
+static std::string supported_gpus[] = {"GeForce GTX 1070", "GeForce GTX 1080", "Tesla V100-SXM2-16GB"};
 
 /* Look into cuMemHostRegister and cuMemHostGetFlags and cuInit*/
 /*sysconf(_SC_THREAD_PROCESS_SHARED), pthread_mutexattr_setpshared
@@ -859,7 +859,7 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
 
 
 #if defined(FGPU_USER_MEM_COLORING_ENABLED)
-    int ret = fgpu_get_memory_info(&ctx->start_virt_addr, &ctx->start_idx);
+    ret = fgpu_get_memory_info(&ctx->start_virt_addr, &ctx->start_idx);
     if (ret < 0)
         return ret;
 #endif
@@ -874,12 +874,16 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
 
 int fgpu_color_stream_synchronize(void)
 {
+#ifdef FGPU_COMP_COLORING_ENABLE
     if (!is_color_set()) {
         fprintf(stderr, "FGPU:Colors not set\n");
         return -EINVAL;
     }
 
     return gpuErrCheck(cudaStreamSynchronize(color_stream));
+#else
+    return gpuErrCheck(cudaDeviceSynchronize());
+#endif
 }
 
 int fgpu_num_sm(int color, int *num_sm)

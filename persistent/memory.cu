@@ -512,7 +512,27 @@ void *fgpu_memory_get_phy_address(void *addr)
 
 int fgpu_memory_allocate(void **p, size_t len)
 {
-    return gpuErrCheck(cudaMallocManaged(p, len));
+    /*
+     * XXX: We are using cudaMallocManaged() nstead of just
+     * cudaMalloc() because to make comparision fair between memory coloring
+     * enabled v.s. disabled. Memcpy() is slower (for small sizes) for
+     * cudaMallocManaged() v.s. for cudaMalloc() (but faster for larger sizes > 8MB)
+     * This we suspect is because of code difference inside the Linux driver
+     */
+    int ret;
+    
+    ret = gpuErrCheck(cudaMallocManaged(p, len));
+    if (ret < 0)
+        return ret;
+
+    /* Do the actual allocation on device */
+    ret = gpuErrCheck(cudaMemPrefetchAsync(*p, len, FGPU_DEVICE_NUMBER));
+    if (ret < 0) {
+        cudaFree(p);
+        return ret;
+    }
+
+    return gpuErrCheck(cudaDeviceSynchronize());
 }
 
 int fgpu_memory_free(void *p)
