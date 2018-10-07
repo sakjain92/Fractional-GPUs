@@ -7,6 +7,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <vector>
 
 #define DEFAULT_NUM_ITERATION   INT_MAX
 
@@ -27,30 +29,46 @@ inline double dtime_usec(unsigned long long start)
 /* For benchmarking applications */
 typedef struct pstats {
     double sum;
-    double min;
-    double max;
-    double count;
+    size_t count;
+    std::vector<double> vals;
 } pstats_t;
 
 inline void pstats_init(pstats_t *stats)
 {
-    stats->min = LONG_MAX;
-    stats->max = LONG_MIN;
     stats->count = stats->sum = 0;
+    stats->vals.clear();
 }
 
 inline void pstats_add_observation(pstats_t *stats, double time)
 {
-    stats->max = time > stats->max ? time : stats->max;
-    stats->min = time < stats->min ? time : stats->min;
     stats->count++;
     stats->sum += time;
+    stats->vals.push_back(time);
 }
 
 inline void pstats_print(pstats_t *stats)
 {
-    printf("STATS: Avg:%f, Min:%f, Max:%f, Count:%f\n",
-            stats->sum / stats->count, stats->min, stats->max, stats->count);
+    double median;
+    size_t count = stats->count;
+    size_t count_95p = ((double)(count) * 95.0) / 100.0;
+    size_t count_5p = ((double)(count) * 5.0) / 100.0;
+
+    if (count == 0)
+        printf("STATS:No values\n");
+
+    std::sort(stats->vals.begin(), stats->vals.begin() + stats->vals.size());
+
+    /* Count odd or even? */
+    if (count & 0x1) {
+        median = stats->vals[count / 2];
+    } else {
+        median = (stats->vals[count / 2 - 1] + stats->vals[count / 2]) / 2;
+    }
+
+    printf("STATS: Avg:%f, Median:%f, Min:%f, Max:%f, 5 percentile:%f, 95 percentile:%f, Count:%zu\n",
+            stats->sum / stats->count, median,
+            stats->vals[0], stats->vals[count - 1], stats->vals[count_5p], stats->vals[count_95p],
+            stats->count);
 }
 
 #if defined(USE_FGPU)
