@@ -166,6 +166,12 @@ add_persistent_target(membench_persistent programs/membench_persistent
 #add_persistent_target(conjugateGradientMultiBlockCG_persistent programs/cuda_samples/conjugateGradientMultiBlockCG_persistent
 #    programs/cuda_samples/conjugateGradientMultiBlockCG_persistent/conjugateGradientMultiBlockCG_persistent.cu)
 
+
+# Benchmarks
+# Gausssian
+add_persistent_target(rodina_gaussian benchmarks/rodina/cuda/gaussian
+    benchmarks/rodina/cuda/gaussian/gaussian.cu)
+
 # Reverse engineering code
 if(FGPU_TEST_MEM_COLORING_ENABLED)
     # DRAM Bank and Cache Lines Hash Function Finder for GPU
