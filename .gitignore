@@ -53,3 +53,9 @@ tags
 ########################
 include/fgpu_internal_build_config.hpp
 driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h
+
+# Files created during runtim #
+###############################
+benchmarks/rodina/data/cfd/momentum
+benchmarks/rodina/data/cfd/density_energy
+benchmarks/rodina/data/cfd/density
