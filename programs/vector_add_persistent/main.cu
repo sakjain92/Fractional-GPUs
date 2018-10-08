@@ -17,8 +17,8 @@ void serial_add(double2 *a, double2 *b, double2 *c, int n)
 {
     for(int index=0;index<n;index++)
     {
-        c[index].x = a[index].x*a[index].x + b[index].x*b[index].x;
-        c[index].y = a[index].y*a[index].y + b[index].y*b[index].y;
+        c[index].x = a[index].x + b[index].x;
+        c[index].y = a[index].y + b[index].y;
     }
 }
 
@@ -35,7 +35,7 @@ FGPU_DEFINE_KERNEL(vector_add, double2 *a, double2 *b, double2 *c, int n)
         if (index < n) {
             double2 a_data = FGPU_COLOR_LOAD(ctx, &a[index]);
             double2 b_data = FGPU_COLOR_LOAD(ctx, &b[index]);
-            double2 c_data = {a_data.x * a_data.x + b_data.x * b_data.x, a_data.y * a_data.y + b_data.y * b_data.y};
+            double2 c_data = {a_data.x + b_data.x, a_data.y + b_data.y};
             FGPU_COLOR_STORE(ctx, &c[index], c_data);
         }   
     }   
