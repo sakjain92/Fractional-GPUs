@@ -172,9 +172,13 @@ add_persistent_target(membench_persistent programs/membench_persistent
 add_persistent_target(rodina_gaussian benchmarks/rodina/cuda/gaussian
     benchmarks/rodina/cuda/gaussian/gaussian.cu)
 
+# CFD (Computational Fluid Dynamics)
 add_persistent_target(rodina_cfd benchmarks/rodina/cuda/cfd
     benchmarks/rodina/cuda/cfd/euler3d.cu)
 
+# NN (Nearest Neighbours)
+add_persistent_target(rodina_nn benchmarks/rodina/cuda/nn
+    benchmarks/rodina/cuda/nn/nn_cuda.cu)
 
 # Reverse engineering code
 if(FGPU_TEST_MEM_COLORING_ENABLED)
