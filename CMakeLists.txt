@@ -197,6 +197,10 @@ add_persistent_target(cudaSDK_sp benchmarks/cudaSDK/scalarProd
 add_persistent_target(cudaSDK_va benchmarks/cudaSDK/vectorAdd
     benchmarks/cudaSDK/vectorAdd/vectorAdd.cu)
 
+# Matrix Multiplication with Shared mem
+add_persistent_target(cudaSDK_mms benchmarks/cudaSDK/matrixMulShared
+    benchmarks/cudaSDK/matrixMulShared/matrixMul.cu)
+
 # Reverse engineering code
 if(FGPU_TEST_MEM_COLORING_ENABLED)
     # DRAM Bank and Cache Lines Hash Function Finder for GPU
