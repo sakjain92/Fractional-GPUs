@@ -180,6 +180,18 @@ add_persistent_target(rodina_cfd benchmarks/rodina/cuda/cfd
 add_persistent_target(rodina_nn benchmarks/rodina/cuda/nn
     benchmarks/rodina/cuda/nn/nn_cuda.cu)
 
+# Fast Walsh Transform
+add_persistent_target(cudaSDK_fwt benchmarks/cudaSDK/fastWalshTransform
+    benchmarks/cudaSDK/fastWalshTransform/fastWalshTransform.cu
+    benchmarks/cudaSDK/fastWalshTransform/fastWalshTransform_gold.cpp
+    benchmarks/cudaSDK/fastWalshTransform/fastWalshTransform_kernel.cuh)
+
+# Scalar Product
+add_persistent_target(cudaSDK_sp benchmarks/cudaSDK/scalarProd
+    benchmarks/cudaSDK/scalarProd/scalarProd.cu
+    benchmarks/cudaSDK/scalarProd/scalarProd_cpu.cpp
+    benchmarks/cudaSDK/scalarProd/scalarProd_kernel.cuh)
+
 # Reverse engineering code
 if(FGPU_TEST_MEM_COLORING_ENABLED)
     # DRAM Bank and Cache Lines Hash Function Finder for GPU
