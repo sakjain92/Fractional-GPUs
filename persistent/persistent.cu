@@ -688,6 +688,7 @@ bool fgpu_is_color_prop_set(void)
 /* Wait for last launched kernel to be completely started */
 static void wait_for_last_start(void)
 {
+#if defined(FGPU_SERIALIZED_LAUNCH)
     pthread_mutex_lock(&g_host_ctx->launch_lock);
     while (1) {
         if (g_host_ctx->is_lauchpad_free)
@@ -726,6 +727,8 @@ static void wait_for_last_start(void)
 #if defined(FGPU_COMPUTE_CHECK_ENABLED)
     /* Some inactive blocks appear as active blocks */
     assert(num_active_pblocks >= g_host_ctx->last_num_active_pblocks);
+#endif
+
 #endif
 }
 
@@ -770,6 +773,7 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
         return -EINVAL;
     }
 
+#if defined(FGPU_SERIALIZED_LAUNCH)
     g_host_ctx->last_color = ctx->color;
     g_host_ctx->last_num_pblocks_launched = ctx->num_pblock;
     g_host_ctx->last_num_active_pblocks = ctx->num_active_pblocks;
@@ -778,6 +782,7 @@ int fgpu_complete_launch_kernel(fgpu_dev_ctx_t *ctx)
     g_host_ctx->is_lauchpad_free = true;
     pthread_cond_signal(&g_host_ctx->launch_cond);
     pthread_mutex_unlock(&g_host_ctx->launch_lock);
+#endif
 
     ret = gpuErrCheck(cudaStreamSynchronize(color_stream));
 
@@ -831,6 +836,11 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
                     func, num_threads, shared_mem, cudaOccupancyDisableCachingOverride));
     if (ret < 0)
         return ret;
+
+    if (num_pblocks_per_sm == 0) {
+        fprintf(stderr, "FGPU:Invalid grid/block/thread configuration\n");
+        return -EINVAL;
+    }
 
     num_pblocks = num_pblocks_per_sm * g_host_ctx->num_sm;
 

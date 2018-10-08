@@ -39,6 +39,7 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 
 #endif
 
+#if defined(FGPU_SERIALIZED_LAUNCH)
 #if defined(FGPU_COMPUTE_CHECK_ENABLED)
         if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm)
     	    dev_ctx->d_host_indicators->indicators[blockIdx.x].started =
@@ -49,6 +50,7 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 #else
         dev_ctx->d_host_indicators->indicators[blockIdx.x].started =
                 FGPU_GENERIC_PBLOCK_STARTED;
+#endif
 #endif
 
         /* Prepare for the next function */

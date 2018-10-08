@@ -11,6 +11,7 @@ option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" OFF)
 option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
 option(FGPU_PARANOID_CHECK_ENABLED "Enable checks that are not strictly neccesary" ON)
 option(FGPU_COMPUTE_CHECK_ENABLED "Checks that computation isolation is working correctly" OFF)
+option(FGPU_SERIALIZED_LAUNCH "As extra checks, allows only one kernel to launch (not execute) at a time" OFF)
 
 # Check for contraints on configurations
 
