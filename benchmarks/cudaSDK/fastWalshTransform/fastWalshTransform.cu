@@ -134,29 +134,33 @@ int main(int argc, char *argv[])
         bool is_warmup = (i == 0);
 
         for (j = 0; j < num_iterations; j++) {
-        
-            double start = dtime_usec(0);
 
-            ret = fgpu_memory_memset_async(d_Kernel, 0, DATA_SIZE);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+            double start;
 
-            ret = fgpu_color_stream_synchronize();
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+            if (!test_execute_just_kernel() || j == 0) {
 
-            ret = fgpu_memory_copy_async(d_Kernel, h_Kernel, KERNEL_SIZE, FGPU_COPY_CPU_TO_GPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                start = dtime_usec(0);
 
-            ret = fgpu_memory_copy_async(d_Data, h_Data, DATA_SIZE, FGPU_COPY_CPU_TO_GPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_memory_memset_async(d_Kernel, 0, DATA_SIZE);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
 
-            ret = fgpu_color_stream_synchronize();
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_color_stream_synchronize();
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
 
+                ret = fgpu_memory_copy_async(d_Kernel, h_Kernel, KERNEL_SIZE, FGPU_COPY_CPU_TO_GPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+
+                ret = fgpu_memory_copy_async(d_Data, h_Data, DATA_SIZE, FGPU_COPY_CPU_TO_GPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+
+                ret = fgpu_color_stream_synchronize();
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+            }
 
             double kernel_start = dtime_usec(0);
 
@@ -172,16 +176,19 @@ int main(int argc, char *argv[])
             if (!is_warmup)
                 pstats_add_observation(&kernel_stats, dtime_usec(kernel_start));
 
-            ret = fgpu_memory_copy_async(h_ResultGPU, d_Data, DATA_SIZE, FGPU_COPY_GPU_TO_CPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+            if (!test_execute_just_kernel() || j == 0) {
 
-            ret = fgpu_color_stream_synchronize();
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_memory_copy_async(h_ResultGPU, d_Data, DATA_SIZE, FGPU_COPY_GPU_TO_CPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
 
-            if (!is_warmup)
-                pstats_add_observation(&stats, dtime_usec(start));
+                ret = fgpu_color_stream_synchronize();
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+
+                if (!is_warmup)
+                    pstats_add_observation(&stats, dtime_usec(start));
+            }   
         }
     }
 
@@ -202,8 +209,10 @@ int main(int argc, char *argv[])
 
     L2norm = sqrt(sum_delta2 / sum_ref2);
 
-    printf("Overall Stats\n");
-    pstats_print(&stats);
+    if (!test_execute_just_kernel()) {
+        printf("Overall Stats\n");
+        pstats_print(&stats);
+    }
 
     printf("Kernel Stats\n");
     pstats_print(&kernel_stats);

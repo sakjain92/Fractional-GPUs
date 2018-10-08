@@ -140,19 +140,24 @@ int main(int argc, char **argv)
 
         for (j = 0; j < num_iterations; j++) {
 
-            double start = dtime_usec(0);
+            double start;
+            
+            if (!test_execute_just_kernel() || j == 0) {
 
-            ret = fgpu_memory_copy_async(d_A, h_A, DATA_SZ, FGPU_COPY_CPU_TO_GPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                start = dtime_usec(0);
 
-            ret = fgpu_memory_copy_async(d_B, h_B, DATA_SZ, FGPU_COPY_CPU_TO_GPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_memory_copy_async(d_A, h_A, DATA_SZ, FGPU_COPY_CPU_TO_GPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
 
-            ret = fgpu_color_stream_synchronize();
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_memory_copy_async(d_B, h_B, DATA_SZ, FGPU_COPY_CPU_TO_GPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+
+                ret = fgpu_color_stream_synchronize();
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+            }
 
             double kernel_start = dtime_usec(0);
 
@@ -167,16 +172,19 @@ int main(int argc, char **argv)
             if (!is_warmup)
                 pstats_add_observation(&kernel_stats, dtime_usec(kernel_start));
             
-            ret = fgpu_memory_copy_async(h_C_GPU, d_C, RESULT_SZ, FGPU_COPY_GPU_TO_CPU);
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+            if (!test_execute_just_kernel() || j == 0) {
 
-            ret = fgpu_color_stream_synchronize();
-            if (ret < 0)
-                exit(EXIT_FAILURE);
+                ret = fgpu_memory_copy_async(h_C_GPU, d_C, RESULT_SZ, FGPU_COPY_GPU_TO_CPU);
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
 
-            if (!is_warmup)
-                pstats_add_observation(&stats, dtime_usec(start));
+                ret = fgpu_color_stream_synchronize();
+                if (ret < 0)
+                    exit(EXIT_FAILURE);
+
+                if (!is_warmup)
+                    pstats_add_observation(&stats, dtime_usec(start));
+            }   
         }   
     }
 
@@ -200,8 +208,10 @@ int main(int argc, char **argv)
 
     L1norm = sum_delta / sum_ref;
 
-    printf("Overall Stats\n");
-    pstats_print(&stats);
+    if (!test_execute_just_kernel()) {
+        printf("Overall Stats\n");
+        pstats_print(&stats);
+    }
 
     printf("Kernel Stats\n");
     pstats_print(&kernel_stats);

@@ -53,8 +53,10 @@ inline void pstats_print(pstats_t *stats)
     size_t count_95p = ((double)(count) * 95.0) / 100.0;
     size_t count_5p = ((double)(count) * 5.0) / 100.0;
 
-    if (count == 0)
+    if (count == 0) {
         printf("STATS:No values\n");
+        return;
+    }
 
     std::sort(stats->vals.begin(), stats->vals.begin() + stats->vals.size());
 
@@ -71,13 +73,26 @@ inline void pstats_print(pstats_t *stats)
             stats->count);
 }
 
+/* 
+ * Do we just execute kernel in a loop? Helpful during benchmarking and creating
+ * background interference tasks.
+ */
+static bool execute_just_kernel = false;
+
+/* To be called after initialization */
+bool test_execute_just_kernel(void)
+{
+    return execute_just_kernel;
+}
+
 #if defined(USE_FGPU)
 
 #include <fractional_gpu.hpp>
 
 void print_usage(char **argv)
 {
-    fprintf(stderr, "Usage: %s -c <color> -m <memory size> -i <number of iterations>\n",
+    fprintf(stderr, "Usage: %s -c <color> -m <memory size> -i <number of iterations> [OPTIONS]\n"
+            "-k Execute only kernel (Default: Memcpy and kernels both executed)\n",
             argv[0]);
     fprintf(stderr, "Exiting\n");
     exit(-1);
@@ -96,7 +111,7 @@ static inline void test_initialize(int argc, char **argv, int *out_num_iteration
     mem_size = fgpu_get_env_color_mem_size();
     num_iterations = DEFAULT_NUM_ITERATION;
 
-    while ((opt = getopt(argc, argv, "c:i:m:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:i:m:k")) != -1) {
         
         switch (opt) {
         
@@ -110,6 +125,10 @@ static inline void test_initialize(int argc, char **argv, int *out_num_iteration
 
         case 'i':
             num_iterations = atoi(optarg);
+            break;
+
+        case 'k':
+            execute_just_kernel = true;
             break;
 
         default: /* '?' */
@@ -182,7 +201,9 @@ static inline void test_deinitialize()
 
 void print_usage(char **argv)
 {
-    fprintf(stderr, "Usage: %s -i <number of iterations>\n", argv[0]);
+    fprintf(stderr, "Usage: %s -i <number of iterations> [OPTIONS]\n"
+            "-k Execute only kernel (Default: Memcpy and kernels both executed)\n",
+            argv[0]);
     fprintf(stderr, "Exiting\n");
     exit(-1);
 }
@@ -196,13 +217,16 @@ static inline void test_initialize(int argc, char **argv, int *out_num_iteration
     
     num_iterations = DEFAULT_NUM_ITERATION;
 
-    while ((opt = getopt(argc, argv, "i:")) != -1) {
+    while ((opt = getopt(argc, argv, "i:k")) != -1) {
         
         switch (opt) {
         
         case 'i':
             num_iterations = atoi(optarg);
             break;
+
+        case 'k':
+            execute_just_kernel = true;
 
         default: /* '?' */
             fprintf(stderr, "Invalid arguments found\n");
