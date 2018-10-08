@@ -1,0 +1,226 @@
+/*
+ * Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
+ *
+ * Please refer to the NVIDIA end user license agreement (EULA) associated
+ * with this source code for terms and conditions that govern your use of
+ * this software. Any use, reproduction, disclosure, or distribution of
+ * this software and related documentation outside the terms of the EULA
+ * is strictly prohibited.
+ *
+ */
+
+/*
+ * Walsh transforms belong to a class of generalized Fourier transformations.
+ * They have applications in various fields of electrical engineering
+ * and numeric theory. In this sample we demonstrate efficient implementation
+ * of naturally-ordered Walsh transform
+ * (also known as Walsh-Hadamard or Hadamard transform) in CUDA and its
+ * particular application to dyadic convolution computation.
+ * Refer to excellent Jorg Arndt's "Algorithms for Programmers" textbook
+ * http://www.jjj.de/fxt/fxtbook.pdf (Chapter 22)
+ *
+ * Victor Podlozhnyuk (vpodlozhnyuk@nvidia.com)
+ */
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <helper_functions.h>
+#include <helper_cuda.h>
+
+#include <fractional_gpu.hpp>
+#include <fractional_gpu_cuda.cuh>
+
+#define USE_FGPU
+#include <fractional_gpu_testing.hpp>
+
+////////////////////////////////////////////////////////////////////////////////
+// Reference CPU FWT
+////////////////////////////////////////////////////////////////////////////////
+extern"C" void fwtCPU(float *h_Output, float *h_Input, int log2N);
+extern"C" void slowWTcpu(float *h_Output, float *h_Input, int log2N);
+extern "C" void dyadicConvolutionCPU(
+    float *h_Result,
+    float *h_Data,
+    float *h_Kernel,
+    int log2dataN,
+    int log2kernelN
+);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// GPU FWT
+////////////////////////////////////////////////////////////////////////////////
+#include "fastWalshTransform_kernel.cuh"
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Data configuration
+////////////////////////////////////////////////////////////////////////////////
+const int log2Kernel = 7;
+const   int log2Data = 23;
+
+const int   dataN = 1 << log2Data;
+const int kernelN = 1 << log2Kernel;
+
+const int   DATA_SIZE = dataN   * sizeof(float);
+const int KERNEL_SIZE = kernelN * sizeof(float);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Main program
+////////////////////////////////////////////////////////////////////////////////
+int main(int argc, char *argv[])
+{
+    float *h_Data,
+          *h_Kernel,
+          *h_ResultCPU,
+          *h_ResultGPU;
+
+    float *d_Data,
+          *d_Kernel;
+
+    double delta, ref, sum_delta2, sum_ref2, L2norm;
+
+    int i, j, ret;
+
+    int num_iterations;
+
+    test_initialize(argc, argv, &num_iterations);
+
+    printf("%s Starting...\n\n", argv[0]);
+
+    printf("Initializing data...\n");
+    printf("...allocating CPU memory\n");
+    h_Kernel    = (float *)malloc(KERNEL_SIZE);
+    h_Data      = (float *)malloc(DATA_SIZE);
+    h_ResultCPU = (float *)malloc(DATA_SIZE);
+    h_ResultGPU = (float *)malloc(DATA_SIZE);
+    printf("...allocating GPU memory\n");
+    
+    ret = fgpu_memory_allocate((void **)&d_Kernel, DATA_SIZE);
+    if (ret < 0)
+        exit(EXIT_FAILURE);
+
+    ret = fgpu_memory_allocate((void **)&d_Data, DATA_SIZE);
+    if (ret < 0)
+        exit(EXIT_FAILURE);
+
+    printf("...generating data\n");
+    printf("Data length: %i; kernel length: %i\n", dataN, kernelN);
+    srand(2007);
+
+    for (i = 0; i < kernelN; i++)
+    {
+        h_Kernel[i] = (float)rand() / (float)RAND_MAX;
+    }
+
+    for (i = 0; i < dataN; i++)
+    {
+        h_Data[i] = (float)rand() / (float)RAND_MAX;
+    }
+
+    pstats_t stats;
+    pstats_t kernel_stats;
+
+    pstats_init(&stats);
+    pstats_init(&kernel_stats);
+
+    for (i = 0; i < 2; i++) {
+        
+        bool is_warmup = (i == 0);
+
+        for (j = 0; j < num_iterations; j++) {
+        
+            double start = dtime_usec(0);
+
+            ret = fgpu_memory_memset_async(d_Kernel, 0, DATA_SIZE);
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            ret = fgpu_color_stream_synchronize();
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            ret = fgpu_memory_copy_async(d_Kernel, h_Kernel, KERNEL_SIZE, FGPU_COPY_CPU_TO_GPU);
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            ret = fgpu_memory_copy_async(d_Data, h_Data, DATA_SIZE, FGPU_COPY_CPU_TO_GPU);
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            ret = fgpu_color_stream_synchronize();
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+
+            double kernel_start = dtime_usec(0);
+
+            fwtBatchGPU(d_Data, 1, log2Data);
+            fwtBatchGPU(d_Kernel, 1, log2Data);
+            modulateGPU(d_Data, d_Kernel, dataN);
+            fwtBatchGPU(d_Data, 1, log2Data);
+        
+            ret = fgpu_color_stream_synchronize();
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            if (!is_warmup)
+                pstats_add_observation(&kernel_stats, dtime_usec(kernel_start));
+
+            ret = fgpu_memory_copy_async(h_ResultGPU, d_Data, DATA_SIZE, FGPU_COPY_GPU_TO_CPU);
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            ret = fgpu_color_stream_synchronize();
+            if (ret < 0)
+                exit(EXIT_FAILURE);
+
+            if (!is_warmup)
+                pstats_add_observation(&stats, dtime_usec(start));
+        }
+    }
+
+    printf("Running straightforward CPU dyadic convolution...\n");
+    dyadicConvolutionCPU(h_ResultCPU, h_Data, h_Kernel, log2Data, log2Kernel);
+
+    printf("Comparing the results...\n");
+    sum_delta2 = 0;
+    sum_ref2   = 0;
+
+    for (i = 0; i < dataN; i++)
+    {
+        delta       = h_ResultCPU[i] - h_ResultGPU[i];
+        ref         = h_ResultCPU[i];
+        sum_delta2 += delta * delta;
+        sum_ref2   += ref * ref;
+    }
+
+    L2norm = sqrt(sum_delta2 / sum_ref2);
+
+    printf("Overall Stats\n");
+    pstats_print(&stats);
+
+    printf("Kernel Stats\n");
+    pstats_print(&kernel_stats);
+
+    printf("Shutting down...\n");
+    fgpu_memory_free(d_Data);
+    fgpu_memory_free(d_Kernel);
+    free(h_ResultGPU);
+    free(h_ResultCPU);
+    free(h_Data);
+    free(h_Kernel);
+
+    printf("L2 norm: %E\n", L2norm);
+    printf(L2norm < 1e-6 ? "Test passed\n" : "Test failed!\n");
+
+    if (L2norm >= 1e-6)
+        exit(EXIT_FAILURE);
+
+    return 0;
+}
