@@ -201,6 +201,12 @@ add_persistent_target(cudaSDK_va benchmarks/cudaSDK/vectorAdd
 add_persistent_target(cudaSDK_mms benchmarks/cudaSDK/matrixMulShared
     benchmarks/cudaSDK/matrixMulShared/matrixMul.cu)
 
+# Sorting Networks
+add_persistent_target(cudaSDK_sn benchmarks/cudaSDK/sortingNetworks
+    benchmarks/cudaSDK/sortingNetworks/main.cpp
+    benchmarks/cudaSDK/sortingNetworks/sortingNetworks_validate.cpp
+    benchmarks/cudaSDK/sortingNetworks/bitonicSort.cu)
+
 # Reverse engineering code
 if(FGPU_TEST_MEM_COLORING_ENABLED)
     # DRAM Bank and Cache Lines Hash Function Finder for GPU

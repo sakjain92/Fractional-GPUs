@@ -215,5 +215,7 @@ int main(int argc, char **argv)
 
     test_deinitialize();
 
+    if (!flag)
+        printf("Verification Fail\n");
     exit(flag ? EXIT_SUCCESS : EXIT_FAILURE);
 }
