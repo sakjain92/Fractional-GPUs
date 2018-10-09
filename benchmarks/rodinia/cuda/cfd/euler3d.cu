@@ -18,7 +18,7 @@
 #define RD_WG_SIZE_3 128
 #define RD_WG_SIZE_4 256
 
-#define FILEPATH        "benchmarks/rodina/data/cfd/"
+#define FILEPATH        "benchmarks/rodinia/data/cfd/"
 #define INPUT_FILENAME  "missile.domn.0.2M"
 /*
  * Options 

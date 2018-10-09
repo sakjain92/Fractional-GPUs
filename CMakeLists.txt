@@ -170,16 +170,16 @@ add_persistent_target(membench_persistent programs/membench_persistent
 
 # Benchmarks
 # Gausssian
-add_persistent_target(rodina_gaussian benchmarks/rodina/cuda/gaussian
-    benchmarks/rodina/cuda/gaussian/gaussian.cu)
+add_persistent_target(rodinia_gaussian benchmarks/rodinia/cuda/gaussian
+    benchmarks/rodinia/cuda/gaussian/gaussian.cu)
 
 # CFD (Computational Fluid Dynamics)
-add_persistent_target(rodina_cfd benchmarks/rodina/cuda/cfd
-    benchmarks/rodina/cuda/cfd/euler3d.cu)
+add_persistent_target(rodinia_cfd benchmarks/rodinia/cuda/cfd
+    benchmarks/rodinia/cuda/cfd/euler3d.cu)
 
 # NN (Nearest Neighbours)
-add_persistent_target(rodina_nn benchmarks/rodina/cuda/nn
-    benchmarks/rodina/cuda/nn/nn_cuda.cu)
+add_persistent_target(rodinia_nn benchmarks/rodinia/cuda/nn
+    benchmarks/rodinia/cuda/nn/nn_cuda.cu)
 
 # Fast Walsh Transform
 add_persistent_target(cudaSDK_fwt benchmarks/cudaSDK/fastWalshTransform

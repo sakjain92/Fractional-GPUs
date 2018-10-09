@@ -28,7 +28,7 @@
 #define LATITUDE_POS 28	// character position of the latitude value in each record
 #define OPEN 10000	// initial value of nearest neighbors
 
-#define FILEPATH        "benchmarks/rodina/data/nn/"
+#define FILEPATH        "benchmarks/rodinia/data/nn/"
 #define INPUT_FILENAME  "filelist"
 
 typedef struct latLong

@@ -59,6 +59,6 @@ driver/NVIDIA-Linux-x86_64-390.48/kernel/.tmp_versions/
 
 # Files created during runtim #
 ###############################
-benchmarks/rodina/data/cfd/momentum
-benchmarks/rodina/data/cfd/density_energy
-benchmarks/rodina/data/cfd/density
+benchmarks/rodinia/data/cfd/momentum
+benchmarks/rodinia/data/cfd/density_energy
+benchmarks/rodinia/data/cfd/density
