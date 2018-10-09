@@ -107,7 +107,7 @@ target_compile_features(fractional_gpu PUBLIC cxx_std_11)
 target_link_libraries(fractional_gpu cuda cudart nvidia-ml)
 
 #server
-add_persistent_target(server programs programs/server.cu)
+add_persistent_target(fgpu_server programs programs/server.cu)
 
 # Dummy
 add_persistent_target(dummy_persistent programs/dummy_persistent
