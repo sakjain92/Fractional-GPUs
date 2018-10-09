@@ -30,11 +30,11 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 
 #if defined(FGPU_PARANOID_CHECK_ENABLED)
         
-        atomicAdd((int *)&dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index], 1);
+        atomicAdd((int *)&dev_ctx->d_dev_indicator->index[dev_ctx->index], 1);
 
         /* Pblocks launched on wrong SM have to wait for all other pblocks to be launched */
         if (sm < dev_ctx->start_sm || sm > dev_ctx->end_sm) {
-            while(dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index] != gridDim.x);
+            while(dev_ctx->d_dev_indicator->index[dev_ctx->index] != gridDim.x);
         }
 
 #endif
@@ -55,10 +55,10 @@ int fgpu_device_init(const fgpu_dev_ctx_t *dev_ctx)
 
         /* Prepare for the next function */
         if (blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0) {
-            dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+            dev_ctx->d_bindex->index[dev_ctx->index ^ 1] = 0;
 
 #if defined(FGPU_PARANOID_CHECK_ENABLED)
-            dev_ctx->d_dev_indicators->bindexes[dev_ctx->color].index[dev_ctx->index ^ 1] = 0;
+            dev_ctx->d_dev_indicator->index[dev_ctx->index ^ 1] = 0;
 #endif
         }   
     }
@@ -82,7 +82,7 @@ int fgpu_device_get_blockIdx(fgpu_dev_ctx_t *dev_ctx, dim3 *_blockIdx)
         uint num2Dblocks;
         uint x, y, z;
 
-        lblockIdx = atomicAdd(&dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index], 1);
+        lblockIdx = atomicAdd(&dev_ctx->d_bindex->index[dev_ctx->index], 1);
 
         num2Dblocks = dev_ctx->gridDim.x * dev_ctx->gridDim.y;
         z = lblockIdx / (num2Dblocks);
@@ -111,7 +111,7 @@ int fgpu_device_get_multi_blockIdx(fgpu_dev_ctx_t *dev_ctx, int *_blockIdx1D, in
     int got;
 
     if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
-        lblockIdx1D = atomicAdd(&dev_ctx->d_bindex->bindexes[dev_ctx->color].index[dev_ctx->index], count);
+        lblockIdx1D = atomicAdd(&dev_ctx->d_bindex->index[dev_ctx->index], count);
     }
     __syncthreads();
 

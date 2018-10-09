@@ -4,9 +4,9 @@
 
 #include <fgpu_internal_common.hpp>
 
-struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_bindex {
+typedef struct __align__(FGPU_DEVICE_CACHELINE_SIZE) fgpu_bindex {
     int index[2];
-};
+} fgpu_bindex_t;
 
 /* Memory where persistent kernels use atomic operations to get block index */
 typedef struct fgpu_bindexes {

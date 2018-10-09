@@ -57,10 +57,10 @@ cudaStream_t color_stream;
 
 /* Each process maps host pinned memory individually in it's addr space */
 static volatile fgpu_indicators_t *h_indicators;
-static volatile fgpu_bindexes_t *d_dev_indicators;
 static volatile fgpu_indicators_t *d_host_indicators;
-static fgpu_bindexes_t *d_bindexes;
-
+static volatile fgpu_bindex_t *d_dev_indicator;
+static fgpu_bindex_t *d_bindex;
+int cur_index;
 /*
  * This structure contains all host side information for persistent thread ctx.
  * Everything in this structure is shared by processes using shared mem.
@@ -74,15 +74,10 @@ typedef struct fgpu_host_ctx {
 
     std::pair<uint32_t, uint32_t> color_to_sms[FGPU_MAX_NUM_COLORS];
 
-    cudaIpcMemHandle_t dev_indicator_handle;
-    cudaIpcMemHandle_t bindexes_handle;
-
     /* Lock to allow only one process to launch at a time */
     pthread_mutex_t launch_lock;
     pthread_cond_t launch_cond;
     bool is_lauchpad_free;
-    bool cur_indexes[FGPU_MAX_NUM_COLORS];
-    int cur_launch_index;
     int last_color;
     int last_num_pblocks_launched;
     int last_num_active_pblocks;
@@ -361,21 +356,6 @@ int fgpu_server_init(void)
         goto err;
     }
 
-    /* Allocate bindexes on device memory */
-    ret = gpuErrCheck(cudaMalloc(&d_bindexes, sizeof(fgpu_bindexes_t)));
-    if (ret < 0)
-        goto err;
-
-    ret = gpuErrCheck(cudaIpcGetMemHandle(&g_host_ctx->bindexes_handle,
-                (void *)d_bindexes));
-    if (ret < 0)
-        goto err;
-
-    ret = gpuErrCheck(cudaMemset((void *)d_bindexes, 0, sizeof(fgpu_bindexes_t)));
-    if (ret < 0)
-        goto err;
-
-
     ret = shmem_host_fd = shm_open(FGPU_SHMEM_HOST_NAME,
             O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (ret < 0) {
@@ -400,6 +380,7 @@ int fgpu_server_init(void)
         goto err;
     }
 
+    cudaFree(0);
     /* 
      * This function needs to be called after a CUDA function is called so that
      * the device context is created in that function. CUDA context is created
@@ -417,20 +398,6 @@ int fgpu_server_init(void)
 
     memset((void *)h_indicators, 0, sizeof(fgpu_indicators_t));
 
-    ret = gpuErrCheck(cudaMalloc(&d_dev_indicators,
-                sizeof(fgpu_bindexes_t)));
-    if (ret < 0)
-        goto err;
-
-    ret = gpuErrCheck(cudaIpcGetMemHandle(&g_host_ctx->dev_indicator_handle,
-                (void *)d_dev_indicators));
-    if (ret < 0)
-        goto err;
-
-    ret = gpuErrCheck(cudaMemset((void *)d_dev_indicators, 0,
-                sizeof(fgpu_bindexes_t)));
-    if (ret < 0)
-        goto err;
 
     ret = init_device_info(g_host_ctx);
     if (ret < 0)
@@ -482,12 +449,6 @@ void fgpu_server_deinit(void)
     printf("FGPU:Server Terminating. Waiting for device to be free\n");
     gpuErrCheck(cudaDeviceSynchronize());
 
-    if (d_bindexes != NULL)
-        cudaFree((void *)d_bindexes);
-
-    if (d_dev_indicators != NULL)
-        cudaFree((void *)d_dev_indicators);
-    
     if (h_indicators != NULL) {
         cuMemHostUnregister((void *)h_indicators);
         cudaFreeHost((void *)h_indicators);
@@ -546,16 +507,12 @@ int fgpu_init(void)
         goto err;
     }
 
-    ret = gpuErrCheck(cudaIpcOpenMemHandle((void **)&d_dev_indicators, 
-                g_host_ctx->dev_indicator_handle, cudaIpcMemLazyEnablePeerAccess));
-    if (ret < 0)
-        goto err;
-
-    ret = gpuErrCheck(cudaIpcOpenMemHandle((void **)&d_bindexes, 
-                g_host_ctx->bindexes_handle, cudaIpcMemLazyEnablePeerAccess));
-    if (ret < 0)
-        goto err;
-
+        cudaFree(0);
+    /* 
+     * This function needs to be called after a CUDA function is called so that
+     * the device context is created in that function. CUDA context is created
+     * lazily.
+     */
     shmem_size = ROUND_UP(sizeof(fgpu_indicators_t), page_size);
     ret = gpuDriverErrCheck(cuMemHostRegister((void *)h_indicators, shmem_size,
                 CU_MEMHOSTREGISTER_PORTABLE | CU_MEMHOSTREGISTER_DEVICEMAP));
@@ -592,18 +549,17 @@ err:
 void fgpu_deinit(void)
 {
 
+    if (d_bindex)
+        fgpu_memory_free((void *)d_bindex);
+
+    if (d_dev_indicator)
+        fgpu_memory_free((void *)d_dev_indicator);
+
 #if defined(FGPU_MEM_COLORING_ENABLED)
     fgpu_memory_deinit();
 #endif
 
     cudaStreamDestroy(color_stream);
-
-    if (d_bindexes)
-        gpuErrCheck(cudaIpcCloseMemHandle((void *)d_bindexes));
-
-    if (d_dev_indicators)
-        gpuErrCheck(cudaIpcCloseMemHandle((void *)d_dev_indicators)); 
-
     if (h_indicators != NULL)
         cuMemHostUnregister((void *)h_indicators);
 
@@ -674,7 +630,45 @@ int fgpu_set_color_prop(int color, size_t mem_size)
 #endif
 
     g_color = color;
+
+    ret = fgpu_memory_allocate((void **)&d_bindex, sizeof(struct fgpu_bindex));
+    if (ret < 0)
+        return ret;
+
+    ret = fgpu_memory_allocate((void **)&d_dev_indicator, sizeof(struct fgpu_bindex));
+    if (ret < 0)
+        return ret;
+
+
+    ret = fgpu_memory_memset_async((void *)d_bindex, 0, sizeof(struct fgpu_bindex));
+    if (ret < 0)
+        goto err;
+
+    ret = fgpu_memory_memset_async((void *)d_dev_indicator, 0, sizeof(struct fgpu_bindex));
+    if (ret < 0)
+        goto err;
+
+
+    ret = fgpu_color_stream_synchronize();
+    if (ret < 0)
+        goto err;
+
     return 0;
+
+err:
+    if (d_bindex) {
+        fgpu_memory_free((void *)d_bindex);
+        d_bindex = NULL;
+    }
+    
+    if (d_dev_indicator) {
+        fgpu_memory_free((void *)d_dev_indicator);
+        d_dev_indicator = NULL;
+    }
+
+    g_color = FGPU_INVALID_COLOR;
+
+    return ret;
 }
 
 bool fgpu_is_color_prop_set(void)
@@ -856,13 +850,11 @@ int fgpu_prepare_launch_kernel(fgpu_dev_ctx_t *ctx, const void *func,
     ctx->color = g_color;
     ctx->num_pblock = num_pblocks;
     ctx->num_blocks = num_blocks;
-    ctx->index = g_host_ctx->cur_indexes[g_color];
-    ctx->launch_index = g_host_ctx->cur_launch_index + 1;
-    g_host_ctx->cur_indexes[g_color] ^= 1;   /* Toggle the index */
-    g_host_ctx->cur_launch_index++;
+    ctx->index = cur_index;
+    cur_index ^= 1; /* Toggle the index */
     ctx->d_host_indicators = d_host_indicators;
-    ctx->d_dev_indicators = d_dev_indicators;
-    ctx->d_bindex = d_bindexes;
+    ctx->d_dev_indicator = d_dev_indicator;
+    ctx->d_bindex = d_bindex;
     ctx->start_sm = g_host_ctx->color_to_sms[g_color].first;
     ctx->end_sm = g_host_ctx->color_to_sms[g_color].second;
     ctx->num_active_pblocks = num_pblocks_per_sm * (ctx->end_sm - ctx->start_sm + 1);

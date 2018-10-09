@@ -14,14 +14,13 @@
 /* This structure is context that is handed over to kernel by host */
 typedef struct fgpu_dev_ctx {
     volatile fgpu_indicators_t *d_host_indicators;  /* Used to indicate launch completion to host */
-    volatile fgpu_bindexes_t *d_dev_indicators;     /* Used to indicate launch completion to pblock */
+    volatile fgpu_bindex_t *d_dev_indicator;        /* Used to indicate launch completion to pblock */
 
-    fgpu_bindexes_t *d_bindex;      /* Used to gather block indexes */
+    fgpu_bindex_t *d_bindex;        /* Used to gather block indexes */
     int color;                      /* Color to be used by the kernel */
-    int index;                      /* Index within the color */
-    int launch_index;               /* Like a global tag id for kernel */
-    dim3 gridDim;                  /* User provided grid dimensions */
-    dim3 blockDim;                 /* User provided block dimensions */
+    int index;                      /* Index within single program */
+    dim3 gridDim;                   /* User provided grid dimensions */
+    dim3 blockDim;                  /* User provided block dimensions */
     int num_blocks;                 /* Number of blocks to be spawned */
     int num_pblock;                 /* Number of persistent thread blocks spawned */
     int start_sm;
