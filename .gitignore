@@ -57,8 +57,9 @@ driver/NVIDIA-Linux-x86_64-390.48/kernel/nv_compiler.h
 driver/NVIDIA-Linux-x86_64-390.48/kernel/.cache.mk
 driver/NVIDIA-Linux-x86_64-390.48/kernel/.tmp_versions/
 
-# Files created during runtim #
+# Files created during runtime #
 ###############################
 benchmarks/rodinia/data/cfd/momentum
 benchmarks/rodinia/data/cfd/density_energy
 benchmarks/rodinia/data/cfd/density
+benchmarks/log.txt
