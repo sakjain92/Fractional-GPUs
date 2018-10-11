@@ -239,6 +239,10 @@ NvU32 uvm_hal_pascal_mmu_phys_addr_to_allocation_color(uvm_gpu_t *gpu, NvU64 phy
 NvU32 uvm_hal_pascal_mmu_phys_addr_to_transfer_color(uvm_gpu_t *gpu, NvU64 phys_addr);
 NvU64 uvm_hal_pascal_mmu_phys_addr_to_base_transfer_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr);
 NvU64 uvm_hal_pascal_mmu_phys_addr_to_transfer_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU32 uvm_hal_volta_mmu_phys_addr_to_allocation_color(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU32 uvm_hal_volta_mmu_phys_addr_to_transfer_color(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_volta_mmu_phys_addr_to_base_transfer_color_addr(uvm_gpu_t *gpu, NvU64 phys_addr);
+NvU64 uvm_hal_volta_mmu_phys_addr_to_transfer_color_idx(uvm_gpu_t *gpu, NvU64 phys_addr);
 
 // Replayable faults
 typedef void (*uvm_hal_enable_replayable_faults_t)(uvm_gpu_t *gpu);
