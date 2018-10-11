@@ -6775,7 +6775,7 @@ static NV_STATUS block_map_gpu_to(uvm_va_block_t *va_block,
                                     &block_context->scratch_page_mask,
                                     new_pte_state);
 
-    pr_info("block_map_gpu_to:va_block:Start:%llx, End:%llx, pte_is_2m:%d, needs_4k:%d"
+    pr_debug("block_map_gpu_to:va_block:Start:%llx, End:%llx, pte_is_2m:%d, needs_4k:%d"
             " pages_to_map:%d, pages_after:%d\n",
             va_block->start, va_block->end, new_pte_state->pte_is_2m, new_pte_state->needs_4k,
             uvm_page_mask_weight(pages_to_map), uvm_page_mask_weight(&block_context->scratch_page_mask));
