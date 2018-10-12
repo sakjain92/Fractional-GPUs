@@ -607,6 +607,8 @@ bool fgpu_is_init_complete(void)
 
 int fgpu_set_color_prop(int color, size_t mem_size)
 {
+    int ret;
+
     if (!is_initialized()) {
         fprintf(stderr, "FGPU:fgpu module not initialized\n");
         return -EINVAL;
@@ -623,7 +625,7 @@ int fgpu_set_color_prop(int color, size_t mem_size)
     }
 
 #ifdef FGPU_MEM_COLORING_ENABLED
-    int ret = fgpu_memory_set_colors_info(FGPU_DEVICE_NUMBER, color,
+    ret = fgpu_memory_set_colors_info(FGPU_DEVICE_NUMBER, color,
             mem_size, color_stream);
     if (ret < 0)
         return ret;
