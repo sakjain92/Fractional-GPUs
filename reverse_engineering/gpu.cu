@@ -217,6 +217,7 @@ int device_init(size_t req_reserved_size, size_t *reserved_size)
     size_t max_len;
     int num_colors;
     int ret;
+    size_t overheads = 1024 * 1024; // 1 MB
 
     ret = fgpu_init();
     if (ret < 0) {
@@ -240,9 +241,12 @@ int device_init(size_t req_reserved_size, size_t *reserved_size)
 
     /* Calculate the amount of memory that needs to be reserved */
     resv_memory = min(req_reserved_size, max_len);
-    
+
+    /* Some reserved memroy might be used up by FGPU API. So take that as an
+     * overhead.
+     */
     if (reserved_size)
-        *reserved_size = resv_memory;
+        *reserved_size = resv_memory - overheads;
 
     ret = fgpu_set_color_prop(0, resv_memory);
     if (ret < 0) {
