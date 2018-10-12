@@ -79,6 +79,42 @@ void uvm_hal_volta_arch_init_properties(uvm_gpu_t *gpu)
 
     gpu->fault_cancel_va_supported = true;
 
+#if defined(UVM_MEM_COLORING)
+
+   // During testing, only one color is needed. We just need contiguous phy memory.
+   // For userspace coloring, during allocation we just need contiguous memory.
+   // But during transfer memory, we need to be color aware.
+   // For kernel coloring, everythng is transparent to userspace application and hence
+   // it needs to be color aware.
+#if defined(UVM_TEST_MEM_COLORING)
+
+    gpu->num_allocation_mem_colors = 1;
+    gpu->num_transfer_mem_colors = 1;
+    gpu->colored_allocation_chunk_size = UVM_PAGE_SIZE_2M;
+    gpu->colored_transfer_chunk_size = UVM_PAGE_SIZE_2M;
+
+#elif defined(UVM_USER_MEM_COLORING)
+
+    gpu->num_allocation_mem_colors = 1;
+    gpu->num_transfer_mem_colors = 2;
+    gpu->colored_allocation_chunk_size = UVM_PAGE_SIZE_2M;
+    gpu->colored_transfer_chunk_size = UVM_PAGE_SIZE_4K;
+
+#else /* Kernel coloring */
+    /* 
+     * Even though V100 seem to have more than 2 colors, 
+     * with one color having more than 64K page size,
+     * for now we stay with 2 and 4K pages
+     */
+    gpu->num_allocation_mem_colors = 2;
+    gpu->num_transfer_mem_colors = 2;
+    gpu->colored_allocation_chunk_size = UVM_PAGE_SIZE_4K;
+    gpu->colored_transfer_chunk_size = UVM_PAGE_SIZE_4K;
+
+#endif
+
+#else
     gpu->num_allocation_mem_colors = 0;
     gpu->num_transfer_mem_colors = 0;
+#endif
 }

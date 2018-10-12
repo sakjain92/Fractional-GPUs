@@ -713,7 +713,7 @@ NV_STATUS uvm_pmm_gpu_alloc(uvm_pmm_gpu_t *pmm,
     status = uvm_tracker_wait_deinit(&local_tracker);
 
     for (i = 0; i < num_chunks; i++)
-        pr_info("Saksham: uvm_gpu_alloc: status: %d, mem_type: %d, size: %d, chunk phy_addr: 0x%llx\n",
+        pr_debug("uvm_gpu_alloc: status: %d, mem_type: %d, size: %d, chunk phy_addr: 0x%llx\n",
                 status, mem_type, chunk_size, chunks[i]->address);
     return status;
 
@@ -2448,7 +2448,7 @@ static void free_chunk(uvm_pmm_gpu_t *pmm, uvm_gpu_chunk_t *chunk)
 
     chunk->inject_split_error = false;
 
-//    pr_info("Saksham: uvm_gpu_free: size: %d, chunk phy_addr: 0x%llx, color_range:%p\n",
+//    pr_info("uvm_gpu_free: size: %d, chunk phy_addr: 0x%llx, color_range:%p\n",
 //                uvm_gpu_chunk_get_size(chunk), chunk->address, chunk->color_range);
 
     status = try_user_color_free_chunk(pmm, chunk);
