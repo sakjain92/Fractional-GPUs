@@ -1,8 +1,12 @@
+#!/bin/bash
+
 # This script is used to collect statistics on benchmarks
 PROJ_PATH=$PWD/../                  # Path to FGPU project directory
 BIN_PATH=$PROJ_PATH/build           # Path to binaries (edit if different)
 SCRIPTS_PATH=$PROJ_PATH/scripts     # Folder containing scripts
 LOG_FILE=$PWD/log.txt               # File to log results
+
+ENABLE_VOLTA_MPS_PARTITION="0"        # If 1, then we use Volta MPS for QoS
 
 SERVER=fgpu_server                  # Server name
 
@@ -27,16 +31,23 @@ benchmarks=(
 
 # List of interference applications that run in background
 interference=(
-#"cudaSDK_mms"       # Computational Intensive
-#"cudaSDK_sp"        # Mid computational/memory intensive
-#"cudaSDK_va"        # Memory Intensive
+"cudaSDK_mms"       # Computational Intensive
+"cudaSDK_fwt"       # Shared memory and memory intensive
+"cudaSDK_va"        # Memory Intensive
 )
+
+# Script needs root permissions
+if [[ $EUID -ne 0 ]]; then
+    echo "This script should not be run using sudo or as the root user"
+    exit 1
+fi
 
 #Change pwd to Proj directory 
 cd $PROJ_PATH
 
 # Remove log file 
-rm $LOG_FILE
+rm $LOG_FILE &> /dev/null
+
 touch $LOG_FILE
 TEMP_LOG_FILE=`mktemp`
 TEMP_TIME_FILE=`mktemp`
@@ -78,6 +89,15 @@ kill_all_processes () {
     kill_process $SERVER
 }
 
+# Incase of sigint, kill all processes (fresh state) and stop mps
+function do_for_sigint() {
+    kill_all_processes
+    $SCRIPTS_PATH/mps_kill.sh  &> /dev/null
+    exit 1
+}
+
+trap 'do_for_sigint' 2
+
 # Function to run a benchmark with an interfering application
 # First Arg - Application to run
 # Second Arg - Interference Application (can be empty string)
@@ -102,24 +122,34 @@ run_benchmark () {
     sleep 5
 
     # Start server
-     $BIN_PATH/$SERVER &> /dev/null &
+    $BIN_PATH/$SERVER &> /dev/null &
     sleep 5
 
     if [ ! -z $int_app ]
     then
-         taskset -c $int_proc_range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $INTERFERENCE_COLOR -m $MEMORY  -k &> /dev/null &
+        if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
+        then
+            CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=50 taskset -c $int_proc_range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $INTERFERENCE_COLOR -m $MEMORY  -k &> /dev/null &
+        else
+            taskset -c $int_proc_range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $INTERFERENCE_COLOR -m $MEMORY  -k &> /dev/null &
+        fi
         int_pid=$!
         sleep 5
     fi
    
     echo "New Benchmark: [$bench_app, $int_app]" > $TEMP_LOG_FILE
-    taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+    if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
+    then
+        CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=50 taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+    else
+        taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+    fi
 
     ret_code=$?
 
     # Kill all processes
     kill_all_processes
-    sleep 5
+    sleep 2
 
     # End MPS
      $SCRIPTS_PATH/mps_kill.sh  &> /dev/null
@@ -153,6 +183,7 @@ run_benchmark () {
 runtimes=()
 
 echo "Running benchmarks with number of iterations:$NUM_ITERATION"
+echo "ENABLE_VOLTA_MPS_PARTITION is $ENABLE_VOLTA_MPS_PARTITION"
 
 # Kill all process first 
 kill_all_processes
