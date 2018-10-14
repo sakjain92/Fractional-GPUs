@@ -284,7 +284,7 @@ FGPU_DEFINE_KERNEL(cuda_compute_step_factor, int nelr, float* variables, float* 
 
     FGPU_FOR_EACH_DEVICE_BLOCK(_blockIdx) {
 
-    	const int i = (blockDim.x*_blockIdx.x + threadIdx.x);
+        const int i = (blockDim.x*_blockIdx.x + threadIdx.x);
 
     	float density = variables[i + VAR_DENSITY*nelr];
 	    float3 momentum;
@@ -627,46 +627,42 @@ int main(int argc, char** argv)
 	// these need to be computed the first time in order to compute time step
 	std::cout << "Starting..." << std::endl;
 
-    /* Warmup */
-	for(int i = 0; i < num_iterations; i++)
-	{
-		copy<float>(old_variables, variables, nelr*NVAR);
-		
-		// for the first iteration we compute the time step
-		compute_step_factor(nelr, variables, areas, step_factors);
-		
-		for(int j = 0; j < RK; j++)
-		{
-			compute_flux(nelr, elements_surrounding_elements, normals, variables, fluxes);
-			time_step(j, nelr, old_variables, variables, step_factors, fluxes);
-		}
-        
-        device_sync();
-	}
-
     pstats_t kernel_stats;
 
     pstats_init(&kernel_stats);
 
-    /* Measurements */
-    for(int i = 0; i < num_iterations; i++)
-	{
-        double start = dtime_usec(0);
+	for (int i = 0; i < 2; i++) {
+        bool is_warmup = (i == 0);
 
-		copy<float>(old_variables, variables, nelr*NVAR);
-		
-		// for the first iteration we compute the time step
-		compute_step_factor(nelr, variables, areas, step_factors);
-		
-		for(int j = 0; j < RK; j++)
-		{
-			compute_flux(nelr, elements_surrounding_elements, normals, variables, fluxes);
-			time_step(j, nelr, old_variables, variables, step_factors, fluxes);
-		}
-        
-        device_sync();
-        pstats_add_observation(&kernel_stats, dtime_usec(start));
-	}
+        for(int j = 0; j < num_iterations; j++)
+        {
+            initialize_variables(nelr, variables);
+            initialize_variables(nelr, old_variables);
+	        initialize_variables(nelr, fluxes);
+            set(step_factors, 0, sizeof(float)*nelr);
+            device_sync();
+
+            if (j == 0) {
+                copy<float>(old_variables, variables, nelr*NVAR);
+            }
+
+            double kernel_start = dtime_usec(0);
+
+            // for the first iteration we compute the time step
+            compute_step_factor(nelr, variables, areas, step_factors);
+
+            for(int k = 0; k < RK; k++)
+            {
+                compute_flux(nelr, elements_surrounding_elements, normals, variables, fluxes);
+                time_step(k, nelr, old_variables, variables, step_factors, fluxes);
+            }
+
+            device_sync();
+
+            if (!is_warmup)
+                pstats_add_observation(&kernel_stats, dtime_usec(kernel_start));
+        }
+    }
 
     printf("Kernel Stats\n");
     pstats_print(&kernel_stats);
