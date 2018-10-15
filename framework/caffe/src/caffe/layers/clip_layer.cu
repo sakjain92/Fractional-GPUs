@@ -109,10 +109,18 @@ void ClipLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       count, bottom_data, top_data, p_min, p_max);
   CUDA_POST_KERNEL_CHECK;
 #else
+
+#if defined(FGPU_COMP_COLORING_ENABLE)
   /* TODO: Try to make a cleaner approach here */
   void (*func)(fgpu_dev_ctx_t, const int, const Dtype*, Dtype *,
     Dtype, Dtype) = static_cast<void (*)(fgpu_dev_ctx_t, const int, const Dtype*, Dtype *,
     Dtype, Dtype)>(ClipForward);
+#else
+  void (*func)(const int, const Dtype*, Dtype *,
+    Dtype, Dtype) = static_cast<void (*)(const int, const Dtype*, Dtype *,
+    Dtype, Dtype)>(ClipForward);
+#endif
+
   FGPU_CHECK(FGPU_LAUNCH_KERNEL(func,
       CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS, 0,
       count, bottom_data, top_data, p_min, p_max));
