@@ -5,13 +5,8 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(fractional_gpu VERSION 1.0.1 LANGUAGES CXX CUDA DESCRIPTION "Split GPU into Fractional GPUs")
 
-option(FGPU_COMP_COLORING_ENABLE "Enable computational coloring" ON)
-option(FGPU_MEM_COLORING_ENABLED "Enable memory coloring" ON)
-option(FGPU_USER_MEM_COLORING_ENABLED "Enable userspace coloring" OFF)
-option(FGPU_TEST_MEM_COLORING_ENABLED "Enable for reverse engineering memory hierarchy" OFF)
-option(FGPU_PARANOID_CHECK_ENABLED "Enable checks that are not strictly neccesary" OFF)
-option(FGPU_COMPUTE_CHECK_ENABLED "Checks that computation isolation is working correctly" OFF)
-option(FGPU_SERIALIZED_LAUNCH "As extra checks, allows only one kernel to launch (not execute) at a time" OFF)
+# Include the file contanining CMake options
+include(config.cmake.in)
 
 # Check for contraints on configurations
 
@@ -53,6 +48,7 @@ configure_file(include/fgpu_internal_build_config.hpp.in
 configure_file(driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h.in            
     "${PROJECT_SOURCE_DIR}/driver/NVIDIA-Linux-x86_64-390.48/kernel/common/inc/uvm_config.h")
 
+# Configure the build type
 #set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Release)
