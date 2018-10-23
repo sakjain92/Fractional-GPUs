@@ -12,10 +12,11 @@ SERVER=fgpu_server                  # Server name
 
 NUM_ITERATION=1000                  # Number of iterations of the benchmarks
 MEMORY=1000000000                   # Amount of memory for each benchmark (About 1GB)
-INTERFERENCE_COLOR=1                # Color on which to run interference app
+INTERFERENCE_COLOR=1                # Color on which to run interference app (starting color)
 BENCHMARK_COLOR=0                   # Color on which to run benchmarks
 INTERFERENCE_PRIO=1                 # Real time priority of interference app
 BENCHMARK_PRIO=99                   # Real time priority of benchmark app
+NUM_COLORS=2		    	    # Number of interferenceing applications + 1
 
 # List of benchmarks to run
 benchmarks=(
@@ -55,13 +56,20 @@ TEMP_TIME_FILE=`mktemp`
 # Get number of processes
 proc=`nproc`
 
-# Two simuntaneously running application - Benchmark and interference app
+# Simuntaneously running application - Benchmark and interference app
 # Divide cpus into two part
-app_proc=$((proc/2))
+app_proc=$((proc/NUM_COLORS))
+num_it=$((NUM_COLORS - 1))
 
-# Give first half to interference and next half to benchmark
-int_proc_range='0-'$((app_proc-1))
-bench_proc_range=$((app_proc))'-'$((proc-1))
+int_proc_ranges=()
+# Give first partitions to interference and last to benchmark
+for i in `seq 1 $NUM_COLORS`;
+do
+	index=$((i-1))
+	int_proc_range=$((index * app_proc))'-'$((index * app_proc + app_proc - 1))
+	int_proc_ranges+=($int_proc_range)
+done
+bench_proc_range=$((proc - app_proc))'-'$((proc-1))
 
 AVG="0"
 
@@ -125,24 +133,35 @@ run_benchmark () {
     $BIN_PATH/$SERVER &> /dev/null &
     sleep 5
 
+    percentage=`expr 100 / $NUM_COLORS`
+
     if [ ! -z $int_app ]
     then
-        if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
-        then
-            CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=50 taskset -c $int_proc_range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $INTERFERENCE_COLOR -m $MEMORY  -k &> /dev/null &
-        else
-            taskset -c $int_proc_range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $INTERFERENCE_COLOR -m $MEMORY  -k &> /dev/null &
-        fi
-        int_pid=$!
+        for i in `seq 1 $num_it`;
+        do  
+		color=`expr $INTERFERENCE_COLOR + $i  - 1`
+		index=`expr $i - 1`
+		range=${int_proc_ranges[$index]}
+	        if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
+        	then
+            		CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+			echo "Interference:$int_app, Color:$color, Range:$range, MPS Percentage:$percentage"
+        	else
+            		taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+                        echo "Interference:$int_app, Color:$color, Range:$range"
+        	fi
+    	done
         sleep 5
     fi
-   
+
     echo "New Benchmark: [$bench_app, $int_app]" > $TEMP_LOG_FILE
     if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
     then
-        CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=50 taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        echo "Benchmark: $bench_app, Color:$BENCHMARK_COLOR, Range:$bench_proc_range, MPS Percentage:$percentage"
     else
         taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+    	echo "Benchmark:$bench_app, Color:$BENCHMARK_COLOR, Range:$bench_proc_range"
     fi
 
     ret_code=$?
