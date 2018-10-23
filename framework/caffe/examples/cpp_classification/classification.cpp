@@ -11,6 +11,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef USE_FGPU
+#include <fractional_gpu_testing.hpp>
+#endif
+
 #ifdef USE_OPENCV
 using namespace caffe;  // NOLINT(build/namespaces)
 using std::string;
@@ -226,8 +230,19 @@ void Classifier::Preprocess(const cv::Mat& img,
     << "Input channels are not wrapping the input layer of the network.";
 }
 
+#if defined(USE_FGPU)
+int fgpu_get_num_iter(void)
+{
+    const char* tmp = getenv("FGPU_NUM_ITER_ENV");
+    if (!tmp)
+        return 1;
+
+    return atoi(tmp);
+}
+#endif
+
 int main(int argc, char** argv) {
-  if (argc != 6) {
+  if (argc < 6) {
     std::cerr << "Usage: " << argv[0]
               << " deploy.prototxt network.caffemodel"
               << " mean.binaryproto labels.txt img.jpg" << std::endl;
@@ -249,14 +264,55 @@ int main(int argc, char** argv) {
 
   cv::Mat img = cv::imread(file, -1);
   CHECK(!img.empty()) << "Unable to decode image " << file;
-  std::vector<Prediction> predictions = classifier.Classify(img);
+
+#ifdef USE_FGPU
+  int i, j, num_iterations;
+  pstats_t stats;
+
+  num_iterations = fgpu_get_num_iter();
+
+  pstats_init(&stats);
+
+  std::vector<Prediction> predictions;
+
+  for (i = 0; i < 2; i++) {
+    bool is_warmup = (i == 0);
+
+    for (j = 0; j < num_iterations; j++) {
+
+      double start;
+
+      start = dtime_usec(0);
+
+      predictions = classifier.Classify(img);
+
+      if (!is_warmup)
+        pstats_add_observation(&stats, dtime_usec(start));
+    }
+  }
 
   /* Print the top N predictions. */
   for (size_t i = 0; i < predictions.size(); ++i) {
     Prediction p = predictions[i];
     std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
+        << p.first << "\"" << std::endl;
+  }
+  
+  printf("Overall Stats\n");
+    pstats_print(&stats);
+
+#else
+  std::vector<Prediction> predictions = classifier.Classify(img);
+
+  /* Print the top N predictions. */
+  for (size_t i = 0; i < predictions.size(); ++i) {
+      Prediction p = predictions[i];
+      std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
               << p.first << "\"" << std::endl;
   }
+
+#endif
+
 }
 #else
 int main(int argc, char** argv) {
