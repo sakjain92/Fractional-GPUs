@@ -1,38 +1,43 @@
-Add proper licence (RTML/NVIDIA for cuda samples)
-Add proper testing framework to test deadlock
-Add performance testing framework
-1) Command such as these might work suitably:
-(`./matrixMul_persistent 0 &> /tmp/a.out` &)  && (`./matrixMul_persistent 1 &> /tmp/b.out` &) 
+# TODO List
 
+This file lists all the broad high-level TODO items. They are broken into sub-categories
+* **Critical** - These features are neccesary and of high importance. 
+* **Important** - These features will make it easier to adopt FGPU or increase its utility.
+* **Nice to have** - These features should be tackled if sufficient time is available.
+* **Minor** - These features should not take much time to implement but are low on priority.
 
-Find reasons for overheads
-1) Few us overhead is because of using MPS (about 10us) with
-atleast one other process existing (launch server and keep it idle)
+## Critical
+1) Find reasons for high overheads on small kernels (such as SortingNetworks/NN).
+2) Find out cache-line size of Tesla V100.
+3) Add compiler support for compiler assisted code transformation to avoid manual kernel modifications. This will allow for virtualization of GPUs. Figure out how a single GPU is currently virtualized.
+Allows porting Caffe without the need to modify the source code (Caffe can use the closed source cuBLAS library).
+4) Confirm that compute partitioning is functionally correct (as there is no therotical guarantee that it will always work). If true, remove optional checks that exists currently in the code to ensure code runs functionally correct.
+5) Page color the metadata used by device driver also (such as page tables).
+6) Add proper licence for code distribution.
+7) Conduct case study to showcase FGPU can be used to improve throughput as compared to running back-to-back by exploiting the under-uilization of GPU by most applications.
+8) Understand the reason for high tail latency for kernel exeuction on FGPU.
+9) FGPU uses cudaMallocManaged() (as this is the API for which we have open source code in device driver). This API has a limitation that it blocks kernel execution and memory transfers from happening in parallel (just by invoking a single instance of this API changes the whole behaviour of cuda library). Need to figure out how to fool CUDA library into thinking this function was never called but still be able to call it.
+10) Promote FGPU on sites such as kubernetes in which users have explicitly opened up issues regarding need for fractional GPUs.
 
+## Important
+1) Eliminate requirement for MPS - Allows use of FGPU on embedded systems that lack MPS support from NVIDIA.
+Also, MPS in pre-Volta architecute causes breakdown of functional isolation between different application wrt to GPU memory.
+2) Reverse engineer memory hierarchy for embedded systems.
+3) Add support for multiple GPUs.
+4) Confirm that use of 4 KB pages have limited impact on performance as compared to use of 2 MB pages. If true, remove upport for userspace coloring.
+5) Reverse engineer memory hierarchy of other GPUs.
+6) Give more control to user on how to partition the SMs (currently all the partitions receive equal amount of SMs).
+7) Fix the bugs in device driver. Currently, some of the bugs are lying in the modified device driver. Hacks have been placed to bypass them currently. Need to fix these issues.
+8) Add support for a single application to use multiple colors - Helps in case hardware supports multiple colors.
+9) Add support for having more compute partitions that memory partitions.
+10) Find all the reasons for NVIDIA driver not being real-time (such as spawining background kernel threads).
 
-Limitations
-1) Only launch one at a time - This has some inteference with each other - SortingNetworks - Multiple kernels launched one after another - So smaller the kernels runtime, more contention (Try to see if possible to eleminate this need of launch one at a time)
-2) Requires MPS (Try to see if possible to eliminate need for this)
-3) Nvidia driver (for atleast dicrete GPUs) is not real time (I think for non-real GPUs kernel code is not publicily available). Kernel driver uses background threads which might have latency issues.
-4) For embedded GPUs probably memory hierachy is completely different. Might require CPU memory coloring.
-5) Power management on GPUs is an issue (on discrete GPUs)
-6) Functional memory isolation is not present (limitation of MPS and the way we semi-bypass TLB). Crash in one application cause crash in another (limitation of MPS, even if MPS bypassed, still this remains an issue)
-7) Half of memory is being wasted (This limitation can be removed)
-8) Application code needs to be modified (Maybe can be done at compiler level - But requires knowledge of which address is shared/contant and which is global)
-9) Requires root permission for insertion of kernel module and also for starting MPS
-10) Application might need to be compiled seperately for each different GPU (as hash function probably changes with GPUs and that function is inline. Can use 'switch-case' but will be slower in that case) - Is there a way to have multiple different kernels, one for each genarch?
-11) Only single GPU supported currently. Maybe multiple GPU might be possible (Each of same type?)
+## Nice to have
+1) Find out how to disable power mangement on discrete GPUs to avoid variablility in timing during benchmarks.
+2) Make it easier to port changes in device driver from one version to another (possibly in form of a patch).
+Currently we are forced to use a single device driver with the modified code hence limiting FGPU to CUDA 9.1.
 
-Advantages
-1) Flexible SM partitioning
-2) Almost full interference free - Works best for large kernels
-
-TODO
-1) If kernel occupancy is low, than a deadlock might happen. To avoid this, there is an API that tells how many blocks can fit in a SM. Use that.
-2) Test with large real applications
-3) Find 31st and 32nd bit of the memory hash function
-4) Run experiments on a GPU with even number of SM (e.g. GTX 1080)
-5) Find how memory heirachy/hash function changes with the GPU
-6) Try MPS on voltas and find it's limitation
-7) Cleanup code - Better error codes, better API - Specially how to cleanly do memory transfer between CPU - GPU
-8) Make PTEs persistent on GPU - Though this will make UVM transparent migration unavailable as a feature - But cleaner method. Also avoids double copy when just want to read data (so don't want to invalidate TLBs)
+## Minor
+1) Compile programs based on the generation of GPU (i.e. compute_arch or sm_arch compiler options passed to nvcc).
+2) Add better error code handling.
+3) Replace FGPU API with API with better names for functions/macros.
