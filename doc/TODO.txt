@@ -31,11 +31,16 @@ Also, MPS in pre-Volta architecute causes breakdown of functional isolation betw
 8) Add support for a single application to use multiple colors - Helps in case hardware supports multiple colors.
 9) Add support for having more compute partitions that memory partitions.
 10) Find all the reasons for NVIDIA driver not being real-time (such as spawining background kernel threads).
+11) Add testing framework to test functionality (apart from benchmark framework)
 
 ## Nice to have
 1) Find out how to disable power mangement on discrete GPUs to avoid variablility in timing during benchmarks.
 2) Make it easier to port changes in device driver from one version to another (possibly in form of a patch).
 Currently we are forced to use a single device driver with the modified code hence limiting FGPU to CUDA 9.1.
+3) Add C API (instead of just C++).
+4) Explore virtualization of graphics pipeline also. 
+5) Detailed commented code.
+6) Add suport for multiple CUDA streams.
 
 ## Minor
 1) Compile programs based on the generation of GPU (i.e. compute_arch or sm_arch compiler options passed to nvcc).
