@@ -18,13 +18,13 @@ through FGPU API. Revert back the changes and compile again after completion of 
 
 ## My application is complaining that "FGPU:Couldn't open shmem"
 
-This indicates that the fgpu_server is not running. Please see the document *$PROJ_DIR/doc/PORT.txt*.
+This indicates that the fgpu_server is not running. Please see the document *$PROJ_DIR/doc/PORT.md*.
 
 ## FGPU server is complaining that "FGPU:Couldn't get device color info"
 
 This indicates that the device driver has not been confifured for memory partitioning but FGPU has been.
 Recompile FGPU with appropriate configuration and then install the device driver. 
-Please see the document *$PROJ_DIR/doc/BUILD.txt*.
+Please see the document *$PROJ_DIR/doc/BUILD.md*.
 
 ## FGPU server is complaining that "FGPU:MPS is not enabled"
 FGPU server requires Nvidia MPS. Run the following command
@@ -63,7 +63,7 @@ Tue Oct 23 17:29:12 2018
 There can be four reasons for this:
 
 * Environment variables *PATH* or *LD_LIBRARY_PATH* are not configured properly <br/>
-    Both these variables should point to cuda installation path. Refer to *$PROJ_DIR/doc/BUILD.txt*
+    Both these variables should point to cuda installation path. Refer to *$PROJ_DIR/doc/BUILD.md*
 
 * CUDA SDK is not installed  <br/>
     Check that the CUDA SDK is installed by running following command

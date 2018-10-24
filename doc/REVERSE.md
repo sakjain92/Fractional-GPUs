@@ -9,12 +9,12 @@ Pascal architecture. We have already reversed engineering Pascal and Volta archi
 details of which are provided below.
 
 To reverse engineer details about other architectures, it is required to run reverse engineering code.
-For this, FGPU code needs to be compiled in reverse engineering mode (See *$PROJ_DIR/doc/BUILD.txt*).
+For this, FGPU code needs to be compiled in reverse engineering mode (See *$PROJ_DIR/doc/BUILD.md*).
 
 When reverse engineering mode is enable and FGPU is compiled, reverse engineering 
 code is builded in form of a binary *gpu_reverse_engineering*, present in the build
 directory. Running it provides with the details of L2 cache and DRAM structure of the current GPU. 
-Refer to *$PROJ_DIR/doc/PORT.txt* on how to run FGPU applications.
+Refer to *$PROJ_DIR/doc/PORT.md* on how to run FGPU applications.
 
 Also, some support needs to be added for that specific architecture in the device driver. Please refer to the following
 files to see what changes are required:

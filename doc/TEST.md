@@ -6,7 +6,7 @@ Various applications have been ported to use FPGU API. These are present in
 *$PROJ_DIR/programs*. Some of the application within *$PROJ_DIR/programs* 
 use user-space memory coloring, which is an obselete feature FGPU provided, 
 and hence should not be taken as reference. For an example, refer to 
-*$PROJ_DIR/benchmarks/cudaSDK/vectorAdd/vectorAdd.cu*. File *$PROJ_DIR/doc/PORT.txt* 
+*$PROJ_DIR/benchmarks/cudaSDK/vectorAdd/vectorAdd.cu*. File *$PROJ_DIR/doc/PORT.md* 
 explains how to port an application to use FGPU API.
 
 The header file *$PROJ_DIR/include/fractional_gpu_testing.hpp* contains some helper functions that
@@ -23,7 +23,7 @@ To add a new test application to build system, refer to *$PROJ_DIR/CMakelists.tx
 In micro-benchmark evaluation, we have taken codes from CUDA SDK and Rodinia suite and 
 modified them to use FGPU API. These benchmarks can be found in *$PROJ_DIR/benchmarks*.
 The methodology for benchmark is as follows:
-1) Configure FGPU into a specific mode (Refer to *$PROJ_DIR/doc/BUILD.txt* to see all modes that FGPU supports)
+1) Configure FGPU into a specific mode (Refer to *$PROJ_DIR/doc/BUILD.md* to see all modes that FGPU supports)
 2) Run a single application on the first partition of GPU. All other partitions are empty. Measure time taken by
 kernels of the application.
 3) Run an application on the first partition of GPU. On all other partitions, run an interfering application (copies
@@ -46,7 +46,7 @@ computation resources equally between all partitions of GPU. Note: FGPU should b
 mode when using this option as we rely on MPS to do the partition and not FGPU.
 
 ### Running benchmarks
-After selecting the mode for FGPU and building the code (Refer to *$PROJ_DIR/doc/BUILD.txt*),
+After selecting the mode for FGPU and building the code (Refer to *$PROJ_DIR/doc/BUILD.md*),
 run the following commands:
 
 ```

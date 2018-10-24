@@ -133,19 +133,19 @@ Work is currently in progress.
 
 Apart from this README, the following text files exist to help new developers:
 
-* **doc/BUILD.txt**          
+* **doc/BUILD.md**          
     * This file contains steps to setup/build/install FGPU.
-* **doc/FAQ.txt**
+* **doc/FAQ.md**
     * This file contains solutions to frequently encountered issues.
 * **doc/FGPU-RTAS-2019.pdf** 
     * This file contains overall details about FGPU functionality and evaluation results.
-* **doc/PORT.txt**           
+* **doc/PORT.md**           
     * This file contains details about how to port applications to use FGPU and how to
     run applications that use FGPU. Including how to use Caffe that is ported to FGPU API.
-* **doc/REVERSE.txt**        
+* **doc/REVERSE.md**        
     * This file contains details about how to reverse engineer GPU memory hierarchy.
     * It also contains details about GPUs that have been reversed engineered.
-* **doc/TEST.txt**           
+* **doc/TEST.md**           
     * This file contains details about how to add new tests and how to run benchmarks.
-* **doc/TODO.txt**           
+* **doc/TODO.md**           
     * This file contains a wish-list of features/issues to be added/solved.
