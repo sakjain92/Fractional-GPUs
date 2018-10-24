@@ -103,7 +103,7 @@ We might require you to provide us with access to this GPU for testing.
 Work is currently in progress. 
 
 * **v0.1** has been released as a tag and is stable and working.
-* **v0.2** has been proper documentation. This tag was used for RTAS 2019 paper evaluations.
+* **v0.2** has proper documentation. This tag was used for RTAS 2019 paper evaluations.
 
 
 ## Directory Hierarchy
