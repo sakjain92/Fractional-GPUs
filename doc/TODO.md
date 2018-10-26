@@ -18,6 +18,7 @@ Allows porting Caffe without the need to modify the source code (Caffe can use t
 8) Understand the reason for high tail latency for kernel exeuction on FGPU.
 9) FGPU uses cudaMallocManaged() (as this is the API for which we have open source code in device driver). This API has a limitation that it blocks kernel execution and memory transfers from happening in parallel (just by invoking a single instance of this API changes the whole behaviour of cuda library). Need to figure out how to fool CUDA library into thinking this function was never called but still be able to call it.
 10) Promote FGPU on sites such as kubernetes in which users have explicitly opened up issues regarding need for fractional GPUs.
+11) Caffe test failing with FGPU: GPUStochasticPoolingLayerTest 
 
 ## Important
 1) Eliminate requirement for MPS - Allows use of FGPU on embedded systems that lack MPS support from NVIDIA.

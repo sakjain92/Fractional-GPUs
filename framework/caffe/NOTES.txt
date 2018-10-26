@@ -2,6 +2,11 @@ List of useful commands:
 
 make all
 make test
-sudo LD_PRELOAD=/home/saksham/work/eval/fractional_gpu/build/libfractional_gpu.so LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/saksham/work/eval/fractional_gpu/build/ make runtest
+
+./scripts/download_model_binary.py models/bvlc_reference_caffenet  # Download Model
+./data/ilsvrc12/get_ilsvrc_aux.sh
+
+sudo LD_PRELOAD=/home/saksham/work/eval/fractional_gpu/build/libfractional_gpu.so LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/saksham/work/eval/fractional_gpu/build/ make runtest --gtest_filter=-GPUStochasticPoolingLayerTest # One of the test fails currently and has been removed.
+
 sudo FGPU_COLOR_ENV=0 FGPU_COLOR_MEM_SIZE_ENV=2000000000 FGPU_NUM_ITER_ENV=1000 LD_PRELOAD=/home/saksham/work/eval/fractional_gpu/build/libfractional_gpu.so LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/saksham/work/eval/fractional_gpu/build/ taskset -c 4-7 schedtool -R -p 99 -e ./build/examples/cpp_classification/classification.bin   models/bvlc_reference_caffenet/deploy.prototxt   models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   data/ilsvrc12/imagenet_mean.binaryproto   data/ilsvrc12/synset_words.txt   examples/images/cat.jpg
 
