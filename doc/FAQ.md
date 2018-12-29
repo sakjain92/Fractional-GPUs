@@ -18,13 +18,13 @@ through FGPU API. Revert back the changes and compile again after completion of 
 
 ## My application is complaining that "FGPU:Couldn't open shmem"
 
-This indicates that the fgpu_server is not running. Please see the document *$PROJ_DIR/doc/PORT.md*.
+This indicates that the fgpu_server is not running. Please see the document [doc/PORT.md](../doc/PORT.md).
 
 ## FGPU server is complaining that "FGPU:Couldn't get device color info"
 
-This indicates that the device driver has not been confifured for memory partitioning but FGPU has been.
+This indicates that the device driver has not been configured for memory partitioning but FGPU has been.
 Recompile FGPU with appropriate configuration and then install the device driver. 
-Please see the document *$PROJ_DIR/doc/BUILD.md*.
+Please see the document [doc/BUILD.md](../doc/BUILD.md).
 
 ## FGPU server is complaining that "FGPU:MPS is not enabled"
 FGPU server requires Nvidia MPS. Run the following command
@@ -32,12 +32,17 @@ FGPU server requires Nvidia MPS. Run the following command
 sudo $PROJ_DIR/scripts/mps_init.sh
 ```
 
+<a name="checkInstalled"/>
+
 ## How do I check if CUDA SDK and Nvidia device driver have been installed correctly?
 By running *nvidia-smi* tool, we can do an end-to-end check. 
 ```
 nvidia-smi
 ```
-It should report the details about all the GPUs it could find attached to current machine. For example
+If this command doesn't exist, then CUDA SDK has not been installed. If it exists
+but shows an error, there is an issue with CUDA SDK/Nvidia device driver.
+
+Otherwise, it should report the details about all the GPUs it could find attached to current machine. For example
 ```
 Tue Oct 23 17:29:12 2018       
 +-----------------------------------------------------------------------------+
@@ -58,12 +63,17 @@ Tue Oct 23 17:29:12 2018
 +-----------------------------------------------------------------------------+
 ```
 
+## I have multiple GPUs attached to my machine. How do I select which GPU the application should use?
+
+Our APIs currently only support a single GPU. The first GPU mentioned by ```nvidia-smi``` (device 0) is selected by default.
+To modify the GPU mentioned as first, please refer to CUDA docuemntation (see *CUDA_VISIBLE_DEVICES*).
+
 ## I cannot run the application as it complains "error while loading shared libraries: libcuda.so" or "error while loading shared libraries: libcudart.so"
 
 There can be four reasons for this:
 
 * Environment variables *PATH* or *LD_LIBRARY_PATH* are not configured properly <br/>
-    Both these variables should point to cuda installation path. Refer to *$PROJ_DIR/doc/BUILD.md*
+    Both these variables should point to cuda installation path. Refer to [doc/BUILD.md](../doc/BUILD.md).
 
 * CUDA SDK is not installed  <br/>
     Check that the CUDA SDK is installed by running following command
@@ -73,7 +83,7 @@ There can be four reasons for this:
     It should state the CUDA SDK version as 9.1
 
 * Nvidia device driver is not installed <br/>
-    Check that the device driver is installed.
+    Check that the device driver is [installed](#checkInstalled)
 
 * *ldconfig* cache is not populated correctly. <br/>
     Try running the following command:

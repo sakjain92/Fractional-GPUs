@@ -9,18 +9,18 @@ to allow Fractional GPUs to be used in real-time systems such as autonomous vehi
 or to allow virtualization of GPU with strong run-time guarantees.
 
 FGPU also have code to reverse engineer details about GPU memory hierarchy, specifically
-details about structure of GPU L2 cache and DRAM. Our reverse engineering code can find
+details about the structure of GPU L2 cache and DRAM. Our reverse engineering code can find
 details such as L2 cache line size, number of cache sets, mapping from a physical address
 to L2 cache set index, number of DRAM banks, number of DRAM chips/memory controllers, 
-width of bus for a single DRAM chip and mapping from a physical address to DRAM bank index.
-We find that the GPU memory hierarchy is sufficiently different from CPU memory hierarchy.
+the width of the bus for a single DRAM chip and mapping from a physical address to DRAM bank index.
+We find that the GPU memory hierarchy is sufficiently different from the CPU memory hierarchy.
 
 Currently, we support only Nvidia's GPU (discrete GPUs) and CUDA. Due to hardware limitations,
 applications require modifications to source code to use this functionality
 (we will mitigate this limitation in future via compiler aided source code transformation).
 
 Interested readers can read our academic paper which is present at doc/FGPU-RTAS-2019.pdf
-which gives high level details about functionality of FGPU.
+which gives high-level details about the functionality of FGPU.
 
 ## How it works
 There are two components to providing isolation between partitions:
@@ -32,14 +32,14 @@ runtime of A1 remains unchanged in the following scenario:
 1) A1 running on P1. P2 is idle.
 2) A1 running on P1. A2 running on P2.
 
-i.e. A2 has no effect on A1 (A2 doesn't steal A1's compute resources). While 
-considering compute isolation, we do not consider the impact of A2’s
+i.e. A2 has no effect on A1 (A2 doesn't steal A1's compute resources). While considering 
+compute isolation, we do not consider the impact of A2’s
 memory transactions (reads/writes) on A1’s run-time through any conflicts in the 
 memory hierarchy (such as L2 cache conflicts). 
 
 In our implementation, compute isolation is achieved by assigning non-overlapping sets
 of SMs to P1 and P2 and forcing A1 to use only P1's SM and A2 to use only P2's
-SM. For example, if a GPU has 10 SMs, we might assign 0-4 SMs to P1 and 5-10 SMs
+SM. For example, if a GPU has 10 SMs, we might assign 0-4 SMs to P1 and 5-9 SMs
 to P2. When A1 runs, it will be forced to use only 0-4 SMs (A1 is allowed to 
 under-utilize these SMs). Hence the maximum number of compute partitions is equal
 to the total number of SMs (as SM is the smallest compute unit allocated to a
@@ -63,7 +63,7 @@ To use page coloring, memory hierarchy of GPU needs to be known. Since this is
 not publicly released information for Nvidia's GPU, we have written code to reverse
 engineer this information. We then used this information (along with modifying the
 application's code and Nvidia's kernel driver) to exploit page coloring. 
-We find the GPU's memory hierarchy is very well suited for page coloring and gives
+We find that the GPU's memory hierarchy is very well suited for page coloring and gives
 near perfect memory bandwidth isolation. The maximum number of memory bandwidth 
 partition is equal to the number of "colors" provided by page coloring. This is
 dependent on the GPU's hardware.
@@ -107,25 +107,28 @@ Work is currently in progress.
 
 
 ## Directory Hierarchy
-* **benchmarks/**
+* **[benchmarks/](benchmarks/)**
     * Contains benchmarks used to evaluate FGPU performance.
-* **doc/**
+* **[doc/](doc/)**
     * Contains various documents that describe various aspects of FGPU.
-* **driver/**
+* **[driver/](driver/)**
     * Contains the modified nvidia driver to support memory coloring.
-* **framework/**
+* **[framework/](framework/)**
     * Contains frameworks (such as Caffe) which have to ported to use FGPU API.
-* **include/**
+* **[include/](include/)**
     * Contains files to be included by applications using FPGU.
-* **persistent/**
+* **[persistent/](persistent/)**
     * Code for FGPU API.
-* **programs/**
+* **[programs/](programs/)**
+    * *Update:* Do not refer to examples in this folder as they use some of the deprecated
+      APIs (which makes it harder to understand the code even though the code is fully functional). 
+      Please instead refer to benchmark folder.
     * Contains example codes for testing/benchmarking.
-    * Folders ending with 'persistent' have applications that use compute partitioning features.
-    * Other folders are native code (not using partitioning feature).
-* **reverse_engineering/**
+    * Folders ending with 'persistent' have applications that use partitioning features.
+    * Other folders are native code (not using the partitioning feature).
+* **[reverse_engineering/](reverse_engineering/)**
     * Contains code used to reverse engineer the memory hierarchy of GPUs.
-* **scripts/**
+* **[scripts/](scripts/)**
     * Contains basic utility scripts.
 
 
@@ -133,19 +136,19 @@ Work is currently in progress.
 
 Apart from this README, the following text files exist to help new developers:
 
-* **doc/BUILD.md**          
+* **[doc/BUILD.md](doc/BUILD.md)**  
     * This file contains steps to setup/build/install FGPU.
-* **doc/FAQ.md**
+* **[doc/FAQ.md](doc/FAQ.md)**
     * This file contains solutions to frequently encountered issues.
-* **doc/FGPU-RTAS-2019.pdf** 
+* **[doc/FGPU-RTAS-2019.pdf](doc/FGPU-RTAS-2019.pdf)** 
     * This file contains overall details about FGPU functionality and evaluation results.
-* **doc/PORT.md**           
+* **[doc/PORT.md](doc/PORT.md)**           
     * This file contains details about how to port applications to use FGPU and how to
     run applications that use FGPU. Including how to use Caffe that is ported to FGPU API.
-* **doc/REVERSE.md**        
+* **[doc/REVERSE.md](doc/REVERSE.md)**        
     * This file contains details about how to reverse engineer GPU memory hierarchy.
     * It also contains details about GPUs that have been reversed engineered.
-* **doc/TEST.md**           
+* **[doc/TEST.md](doc/TEST.md)**           
     * This file contains details about how to add new tests and how to run benchmarks.
-* **doc/TODO.md**           
+* **[doc/TODO.md](doc/TODO.md)**           
     * This file contains a wish-list of features/issues to be added/solved.

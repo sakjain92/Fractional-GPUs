@@ -25,12 +25,12 @@ Allows porting Caffe without the need to modify the source code (Caffe can use t
 Also, MPS in pre-Volta architecute causes breakdown of functional isolation between different application wrt to GPU memory.
 2) Reverse engineer memory hierarchy for embedded systems.
 3) Add support for multiple GPUs.
-4) Confirm that use of 4 KB pages have limited impact on performance as compared to use of 2 MB pages. If true, remove upport for userspace coloring.
+4) Confirm that use of 4 KB pages have limited impact on performance as compared to use of 2 MB pages. If true, remove support for userspace coloring.
 5) Reverse engineer memory hierarchy of other GPUs.
 6) Give more control to user on how to partition the SMs (currently all the partitions receive equal amount of SMs).
 7) Fix the bugs in device driver. Currently, some of the bugs are lying in the modified device driver. Hacks have been placed to bypass them currently. Need to fix these issues.
 8) Add support for a single application to use multiple colors - Helps in case hardware supports multiple colors.
-9) Add support for having more compute partitions that memory partitions.
+9) Add support for having more compute partitions than memory partitions.
 10) Find all the reasons for NVIDIA driver not being real-time (such as spawining background kernel threads).
 11) Add testing framework to test functionality (apart from benchmark framework)
 

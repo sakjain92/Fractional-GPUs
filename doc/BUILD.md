@@ -15,7 +15,7 @@ of FGPU on your machine.
 FGPU can be configured upto certain degree.
 
 ### Global configuration
-File **config.cmake.in** contains the following options that can be configured:
+File **[config.cmake.in](../config.cmake.in)** contains the following options that can be configured:
 
 * **FGPU_COMP_COLORING_ENABLE**
     * Default - Enabled
@@ -26,12 +26,13 @@ File **config.cmake.in** contains the following options that can be configured:
     * Default - Enabled
     * Disabling this disabled memory bandwidth partitioning. In this case, each application utilizes whole GPU memory bandwidth.
     * Enabling this enabled memory bandwidth partitioning. In this case, each application utilizes only a fraction of whole GPU memory bandwidth.
+    * Currently we do not support memory partitioning without compute partitioning.
 
 * **FGPU_TEST_MEM_COLORING_ENABLED**
     * Default - Disabled.
     * Enabling this enables contiguous memory allocation when using fgpu_memory_allocate() API.
     * This feature is useful only when reverse engineering a new GPU.
-    * To be kept disabled during production mode.
+    * To be kept disabled during production mode (i.e. when running actual applications/benchmarks).
 
 * **FGPU_USER_MEM_COLORING_ENABLED**
     * Default - Disabled.
@@ -67,12 +68,12 @@ Hence an application using FGPU can run in these modes:
     * *FGPU_COMP_COLORING_ENABLE* is enabled.
     * *FGPU_MEM_COLORING_ENABLED* is disabled.
     * *FGPU_TEST_MEM_COLORING_ENABLED* is enabled.
-    * Only reverse engineering code is intended to run (one at a time) in this scenario.
+    * Only reverse engineering code is intended to run (one reverse engineering application at a time) in this scenario.
 
 
 ### Fine tuning configuration
 
-For fine tuning, parameters in **include/fgpu_internal_config.hpp** can be modified. Specifically,
+For fine tuning, parameters in **[include/fgpu_internal_config.hpp](../include/fgpu_internal_config.hpp)** can be modified. Specifically,
 the following paramters might be of interest:
 
 * **FGPU_PREFERRED_NUM_COLORS**
@@ -81,11 +82,12 @@ the following paramters might be of interest:
     * This only specifices an upper bound on the total number of partitions. If it is -1, effectively no hint is passed to FGPU.
     * If only compute partitioning is enabled, number of partitions = MIN(number of SM, FGPU_PREFERRED_NUM_COLORS)
     * If both compute and memory bandwidth partitioning is enabled, number of partitions = MIN(number of SM, number of memory colors, FGPU_PREFERRED_NUM_COLORS)
-    * Currently each partition has equal number of SMs and equal memory bandwidth.
+        * Currently, it is not possible to have different number of compute and memory partitions. 
+        * Also, currently each partition has equal number of SMs and equal memory bandwidth.
 
 ## Setup
 FGPU requires following setup prior to build/installation:
-* CUDA SDK 9.1 is required.
+* CUDA SDK 9.1 is required (We currently only support specifically CUDA SDK 9.1).
     * CUDA SDK version can be probed
         ```
         nvcc --version
@@ -102,7 +104,7 @@ FGPU requires following setup prior to build/installation:
             export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
             export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
             ```
-* Nvidia driver needs to be uninstalled
+* Nvidia driver needs to be uninstalled (You need to do this even if you newly install CUDA 9.1)
     * To remove old Nvidia drivers
         ```
         sudo apt-get purge nvidia*
@@ -119,7 +121,7 @@ cmake ..
 make
 ```
 
-In the build directory, following files should be present:
+After these steps, in the build directory, following files should be present:
 
 * *libfractional_gpu.so* - Link external applications with this library
 * *fgpu_server* - Server that is required by FGPU applications.
@@ -152,9 +154,11 @@ needs to be installed before any application can run. Following are the steps to
         sudo service lightdm stop
         ```
     * Keep it stopped if running benchmarks as you do not want graphics applications to mess with your evaluations.
+      This can be achieved by running this command after each boot.
 
 * Stop all CUDA programs
     * Before install Nvidia driver, all existing applications using Nvidia driver needs to be stopped.
+    (See list of running applications using ```ps -ef```)
     * Nvidia MPS also needs to be stopped
         ```
         sudo $PROJ_DIR/scripts/mps_stop.sh
@@ -169,7 +173,7 @@ needs to be installed before any application can run. Following are the steps to
     * Follow all default options that come on screen.
 
 ## Note
-Each time any of the options in **config.cmake.in** are modified, all the build and installation
+Each time any of the options in **[config.cmake.in](../config.cmake.in)** are modified, all the build and installation
 steps needs to be repeated. Your application code might also need to be compiled again
 (as these options modify the header files). Hence all the following steps needs to be redone 
 (in the same order as described below):
@@ -186,4 +190,16 @@ steps needs to be repeated. Your application code might also need to be compiled
         make
         ```
 * Compile and Install device driver
+    ```
+    cd $PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48
+    sudo ./nvidia-installer
+    ```
 * Rebuild all external applications that are using FGPU API.
+
+## Running applications
+
+See [doc/PORT.md](../doc/PORT.md) for how to compile applications and then
+run them after completing the build and installation steps.
+
+## Issues during Build/Installation phase
+See [doc/FAQ.md](../doc/FAQ.md).
