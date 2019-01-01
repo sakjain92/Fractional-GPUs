@@ -9,34 +9,28 @@ Pascal architecture. We have already reversed engineering Pascal and Volta archi
 details of which are provided below.
 
 To reverse engineer details about other architectures, it is required to run reverse engineering code.
-For this, FGPU code needs to be compiled in reverse engineering mode (See *$PROJ_DIR/doc/BUILD.md*).
+For this, FGPU code needs to be compiled in reverse engineering mode (See *[doc/BUILD.md](../doc/BUILD.md)*).
 
 When reverse engineering mode is enable and FGPU is compiled, reverse engineering 
 code is builded in form of a binary *gpu_reverse_engineering*, present in the build
 directory. Running it provides with the details of L2 cache and DRAM structure of the current GPU. 
-Refer to *$PROJ_DIR/doc/PORT.md* on how to run FGPU applications.
+Refer to *[doc/PORT.md](../doc/PORT.md)* on how to run FGPU applications.
 
-Also, some support needs to be added for that specific architecture in the device driver. Please refer to the following
-files to see what changes are required:
-* *$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal.c*
-* *$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta.c*
-
-Similar changes are required to be made in the file 
+Also, some support needs to be added for that specific architecture in the device driver:
 *$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_\<arch\>.c*
 
+Please refer to the following files to see what changes are required:
+* *[driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal.c](../driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal.c)*
+* *[driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta.c](../driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta.c)*
+
 After reverse engineering details about a GPU architecture, support for memory coloring can be added for that
-architecture. We have alreeady added support for memory coloring on Pascal and Volta architecture. Please
+architecture in the file $PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_<arch>_mmu.c
+We have alreeady added support for memory coloring on Pascal and Volta architecture. Please
 refer to the following files:
-* *$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal_mmu.c*
-* *$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta_mmu.c*
+* *[driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal_mmu.c](../driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_pascal_mmu.c)*
+* *[driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta_mmu.c](../driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_volta_mmu.c)*
 
-To add memory coloring in any other architecture, similar changes need to be made in the file
-*$PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/kernel/nvidia-uvm/uvm8_\<arch\>_mmu.c*
-
-Note: Currently even though Volta has capability to have 8 memory colors, we have only added support for 2 memory
-colors. This can be easily changed.
-
-For more details about GPU memory hierarchy, please refer to *$PROJ_DIR/doc/FGPU-RTAS-2019.pdf*.
+For more details about GPU memory hierarchy, please refer to *[doc/FGPU-RTAS-2019.pdf](../doc/FGPU-RTAS-2019.pdf)*.
 
 ## Reversed Engineered GPUs
 
