@@ -99,7 +99,8 @@ sudo $PROJ_DIR/driver/NVIDIA-Linux-x86_64-390.48/nvidia-installer --uninstall
 
 ## *mps_stop.sh* script is stuck. What should I do?
 To stop MPS, it is first required that all applications using CUDA are stopped/killed
-(including *fgpu_server*).
+(including *fgpu_server*). Use combination of ```ps -ef``` and ```kill -9 <pid>```.
+
 You might also want to try running the following command
 ```
 sudo $PROJ_DIR/scripts/mps_kill.sh
@@ -107,7 +108,7 @@ sudo $PROJ_DIR/scripts/mps_kill.sh
 
 ## My application is stuck at the start and not making any progress
 
-There can be three reasons for this:
+There can be four reasons for this:
 * Pre-Volta MPS only allows a single user at a time  <br/>
     If you are using a GPU that is of pre-Volta architecture, only single user can run applications
     at a time. Check that all the running applications (including *fgpu_server*) have been launched by the same user.
@@ -125,6 +126,15 @@ There can be three reasons for this:
     sudo $PROJ_DIR/scripts/mps_kill.sh
     ```
 
+* Application is only assigned one core and is given real-time priority <br/>
+    This issue can only occur if you are changing the CPU affinity for an application and also giving it
+    a real-time linux prioirty (RR - Round robin scheduling policy).
+    
+    Since certain CUDA API that FGPU uses are non-blocking (in these API, CUDA spawns a thread that does 
+    a non-blocking check on a condition in a loop), if you are using real-time linux scheduling policy (RR), 
+    assign atleast 2 CPU cores per application. This might also be a problem if only a single CPU core exists in your system.
+    In such case, avoid using RR policy (try FIFO instead).
+
 * Bug in device driver <br/>
     There might be some bugs in the Nvidia device driver. To check if this is the cause, the following command outputs the linux kernel
     log. Check if the log shows any kernel panics.
@@ -134,6 +144,6 @@ There can be three reasons for this:
     Some bugs in the device driver might cause reboots. Please open a new issue with the log attached incase you notice any reboots or kernel panics.
 
 
-## I have read this FAQ and all the supplement documents in this repository. I am still facing an issue not covered. What should I do?
+## I have read this FAQ and all the supplement documents in this repository. I am still facing an issue not covered here. What should I do?
 
 Please open a new issue on the github repository.
