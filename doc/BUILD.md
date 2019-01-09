@@ -33,6 +33,7 @@ File **[config.cmake.in](../config.cmake.in)** contains the following options th
     * Enabling this enables contiguous memory allocation when using fgpu_memory_allocate() API.
     * This feature is useful only when reverse engineering a new GPU.
     * To be kept disabled during production mode (i.e. when running actual applications/benchmarks).
+    * This requires both compute and memory coloring to be enabled.
 
 * **FGPU_USER_MEM_COLORING_ENABLED**
     * Default - Disabled.
