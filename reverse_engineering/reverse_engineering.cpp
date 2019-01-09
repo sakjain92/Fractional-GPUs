@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <math.h>
+#include <stdarg.h>
 
 #include <algorithm>
 #include <vector>
@@ -51,18 +52,49 @@ typedef struct pchase_cb_arg {
 
 /* Parameters for DRAM Bank access time histogram */
 static bool g_dram_histogram_enabled = false;
-static int g_dram_histogram_sample_size = 1000;
+static bool g_dram_trendline_enabled = false;
+static bool g_interference_enabled = false;
+static int g_dram_sample_size = 1000;
 static int g_dram_histogram_spacing = 10;
+FILE *g_dram_histogram_fp;
+FILE *g_dram_trendline_fp;
+FILE *g_interference_fp;
+char *g_dram_histogram_file;
+char *g_dram_trendline_file;
+char *g_interference_file;
 
+/* Prints and hightlights string */
+static void print_highlighted(const char *fmt, ...)
+{
+    va_list args;
+    char buf[1000];
+    size_t len;
+
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    len = strlen(buf);
+    for (size_t i = 0; i < len; i++)
+        printf("*");
+    printf("\n");
+
+    printf("%s\n", buf);
+
+    for (size_t i = 0; i < len; i++)
+        printf("*");
+    printf("\n");
+}
 /* Usage for current program */
 void print_usage(char **argv)
 {
     fprintf(stderr, "Usage: %s [OPTIONS]\n"
-            "-d Number of samples of DRAM histogram. Enables DRAM histogram (Default: %s). Default :%d\n"
-            "-s Spacing for dram histogram. Enables DRAM histogram (Default: %s). Default: %d\n", argv[0],
-            g_dram_histogram_enabled ? "ON" : "OFF", 
-            g_dram_histogram_sample_size,
-            g_dram_histogram_enabled ? "ON" : "OFF",
+            "-H Filename for outputting DRAM access time histogram\n"
+            "-I Filename for outputting DRAM Banks/Cachelines inteference results\n"
+            "-T Filename for outputting DRAM access times\n"
+            "-n Number of samples of DRAM. Default :%d\n"
+            "-s Spacing for dram histogram. Default: %d\n", argv[0],
+            g_dram_sample_size,
             g_dram_histogram_spacing);
 }
 
@@ -70,7 +102,7 @@ void parse_args(int argc, char **argv)
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:s:h")) != -1) {
+    while ((opt = getopt(argc, argv, "H:I:T:n:s:h")) != -1) {
         
         switch (opt) {
         
@@ -79,14 +111,45 @@ void parse_args(int argc, char **argv)
             fprintf(stderr, "Exiting\n");
             exit(EXIT_SUCCESS);
 
-        case 'd':
-            g_dram_histogram_enabled = true;
-            g_dram_histogram_sample_size = atoi(optarg);
+        case 'n':
+            g_dram_sample_size = atoi(optarg);
             break;
 
         case 's':
-            g_dram_histogram_enabled = true;
             g_dram_histogram_spacing = atoi(optarg);
+            break;
+
+        case 'H':
+            g_dram_histogram_enabled = true;
+            g_dram_histogram_file = optarg;
+            g_dram_histogram_fp = fopen(optarg, "w");
+            if (!g_dram_histogram_fp)
+            {
+                fprintf(stderr, "Error opening file %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+
+        case 'I':
+            g_interference_enabled = true;
+            g_interference_file = optarg;
+            g_interference_fp = fopen(optarg, "w");
+            if (!g_interference_fp)
+            {
+                fprintf(stderr, "Error opening file %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+
+        case 'T':
+            g_dram_trendline_enabled = true;
+            g_dram_trendline_file = optarg;
+            g_dram_trendline_fp = fopen(optarg, "w");
+            if (!g_dram_trendline_fp)
+            {
+                fprintf(stderr, "Error opening file %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
             break;
 
         default: /* '?' */
@@ -191,12 +254,12 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
     std::vector<std::pair<void *, double>> times;
     std::vector<int> dram_histogram;
 
-    if (g_dram_histogram_enabled) {
+    if (g_dram_histogram_enabled || g_dram_trendline_enabled) {
         
-        count = std::min(max_entries, (size_t)g_dram_histogram_sample_size);
-        if (count != g_dram_histogram_sample_size) {
+        count = std::min(max_entries, (size_t)g_dram_sample_size);
+        if (count != g_dram_sample_size) {
             fprintf(stderr, "WARNING: DRAM histogram sample size will be %d, instead of %d\n",
-                    count, g_dram_histogram_sample_size);
+                    count, g_dram_sample_size);
         }
     }
 
@@ -225,10 +288,10 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
     threshold = avg * THRESHOLD_MULTIPLIER;
     running_threshold = (avg * (100.0 + OUTLIER_DRAM_PERCENTAGE)) / 100.0;
 
-    if (g_dram_histogram_enabled) {
+    if (g_dram_histogram_enabled || g_dram_trendline_fp) {
 
-        printf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
-            threshold, running_threshold, max, min);
+        printf("Access Time: Threshold is: %f cycles, (Max: %f cycles, Min:%f cycles)\n",
+            running_threshold, max, min);
 
         /* Create histogram bins - Add few extra bins at end just for verification by eyeballing */
         int max_bins = get_histogram_bin(max, min, g_dram_histogram_spacing) + 2;
@@ -236,31 +299,37 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             dram_histogram.push_back(0);
         }
 
-        /* Print and add to histogram */
+
+        if (g_dram_trendline_enabled) {
+            print_highlighted("Outputting DRAM access time trendline's raw data to %s", g_dram_trendline_file);
+            fprintf(g_dram_trendline_fp, "PrimaryAddress\t SecondaryAddress\t AccessTime(cycles)\t Threshold(cycles)\n");
+        }
+
         for (int i = 0; i < times.size(); i++) {
             int bin;
 
-            if (times[i].second > running_threshold) {
-                printf("DRAM Access Times: %p,\t %p,\t %f us --- Exceeds threashold\n", phy_start,
-                        times[i].first, times[i].second);
-            } else {
-                printf("DRAM Access Times: %p,\t %p,\t %f us\n", phy_start,
-                        times[i].first, times[i].second);
+            if (g_dram_trendline_enabled) {
+
+                fprintf(g_dram_trendline_fp, "%p\t %p\t %f\t %f\n", phy_start,
+                            times[i].first, times[i].second, running_threshold);
             }
 
             bin = get_histogram_bin(times[i].second, min, g_dram_histogram_spacing);
             dram_histogram[bin]++;
         }
 
-        /* Print histogram */
-        for (int i = 0; i < max_bins; i++) {
-            double bin_start_time = 
-                get_histogram_bin_start_time(i, min, g_dram_histogram_spacing);
-            printf("DRAM Histogram: Start:%f, End:%f, Count:%d\n",
-                    bin_start_time, bin_start_time + g_dram_histogram_spacing,
-                    dram_histogram[i]);
-        }
+        if (g_dram_histogram_enabled) {
 
+            print_highlighted("Outputting DRAM access time histogram's raw data to %s", g_dram_histogram_file);
+            fprintf(g_dram_histogram_fp, "StartAccessTime-EndAccessTime\t Count\n");
+            for (int i = 0; i < max_bins; i++) {
+                double bin_start_time = 
+                    get_histogram_bin_start_time(i, min, g_dram_histogram_spacing);
+                fprintf(g_dram_histogram_fp, "%d-%d\t %d\n",
+                        bin_start_time, bin_start_time + g_dram_histogram_spacing,
+                        dram_histogram[i]);
+            }
+        }
     } else {
         dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
             threshold, running_threshold, max, min);
@@ -322,14 +391,14 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
 
     /* Row size should be a power of 2 */
     if (min_row_size == 0 || !is_power_of_2(min_row_size)) {
-        fprintf(stderr, "Min row size seems to be incorrect\n");
+        fprintf(stderr, "Min row size (%zu) seems to be incorrect\n", min_row_size);
         return NULL;
     }
 
     min_bit = ilog2((unsigned long long)min_row_size);
     offset = (1ULL << min_bit);
     
-    printf("Max Bit:%d, Min Bit:%d\n", max_bit, min_bit);
+    printf("Physical address bits from which DRAM Banks are possibly derived: Max Bit:%d, Min Bit:%d\n", max_bit, min_bit);
 
     hctx = hash_init(min_bit, max_bit, phy_start, phy_end);
     assert(hctx);
@@ -349,7 +418,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
         /* Sort before printing */
         hash_sort_solutions(hctx);
 
-        printf("Hash Function for DRAM Banks:\n");
+        print_highlighted("Hash Function for DRAM Banks:");
         hash_print_solutions(hctx);
     }
 
@@ -453,7 +522,7 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
         /* Sort before printing */
         hash_sort_solutions(hctx);
 
-        printf("Hash Function for Cacheline:\n");
+        print_highlighted("Hash Function for Cacheline:");
         hash_print_solutions(hctx);
     }
 
@@ -469,28 +538,24 @@ static hash_context_t *run_cache_exp(void *virt_start, void *phy_start, size_t a
     if (ret < 0) {
         fprintf(stderr, "Couldn't find number of words in a cachline\n");
     }
-    printf("Number of words in a cachline:%zd\n", num_words);
+    print_highlighted("Number of words in a cachline:%zd", num_words);
     
     return hctx;
 }
 
 static int run_interference_exp_helper(void *virt_start,
         pchase_cb_arg_t *primary_pchase_cb_arg,
-        pchase_cb_arg_t *secondary_pchase_cb_arg)
+        pchase_cb_arg_t *secondary_pchase_cb_arg,
+        std::vector<double> &time)
 {
     int ret;
-    std::vector<double> time;
 
     ret = device_run_interference_exp(virt_start, get_next_word,
-            primary_pchase_cb_arg, secondary_pchase_cb_arg, 32, 1000, 
+            primary_pchase_cb_arg, secondary_pchase_cb_arg, 50, 1000, 
             time);
     if (ret < 0) {
         fprintf(stderr, "Couldn't run interference exp\n");
         return ret;
-    }
-
-    for (int i = 0; i < time.size(); i++) {
-        printf("Inteference Test: Number of Blocks:%d, Time:%f\n", i + 1, time[i]);
     }
 
     return 0;
@@ -509,7 +574,7 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     secondary_pchase_cb_arg.virt_start = (uintptr_t)virt_start;
     secondary_pchase_cb_arg.phy_start = (uintptr_t)phy_start;
     
-    std::vector<double> time;
+    std::vector<double> times[5];
 
     primary_pchase_cb_arg.ctx.clear();
     primary_pchase_cb_arg.partition.clear();
@@ -529,9 +594,9 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     secondary_pchase_cb_arg.ctx.push_back(common_hctx);
     secondary_pchase_cb_arg.partition.push_back(0);
 
-    printf("Interference Experiment: Same Cacheline, Same DRAM Bank, Same Partition\n");
+    printf("Running Interference Experiment: Same Cacheline, Same DRAM Bank, Same Partition\n");
     ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
-            &secondary_pchase_cb_arg);
+            &secondary_pchase_cb_arg, times[0]);
     if (ret < 0)
         return ret;
     
@@ -544,9 +609,9 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     secondary_pchase_cb_arg.ctx.push_back(common_hctx);
     secondary_pchase_cb_arg.partition.push_back(0);
 
-    printf("Interference Experiment: Same Cacheline, Different DRAM Bank, Same Partition\n");
+    printf("Running Interference Experiment: Same Cacheline, Different DRAM Bank, Same Partition\n");
     ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
-            &secondary_pchase_cb_arg);
+            &secondary_pchase_cb_arg, times[1]);
     if (ret < 0)
         return ret;
 
@@ -559,9 +624,9 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     secondary_pchase_cb_arg.ctx.push_back(common_hctx);
     secondary_pchase_cb_arg.partition.push_back(0);
 
-    printf("Interference Experiment: Different Cacheline, Same DRAM Bank, Same Partition\n");
+    printf("Running Interference Experiment: Different Cacheline, Same DRAM Bank, Same Partition\n");
     ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
-            &secondary_pchase_cb_arg);
+            &secondary_pchase_cb_arg, times[2]);
     if (ret < 0)
         return ret;
 
@@ -574,9 +639,9 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     secondary_pchase_cb_arg.ctx.push_back(common_hctx);
     secondary_pchase_cb_arg.partition.push_back(0);
 
-    printf("Interference Experiment: Different Cacheline, Different DRAM Bank, Same Partition\n");
+    printf("Running Interference Experiment: Different Cacheline, Different DRAM Bank, Same Partition\n");
     ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
-            &secondary_pchase_cb_arg);
+            &secondary_pchase_cb_arg, times[3]);
     if (ret < 0)
         return ret;
 
@@ -593,12 +658,34 @@ static int run_interference_exp(void *virt_start, void *phy_start,
      * Even if same dram and cache, but in different partition, hence in different
      * dram and cache partitions.
      */
-    printf("Interference Experiment: Different Cacheline, Different DRAM Bank, Different Partition\n");
+    printf("Running Interference Experiment: Different Cacheline, Different DRAM Bank, Different Partition\n");
     ret = run_interference_exp_helper(virt_start, &primary_pchase_cb_arg, 
-            &secondary_pchase_cb_arg);
+            &secondary_pchase_cb_arg, times[4]);
     if (ret < 0)
         return ret;
+
+    /* Number of blocks/threads should be same in each */
+    size_t s = times[0].size();
+    for (int i = 1; i < 5; i++) {
+        assert(times[i].size() == s);
+    }
+
+    assert(g_interference_fp);
+
+    print_highlighted("Outputting Interference experiment results' raw data to %s", g_interference_file);
+    fprintf(g_interference_fp, "NumThreads\t SameCachelineSameDRAMBank\t " 
+            "SameCachelineDifferentDRAMBank\t DifferentCachelineSameDRAMBank\t " 
+            "SamePartition\t DifferentPartition\n");
     
+    for (int i = 0; i < s; i++) {
+        fprintf(g_interference_fp, "%d\t ", i + 1);
+
+        for (int j = 0; j < 5; j++) {
+            fprintf(g_interference_fp, "%f\t ", times[j][i]);
+        }
+        
+        fprintf(g_interference_fp, "\n");
+    }
     return 0;
 }
 
@@ -653,26 +740,37 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    printf("Finding common solutions between DRAM and Cache\n");
+    print_highlighted("Finding common solutions between DRAM and Cache");
     common_hctx = hash_get_common_solutions(dram_hctx, cache_hctx);
 
-    printf("Unique DRAM bank solutions\n");
+    print_highlighted("Unique DRAM bank solutions");
     hash_print_solutions(dram_hctx);
 
-    printf("Unique Cache solutions\n");
+    print_highlighted("Unique Cache solutions");
     hash_print_solutions(cache_hctx);
 
-    printf("Running Interference Tests\n");
-    ret = run_interference_exp(virt_start, phy_start, cache_hctx, dram_hctx, 
-            common_hctx);
-    if (ret < 0) {
-        fprintf(stderr, "Couldn't run interference tests\n");
-        return -1;
+    if (g_interference_enabled) {
+        print_highlighted("Running Interference Tests");
+        ret = run_interference_exp(virt_start, phy_start, cache_hctx, dram_hctx, 
+                common_hctx);
+        if (ret < 0) {
+            fprintf(stderr, "Couldn't run interference tests\n");
+            return -1;
+        }
     }
 
     hash_del(dram_hctx);
     hash_del(cache_hctx);
     hash_del(common_hctx);
+
+    if (g_dram_histogram_fp)
+        fclose(g_dram_histogram_fp);
+
+    if (g_dram_trendline_fp)
+        fclose(g_dram_trendline_fp);
+
+    if (g_interference_fp)
+        fclose(g_interference_fp);
 
     return 0;
 }
