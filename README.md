@@ -152,3 +152,20 @@ Apart from this README, the following text files exist to help new developers:
     * This file contains details about how to add new tests and how to run benchmarks.
 * **[doc/TODO.md](doc/TODO.md)**           
     * This file contains a wish-list of features/issues to be added/solved.
+
+## Help! Too many document and I am impatient!
+
+For a quick demo, first setup your system according to *SETUP* section of 
+[doc/BUILD.md](doc/BUILD.md#setup) (also ensure that you have one of the supported
+GPUs in your system. The first GPU in the system is the GPU used by FGPU by default)
+
+Then, follow these steps:
+```
+cd $PROJ_DIR/scripts
+./evaluations # Follow the steps shown on screen. 
+```
+
+[scripts/evaluation.sh](scripts/evlaution.sh) is a demo script that allows to
+quickly reverse engineer GPUs and evaluate existing benchmarks without needing
+to understand the details of compilation and launch steps associated with FGPU
+(the script handles these steps).
