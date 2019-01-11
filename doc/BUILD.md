@@ -100,6 +100,11 @@ FGPU requires following setup prior to build/installation:
             sudo apt-get --purge remove 'cuda*'
             ```
         * To install CUDA SDK 9.1, download it from https://developer.nvidia.com/cuda-downloads
+        * CUDA SDK and FGPU depends on following packages:
+            * gcc
+            * make
+            * cmake (version 3.8 or greater)
+            * g++
         * After installing add the following to ~/.bashrc file
             ```
             export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}

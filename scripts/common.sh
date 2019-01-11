@@ -21,7 +21,7 @@ BENCHMARK_SCRIPT="run_benchmark.sh"
 supported_gpus=(
 "GeForce GTX 1070"
 "GeForce GTX 1080"
-"Tesla V100"
+"Tesla V100-SXM2-16GB"
 )
 
 # Aliases used in academic paper

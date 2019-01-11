@@ -438,7 +438,7 @@ case $evaluation_mode_number in
         done
 
         result_file=`mktemp`
-        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime\tNormalizedRunTime\n" > $result_file
+        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime(usec)\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime(usec)\tNormalizedRunTime\n" > $result_file
 
         index=0
         for b in "${benchmarks[@]}"
