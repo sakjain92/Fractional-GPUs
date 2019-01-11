@@ -168,4 +168,71 @@ cd $PROJ_DIR/scripts
 [scripts/evaluation.sh](scripts/evlaution.sh) is a demo script that allows to
 quickly reverse engineer GPUs and evaluate existing benchmarks without needing
 to understand the details of compilation and launch steps associated with FGPU
-(the script handles these steps).
+(the script handles these steps). This script re-runs all experiments that were
+done for the FGPU academic paper. Following is a brief explaination of what this 
+script does (Read  [doc/FGPU-RTAS-2019.pdf](doc/FGPU-RTAS-2019.pdf) before proceeding)
+
+FGPU paper can be broken down into 3 chiefs parts: 
+1) Reverse engineering of GPU
+2) Micro-benchmark evaluation on CUDA/Rodinia applications
+3) Macro-benchmark evaluation on Caffe application
+
+This script allows user to re-run all of the above experiments (it has been 
+tested on GTX 1080 and Tesla V100 GPUs). Apart from these, it also allows
+functional testing of FGPU. The script initially asks user to chose one of these
+options.
+
+### Reverse Engineering of GPU
+
+If user chooses this option, the script executes reverse engineering code
+([reverse_engineering/](reverse_engineering/)). 
+1) First, access time of multiple pairs 
+of physical address are collected (Algorithm 1 in FGPU paper). Using this data, the
+script generates trendline of access times and histogram of same
+(Fig 3 and 4 in FGPU paper). 
+2) Then, with this information, hash function for DRAM banks is reversed engineered. 
+3) Next, similar approach is taken to reverse engineer hash function for cacheline. 
+4) Finally, using data about these hash functions, experiments are conducted to see 
+which page coloring scheme gives least interference (Fig. 8 of FGPU paper)
+
+The scripts ends up generating plots for Fig. 3/4/8 of FGPU paper.
+
+### Micro-benchmark evalution on CUDA/Rodinia applications
+If user chooses this option, the script executes benchmarks available in 
+[benchmarks/](benchmarks). There are 3 types of modes in which FGPU can operate
+1) Compute Partitioning Only (CP)
+2) Compute and Mammory Partitioning (CMP)
+3) Volta MPS based Compute Partitioning only (MPS)
+
+(The last option is based on Nvidia's MPS and is only for comparision with isolation
+provided by FGPU. FGPU plays no role in this mode).
+
+User is prompted by the script to chose one of these modes. Using this mode, the GPU 
+is split into multiple partitions. The user is also asked for how many partitions
+does the user want the GPU to be split into (the number of available partitions is 
+hardware dependent).
+
+To see amount of isolation FGPU provides, each of these benchmark is ran in parallel alongside with 
+interfering applications (these interfering applications are themself subsets of the 
+benchmark applications). Hence, on one partition of the GPU, one of the benchmark runs and on other
+partitions other interfering applications run. The runtime of benchmark application
+is measured across different interfering applications. For perfect isolation, this runtime
+should be independent of the interfering application. This is repeated for all different benchmarks.
+
+To normalize these runtimes, as a baseline, each benchmark also runs on the whole GPU without any interfering application.
+These normalized runtimes are then ploted in a graph for the specific FGPU mode by the script. Fig 9a/9b/11
+in the FGPU paper are basically merge of two or more of these plots (E.g Fig 9a is combination of 
+CP and CMP)
+
+### Macro-benchmark evaluation on Caffe applications
+This option is similar as the above option. The only difference is that instead of using CUDA/Rodinia
+applications, we use a ML (image classification) application that uses FGPU ported Caffe.
+
+### Testing
+In this mode, the script uses selected CUDA benchmark applications
+([benchmarks/cudaSDK](benchmarks/cudaSDK)) to test FGPU functionally.
+To do these, we compare the output of these applications
+(when running with/without interfering applications) with known expected output.
+For example [benchmarks/cudaSDK/vectorAdd/](benchmarks/cudaSDK/vectorAdd/) adds two
+vectors together on GPU. Hence we know the epected output based on inputs which we compare
+with the runtime output of GPU implementation of vectorAdd.
