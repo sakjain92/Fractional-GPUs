@@ -78,20 +78,21 @@ configure_fgpu() {
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=ON" "FGPU_TEST_MEM_COLORING_ENABLED=OFF"
         ;;
     4)
-        echo "********************************************"
-        echo "Configuring FGPU in reverse engineering mode"
-        echo "********************************************"
-        FGPU_MODE=$FGPU_REVERSE_ENGINEERING 
-        FGPU_MODE_NAME="FGPU VOLTA COMPUTE ONLY PARTITIONING MODE"
-        build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=ON" "FGPU_TEST_MEM_COLORING_ENABLED=ON"
-        ;;
-    5)
         echo "************************************************************************************************"
         echo "Configuring FGPU in disabled mode (Volta MPS will do the compute partitioning, FGPU is bypassed)"
         echo "************************************************************************************************"
         FGPU_MODE=$FGPU_VOLTA_COMPUTE_ONLY
         FGPU_MODE_NAME="FGPU REVERSE ENGINEERING MODE"
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=OFF" "FGPU_MEM_COLORING_ENABLED=OFF" "FGPU_TEST_MEM_COLORING_ENABLED=OFF"
+        ;;
+
+    5)
+        echo "********************************************"
+        echo "Configuring FGPU in reverse engineering mode"
+        echo "********************************************"
+        FGPU_MODE=$FGPU_REVERSE_ENGINEERING 
+        FGPU_MODE_NAME="FGPU VOLTA COMPUTE ONLY PARTITIONING MODE"
+        build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=ON" "FGPU_TEST_MEM_COLORING_ENABLED=ON"
         ;;
     esac
 
@@ -215,7 +216,7 @@ plot_benchmark() {
         set xtics rotate;
         set key noenhanced;
         set xtics noenhanced;
-        plot '$1' using 1:6:1:xticlabels(stringcolumn(2)) with boxes lc var, '' using 1:6:6 with labels offset char 0,1;
+        plot '$1' using 1:8:1:xticlabels(stringcolumn(2)) with boxes lc var, '' using 1:8:8 with labels offset char 0,1;
     "
 
     gnuplot -e "$gnu_command"
@@ -260,40 +261,43 @@ case $evaluation_mode_number in
         hist_outfile=`mktemp`
         treadline_outfile=`mktemp`
         inteference_outfile=`mktemp`
-        hist_outfile="$hist_outfile.png"
-        treadline_outfile="$treadline_outfile.png"
-        inteference_outfile="$inteference_outfile.png"
+        hist_outfile="$hist_outfile\_dram_bank_access_histogram.png"
+        treadline_outfile="$treadline_outfile\_dram_bank_access_trendline.png"
+        inteference_outfile="$inteference_outfile\_cache_and_dram_interference_experiments.png"
 
         $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
         if [ $? -ne 0 ]; then
             do_error_exit "Reverse engineering code failed"
         fi
 
-        echo "*********************************************************************************"
-        echo "Showing Treadline of DRAM Bank access time (Saving plot to $treadline_outfile)"
-        echo "*********************************************************************************"
+        echo "***********************************************************************"
+        echo "Saving plot of Treadline of DRAM Bank access time to $treadline_outfile"
+        echo "***********************************************************************"
         $REVERSE_ENGINEERING_PATH/$REVERSE_ENGINEERING_PLOT -T=$treadline_file -t=$treadline_outfile
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot trendline"
         fi
+        "Open the file to see the plot"
         pause_for_user_input
 
-        echo "******************************************************************************"
-        echo "Showing Histogram of DRAM Bank access time  (Saving plot to $hist_outfile)"
-        echo "******************************************************************************"
+        echo "***************************************************************"
+        echo "Saving plot of Histogram of DRAM Bank access time $hist_outfile"
+        echo "***************************************************************"
         $REVERSE_ENGINEERING_PATH/$REVERSE_ENGINEERING_PLOT -G=$hist_file -g=$hist_outfile
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot histogram"
         fi
+        "Open the file to see the plot"
         pause_for_user_input
 
-        echo "**************************************************************************************"
-        echo "Showing results of interference expermients (Saving plot to $inteference_outfile)"
-        echo "**************************************************************************************"
+        echo "************************************************************"
+        echo "Saving plot of interference expermients $inteference_outfile"
+        echo "************************************************************"
         $REVERSE_ENGINEERING_PATH/$REVERSE_ENGINEERING_PLOT -I=$inteference_file -i=$inteference_outfile
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot inteference expermients result"
         fi
+        "Open the file to see the plot"
         pause_for_user_input
 
         deinit_fgpu
@@ -383,13 +387,15 @@ case $evaluation_mode_number in
         echo "INFO: For measuring baseline, we disable FGPU and for each benchmark, we run it alone without any interference"
         configure_fgpu $FGPU_DISABLED
         print_fgpu_mode
+       
+        baseline_interference="__none__"
         
         for b in "${benchmarks[@]}"
         do
             # For normalization, base case is when FGPU is disabled,
             # and benchmark application runs alone fully utilizing the whole
             # GPU
-            i="__none__"
+            i=$baseline_interference
             echo "*************************************************"
             echo "Running Benchmark:$b with Interference:$i"
             echo "*************************************************"
@@ -418,7 +424,7 @@ case $evaluation_mode_number in
         done
 
         result_file=`mktemp`
-        printf "Index\tBenchmark-Interference\tNumIterations\tNumColors\tAvgRunTime\tNormalizedRunTime\n" > $result_file
+        printf "Index\tBenchmark-Interference\tNumIterations\tNumColors\tAvgRunTime\tBaselineBenchmark-Inteference\tBaselineAvgRunTime\tNormalizedRunTime\n" > $result_file
 
         index=0
         for b in "${benchmarks[@]}"
@@ -427,8 +433,9 @@ case $evaluation_mode_number in
             do
                 run=${runtimes[index]}
                 norm=${normalized[index]}
+                base=${baseline[index]}
                 index=$((index+1))
-                printf "$index\t$b-$i\t$num_iterations\t$num_colors\t$run\t$norm\n" >> $result_file
+                printf "$index\t$b-$i\t$num_iterations\t$num_colors\t$run\t$b-$baseline_interference\t$base\t$norm\n" >> $result_file
             done
         done
 
@@ -443,13 +450,14 @@ case $evaluation_mode_number in
         echo "****************************************************"
         
         output_plot=`mktemp`
-        output_plot="$output_plot.png"
+        output_plot="$output_plot\_benchmarks.png"
         plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchmarks[*]}" "${#inteferences[*]}"
 
         echo ""
         echo "****************************************************"
         echo "Benchmark results plot is saved in file $output_plot"
         echo "****************************************************"
+        "Open the file to see the plot"
         pause_for_user_input
 
         ;;

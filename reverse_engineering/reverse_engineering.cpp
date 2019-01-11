@@ -325,7 +325,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             for (int i = 0; i < max_bins; i++) {
                 double bin_start_time = 
                     get_histogram_bin_start_time(i, min, g_dram_histogram_spacing);
-                fprintf(g_dram_histogram_fp, "%d-%d\t %d\n",
+                fprintf(g_dram_histogram_fp, "%.1f-%.1f\t %d\n",
                         bin_start_time, bin_start_time + g_dram_histogram_spacing,
                         dram_histogram[i]);
             }
