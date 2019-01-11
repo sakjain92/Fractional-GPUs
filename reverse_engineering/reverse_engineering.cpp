@@ -325,8 +325,8 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             for (int i = 0; i < max_bins; i++) {
                 double bin_start_time = 
                     get_histogram_bin_start_time(i, min, g_dram_histogram_spacing);
-                fprintf(g_dram_histogram_fp, "%.1f-%.1f\t %d\n",
-                        bin_start_time, bin_start_time + g_dram_histogram_spacing,
+                fprintf(g_dram_histogram_fp, "%d-%d\t %d\n",
+                        (int)(bin_start_time), (int)(bin_start_time) + g_dram_histogram_spacing,
                         dram_histogram[i]);
             }
         }
@@ -673,9 +673,9 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     assert(g_interference_fp);
 
     print_highlighted("Outputting Interference experiment results' raw data to %s", g_interference_file);
-    fprintf(g_interference_fp, "NumThreads\t SameCachelineSameDRAMBank\t " 
-            "SameCachelineDifferentDRAMBank\t DifferentCachelineSameDRAMBank\t " 
-            "SamePartition\t DifferentPartition\n");
+    fprintf(g_interference_fp, "NumThreads\t SameCachelineSame_DRAMBank(SCSB)\t " 
+            "SameCachelineDifferentDRAMBank(CSDB)\t DifferentCachelineSameDRAMBank(DCSB)\t " 
+            "DifferentCachelineDifferentBank(DCDB)\t DifferentModule(DM)\n");
     
     for (int i = 0; i < s; i++) {
         fprintf(g_interference_fp, "%d\t ", i + 1);

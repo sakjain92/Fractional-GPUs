@@ -30,6 +30,10 @@ EVAL_CAFFE=3                     # Benchmark using caffe
 # Tracks the current evaluation mode
 EVAL_MODE=''
 
+# Refresh state of machine
+echo "INFO:Cleaning up any previous FGPU related state"
+deinit_fgpu
+
 # Step 1 - Find the GPU
 check_is_volta_gpu
 IS_VOLTA=$?
@@ -66,7 +70,7 @@ configure_fgpu() {
         echo "Configuring FGPU in compute partitioning only mode"
         echo "**************************************************"
         FGPU_MODE=$FGPU_COMPUTE_ONLY
-        FGPU_MODE_NAME="FGPU COMPUTE ONLY PARTITIONING MODE"
+        FGPU_MODE_NAME="FGPU COMPUTE ONLY PARTITIONING MODE (CP)"
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=OFF" "FGPU_TEST_MEM_COLORING_ENABLED=OFF"
         ;;
     3)
@@ -74,7 +78,7 @@ configure_fgpu() {
         echo "Configuring FGPU in compute and memory partitioning mode"
         echo "********************************************************"
         FGPU_MODE=$FGPU_COMPUTE_AND_MEMORY 
-        FGPU_MODE_NAME="FGPU COMPUTE AND MEMORY PARTITIONING MODE"
+        FGPU_MODE_NAME="FGPU COMPUTE AND MEMORY PARTITIONING MODE (CMP)"
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=ON" "FGPU_TEST_MEM_COLORING_ENABLED=OFF"
         ;;
     4)
@@ -82,7 +86,7 @@ configure_fgpu() {
         echo "Configuring FGPU in disabled mode (Volta MPS will do the compute partitioning, FGPU is bypassed)"
         echo "************************************************************************************************"
         FGPU_MODE=$FGPU_VOLTA_COMPUTE_ONLY
-        FGPU_MODE_NAME="FGPU REVERSE ENGINEERING MODE"
+        FGPU_MODE_NAME="FGPU VOLTA COMPUTE ONLY PARTITIONING MODE (MPS)"
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=OFF" "FGPU_MEM_COLORING_ENABLED=OFF" "FGPU_TEST_MEM_COLORING_ENABLED=OFF"
         ;;
 
@@ -91,7 +95,7 @@ configure_fgpu() {
         echo "Configuring FGPU in reverse engineering mode"
         echo "********************************************"
         FGPU_MODE=$FGPU_REVERSE_ENGINEERING 
-        FGPU_MODE_NAME="FGPU VOLTA COMPUTE ONLY PARTITIONING MODE"
+        FGPU_MODE_NAME="FGPU REVERSE ENGINEERING MODE"
         build_and_install_fgpu "FGPU_COMP_COLORING_ENABLE=ON" "FGPU_MEM_COLORING_ENABLED=ON" "FGPU_TEST_MEM_COLORING_ENABLED=ON"
         ;;
     esac
@@ -154,7 +158,7 @@ run_benchmark() {
 
     # Print to stdout and store in variable
     echo ""
-    output=$(sudo $1 | tee /dev/tty)
+    output=$($1 | tee /dev/tty)
     echo ""
 
     if [ $? -ne 0 ]; then
@@ -208,7 +212,7 @@ plot_benchmark() {
         set output '$2';
         set title 'Normalized Average Runtime of Benchmarks ($3, Number of Colors:$4, Number of Iterations:$5)';
         set ylabel 'Normalized Runtime';
-        set xlabel 'Benchmark-Interference';
+        set xlabel 'Benchmark(Alias)-Interference(Alias)';
         set key autotitle columnhead;
         set boxwidth 0.5;
         set style fill solid;
@@ -216,6 +220,7 @@ plot_benchmark() {
         set xtics rotate;
         set key noenhanced;
         set xtics noenhanced;
+        set yrange [0:*];
         plot '$1' using 1:8:1:xticlabels(stringcolumn(2)) with boxes lc var, '' using 1:8:8 with labels offset char 0,1;
     "
 
@@ -232,8 +237,8 @@ plot_benchmark() {
 # Step 2 - Chose the evaluation
 echo "Choose one of the following evaluation modes"
 echo "1) Reverse engineering of GPU (Get hidden details about the GPU)"
-echo "2) Show results of benchmarks (CUDA/Rodinia applications)"
-echo "3) Show results of benchmarks (Caffe application)"
+echo "2) Show results of micro benchmarks (CUDA/Rodinia applications)"
+echo "3) Show results of macro benchmarks (Caffe application)"
 echo "Enter option(1 or 2 or 3): " 
 read evaluation_mode_number
 echo ""
@@ -261,9 +266,9 @@ case $evaluation_mode_number in
         hist_outfile=`mktemp`
         treadline_outfile=`mktemp`
         inteference_outfile=`mktemp`
-        hist_outfile="$hist_outfile\_dram_bank_access_histogram.png"
-        treadline_outfile="$treadline_outfile\_dram_bank_access_trendline.png"
-        inteference_outfile="$inteference_outfile\_cache_and_dram_interference_experiments.png"
+        hist_outfile+="_dram_bank_access_histogram.png"
+        treadline_outfile+="_dram_bank_access_trendline.png"
+        inteference_outfile+="_cache_and_dram_interference_experiments.png"
 
         $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
         if [ $? -ne 0 ]; then
@@ -277,7 +282,7 @@ case $evaluation_mode_number in
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot trendline"
         fi
-        "Open the file to see the plot"
+        echo "Open the file to see the plot"
         pause_for_user_input
 
         echo "***************************************************************"
@@ -287,7 +292,7 @@ case $evaluation_mode_number in
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot histogram"
         fi
-        "Open the file to see the plot"
+        echo "Open the file to see the plot"
         pause_for_user_input
 
         echo "************************************************************"
@@ -297,7 +302,7 @@ case $evaluation_mode_number in
         if [ $? -ne 0 ]; then
             do_error_exit "Failed to plot inteference expermients result"
         fi
-        "Open the file to see the plot"
+        echo "Open the file to see the plot"
         pause_for_user_input
 
         deinit_fgpu
@@ -373,9 +378,12 @@ case $evaluation_mode_number in
         do
             for i in "${inteferences[@]}"
             do
-                echo "*************************************************"
-                echo "Running Benchmark:$b with Interference:$i"
-                echo "*************************************************"
+                b_alias=${benchmark_aliases[$b]}
+                i_alias=${benchmark_aliases[$i]}
+
+                echo "*************************************************************************************"
+                echo "Running Benchmark:$b(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
+                echo "*************************************************************************************"
 
                 cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -b=$b"
                 run_benchmark "$cmd"
@@ -396,9 +404,12 @@ case $evaluation_mode_number in
             # and benchmark application runs alone fully utilizing the whole
             # GPU
             i=$baseline_interference
-            echo "*************************************************"
-            echo "Running Benchmark:$b with Interference:$i"
-            echo "*************************************************"
+            b_alias=${benchmark_aliases[$b]}
+            i_alias=${benchmark_aliases[$i]}
+
+            echo "**************************************************************************************"
+            echo "Running Benchmark:$b(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
+            echo "**************************************************************************************"
 
             cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -b=$b"
             run_benchmark "$cmd"
@@ -424,7 +435,7 @@ case $evaluation_mode_number in
         done
 
         result_file=`mktemp`
-        printf "Index\tBenchmark-Interference\tNumIterations\tNumColors\tAvgRunTime\tBaselineBenchmark-Inteference\tBaselineAvgRunTime\tNormalizedRunTime\n" > $result_file
+        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime\tNormalizedRunTime\n" > $result_file
 
         index=0
         for b in "${benchmarks[@]}"
@@ -435,7 +446,10 @@ case $evaluation_mode_number in
                 norm=${normalized[index]}
                 base=${baseline[index]}
                 index=$((index+1))
-                printf "$index\t$b-$i\t$num_iterations\t$num_colors\t$run\t$b-$baseline_interference\t$base\t$norm\n" >> $result_file
+                b_alias=${benchmark_aliases[$b]}
+                i_alias=${benchmark_aliases[$i]}
+                bi_alias=${benchmark_aliases[$baseline_interference]}
+                printf "$index\t%-40s\t$num_iterations\t$num_colors\t%-10s\t%-40s\t%-10s\t$norm\n" "$b($b_alias)-$i($i_alias)" "$run" "$b($b_alias)-$baseline_interference($bi_alias)" "$base" >> $result_file
             done
         done
 
@@ -450,14 +464,14 @@ case $evaluation_mode_number in
         echo "****************************************************"
         
         output_plot=`mktemp`
-        output_plot="$output_plot\_benchmarks.png"
+        output_plot+="_benchmarks.png"
         plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchmarks[*]}" "${#inteferences[*]}"
 
         echo ""
         echo "****************************************************"
         echo "Benchmark results plot is saved in file $output_plot"
         echo "****************************************************"
-        "Open the file to see the plot"
+        echo "Open the file to see the plot"
         pause_for_user_input
 
         ;;

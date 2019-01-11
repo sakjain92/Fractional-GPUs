@@ -24,6 +24,17 @@ supported_gpus=(
 "Tesla V100"
 )
 
+# Aliases used in academic paper
+declare -A benchmark_aliases=(
+["cudaSDK_mms"]="MM" 
+["cudaSDK_sn"]="SN"
+["cudaSDK_va"]="VA"
+["cudaSDK_sp"]="SP"
+["cudaSDK_fwt"]="FWT"
+["rodinia_cfd"]="CFD"
+["__none__"]="<NONE>"
+)
+
 # Get any input from user to continue
 pause_for_user_input() {
     read -p "Press enter to continue"
@@ -196,6 +207,10 @@ deinit_fgpu() {
     kill_process $SERVER
 
     sleep 2
+
+    # Kill all possibly running benchmarks
+    sudo pkill -9 cudaSDK
+    sudo pkill -9 rodinia
 
     # End MPS
     sudo $SCRIPTS_PATH/mps_kill.sh  &> /dev/null

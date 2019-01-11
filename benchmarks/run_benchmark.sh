@@ -6,9 +6,6 @@ source ./config_benchmark.sh
 # Parse command line arguments
 parse_args $@
 
-# Script needs root permissions
-check_if_sudo
-
 #Change pwd to Proj directory 
 cd $PROJ_PATH
 
@@ -96,10 +93,10 @@ run_benchmark () {
 		range=${int_proc_ranges[$index]}
 	        if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
         	then
-            		CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+                    sudo CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
                     echo "Interference:$int_app, Color:$color, CPU Affinity:$range, MPS Percentage:$percentage"
         	else
-            		taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+                    sudo taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
                         echo "Interference:$int_app, Color:$color, CPU Affinity:$range"
         	fi
     	done
@@ -109,10 +106,10 @@ run_benchmark () {
     echo "New Benchmark: [$bench_app, $int_app]" > $TEMP_LOG_FILE
     if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
     then
-        CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        sudo CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
         echo "Benchmark: $bench_app, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range, MPS Percentage:$percentage"
     else
-        taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
     	echo "Benchmark:$bench_app, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range"
     fi
 
