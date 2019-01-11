@@ -11,6 +11,9 @@ fi
 
 source $COMMON_SCRIPT
 
+# Shouldn't be running as root
+check_if_not_sudo
+
 # Different modes of FGPU
 FGPU_DISABLED=1                  # No compute/memory partitioning
 FGPU_COMPUTE_ONLY=2              # Compute partitioning only

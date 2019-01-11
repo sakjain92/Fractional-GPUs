@@ -74,8 +74,8 @@ check_arg_between() {
 }
 
 # Checks if script has sudo permissions
-check_if_sudo() {
-    if [[ $EUID -ne 0 ]]; then
+check_if_not_sudo() {
+    if [[ $EUID -eq 0 ]]; then
         echo "This script should not be run using sudo or as the root user"
         exit 1
     fi
@@ -231,8 +231,8 @@ init_fgpu() {
     fi
 
     # Remove server file
-    rm -f /dev/shm/fgpu_shmem > /dev/null
-    rm -f /dev/shm/fgpu_host_shmem > /dev/null
+    sudo rm -f /dev/shm/fgpu_shmem > /dev/null
+    sudo rm -f /dev/shm/fgpu_host_shmem > /dev/null
 
     sleep 5
 

@@ -3,6 +3,9 @@
 # Include file containing configurable options
 source ./config_benchmark.sh
 
+# Shouldn't be running as root
+check_if_not_sudo
+
 # Parse command line arguments
 parse_args $@
 
@@ -23,7 +26,7 @@ proc=`nproc`
 # non-overlapping CPU cores.
 app_proc=$((proc/NUM_COLORS))
 if [[ "$app_proc"  -eq "0" ]] ||  [[ "$app_proc" -eq "1" ]]; then
-    do_error_exit "Not enough CPU cores in the system to run benchmark"
+    do_error_exit "Not enough CPU cores in the system to run benchmark (Cores: $proc, Colors: $NUM_COLORS)"
 fi
 
 num_it=$((NUM_COLORS - 1))
@@ -84,6 +87,9 @@ run_benchmark () {
     # inteference applications then (since they will not exit on their own as running in infinte loop).
 
     # If no interference, skip launching inteference application
+    # We need to run schedtool which requires root permission but we don't want to
+    # run the benchmark as root
+    user=`whoami`
     if ! [[ $int_app = $NO_INTERFERENCE_DUMMY_APP ]]
     then
         for i in `seq 1 $num_it`;
@@ -93,10 +99,10 @@ run_benchmark () {
 		range=${int_proc_ranges[$index]}
 	        if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
         	then
-                    sudo CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+                sudo taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  su -c "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null" $user &
                     echo "Interference:$int_app, Color:$color, CPU Affinity:$range, MPS Percentage:$percentage"
         	else
-                    sudo taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  $BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null &
+                sudo taskset -c $range schedtool -R -p $INTERFERENCE_PRIO -e  su -c "$BIN_PATH/$int_app -c $color -m $MEMORY  -k &> /dev/null" $user &
                         echo "Interference:$int_app, Color:$color, CPU Affinity:$range"
         	fi
     	done
@@ -106,10 +112,10 @@ run_benchmark () {
     echo "New Benchmark: [$bench_app, $int_app]" > $TEMP_LOG_FILE
     if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
     then
-        sudo CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e su -c "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
         echo "Benchmark: $bench_app, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range, MPS Percentage:$percentage"
     else
-        sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  $BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE
+        sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  su -c "$BIN_PATH/$bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
     	echo "Benchmark:$bench_app, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range"
     fi
 
