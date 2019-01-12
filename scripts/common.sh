@@ -122,7 +122,7 @@ build_and_install_fgpu() {
     # Install driver
     # Need to first kill display manager that might be using the GPU
     # Basically the driver installation requires Xorg to not be running
-    sudo service $DISPLAY_MANAGER stop
+    sudo service $DISPLAY_MANAGER stop &> /dev/null
     sudo pkill -9 Xorg
 
     # In normal scenarios, the default options should be fine so no need to

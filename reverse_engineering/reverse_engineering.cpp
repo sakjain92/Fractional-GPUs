@@ -354,7 +354,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
      * 2) Find the end address of the row.
      * The difference in these address tell the (minimum) row size.
      */
-    printf("Finding DRAM row size\n");
+    printf("Finding DRAM row size (Might take a while)\n");
     
     row_start = NULL;
     /* Check already measured first */
