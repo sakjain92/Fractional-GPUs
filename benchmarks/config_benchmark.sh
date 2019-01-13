@@ -188,8 +188,8 @@ parse_args() {
 
             shift # past argument=value
             ;;
-        -v*|--voltaMPS=*)
-            V="1"
+        -v*|--voltaMPS*)
+            v="1"
             shift # past argument=value
             ;;
         *)

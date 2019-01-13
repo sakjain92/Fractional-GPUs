@@ -131,10 +131,6 @@ ask_and_configure_fgpu() {
     # Internal scripts function can disable fgpu
     fgpu_mode_number=$((fgpu_mode_number+1))
 
-    if [ $? -ne 0 ]; then
-        do_error_exit "Invalid option"
-    fi
-
     configure_fgpu $fgpu_mode_number
 
     return 0
@@ -155,13 +151,19 @@ trap 'do_for_sigint' EXIT
 unset BENCHMARK_RUNTIME
 run_benchmark() {
 
+    cmd=$1
+    # Enable volta mps based compute partitioning
+    if [ "$FGPU_MODE" = "$FGPU_VOLTA_COMPUTE_ONLY" ]; then
+        cmd="$cmd -v"
+    fi
+
     cur_dir=`pwd`
 
     cd $BENCHMARK_PATH
 
     # Print to stdout and store in variable
     echo ""
-    output=$(eval $1 | tee /dev/tty)
+    output=$(eval $cmd | tee /dev/tty)
     echo ""
 
     if [ $? -ne 0 ]; then
@@ -492,7 +494,7 @@ case $evaluation_mode_number in
                 index=$((index+1))
             done
             max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
-            if [ `echo $max_variation'>'$overall_max_run | bc -l` -eq 1 ]; then
+            if [ `echo $max_variation'>'$overall_max_variation | bc -l` -eq 1 ]; then
                 overall_max_variation=$max_variation
             fi
             sum_variation=`echo $sum_variation'+'$max_variation | bc -l`

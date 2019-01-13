@@ -64,13 +64,19 @@ check_arg_is_number() {
 # Second argument is the lower bound
 # Third argument is the upper bound
 check_arg_between() {
+
+    if [ $# -ne 3 ];
+    then
+        do_error_exit "Invalid argument"
+    fi
+
     check_arg_is_number $1
     if [ $? -ne 0 ]; then
-        return 1
+        do_error_exit "Invalid argument"
     fi
 
     if [ $1 -lt $2 ] || [ $1 -gt $3 ]; then
-        return 1
+        do_error_exit "Invalid argument"
     fi
     return 0
 }
