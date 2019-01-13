@@ -318,7 +318,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             dram_histogram[bin]++;
         }
 
-	fflush(g_dram_trendline_fp);
+        fflush(g_dram_trendline_fp);
 
         if (g_dram_histogram_enabled) {
 
@@ -333,7 +333,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             }
         }
 
-	fflush(g_dram_histogram_fp);
+	    fflush(g_dram_histogram_fp);
     } else {
         dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
             threshold, running_threshold, max, min);

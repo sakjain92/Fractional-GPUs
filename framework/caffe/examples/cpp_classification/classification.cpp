@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
   }
   
   printf("Overall Stats\n");
-    pstats_print(&stats);
+  pstats_print(&stats);
 
 #else
   std::vector<Prediction> predictions = classifier.Classify(img);
