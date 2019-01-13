@@ -11,6 +11,8 @@ DRIVER_PATH="$PROJ_PATH/driver/NVIDIA-Linux-x86_64-390.48/"
 DRIVER_INSTALL_PATH="$DRIVER_PATH/nvidia-installer"
 REVERSE_ENGINEERING_PATH="$PROJ_PATH/reverse_engineering"
 BENCHMARK_PATH="$PROJ_PATH/benchmarks"
+FGPU_LIBRARY="libfractional_gpu.so"
+CAFFE_PATH="$PROJ_PATH/framework/caffe/"
 
 SERVER=fgpu_server                  # Server name
 REVERSE_ENGINEERING_BINARY="gpu_reverse_engineering"
@@ -107,7 +109,8 @@ build_and_install_fgpu() {
         do_error_exit "Couldn't configure FGPU. See log file $log"
     fi
     
-    make -j$nproc &>> $log
+    numcores=`nproc`
+    make -j$numcores &>> $log
    
     if [ $? -ne 0 ]; then
         do_error_exit "Couldn't compile FGPU. See log file $log"
@@ -135,6 +138,31 @@ build_and_install_fgpu() {
     fi
 
     cd $cur_dir
+}
+
+# Compiles Caffe
+compile_caffe() {
+    
+    echo "*************************************"
+    echo "Compiling Caffe (Might take some time)"
+    echo "*************************************"
+
+    cur_dir=$PWD
+
+    cd $CAFFE_PATH
+    # Copy the config file
+    cp Makefile.config.example Makefile.config
+    numcores=`nproc`
+    log=`mktemp`
+    make -j$numcores &>> $log
+   
+    if [ $? -ne 0 ]; then
+        do_error_exit "Couldn't compile Caffe. See log file $log"
+    fi
+
+    rm Makefile.config
+    cur_dir=$PWD
+
 }
 
 # Prints all supported GPUs
