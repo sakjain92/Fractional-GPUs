@@ -14,7 +14,7 @@ BENCHMARK_PATH="$PROJ_PATH/benchmarks"
 FGPU_LIBRARY="libfractional_gpu.so"
 CAFFE_PATH="$PROJ_PATH/framework/caffe/"
 
-SERVER=fgpu_server                  # Server name
+SERVER="fgpu_server"                # Server name
 REVERSE_ENGINEERING_BINARY="gpu_reverse_engineering"
 REVERSE_ENGINEERING_PLOT="plot_reverse_engineering.sh"
 BENCHMARK_SCRIPT="run_benchmark.sh"
@@ -150,8 +150,12 @@ compile_caffe() {
     cur_dir=$PWD
 
     cd $CAFFE_PATH
-    # Copy the config file
-    cp Makefile.config.example Makefile.config
+    # Copy the config file if it doesn't exist
+    if [ ! -f Makefile.config ]; then
+        cp Makefile.config.example Makefile.config
+        file="0"
+    fi
+
     numcores=`nproc`
     log=`mktemp`
     make -j$numcores &>> $log
@@ -160,9 +164,11 @@ compile_caffe() {
         do_error_exit "Couldn't compile Caffe. See log file $log"
     fi
 
-    rm Makefile.config
-    cur_dir=$PWD
+    if [ "$file" = "0" ]; then
+        rm Makefile.config
+    fi
 
+    cur_dir=$PWD
 }
 
 # Prints all supported GPUs
@@ -215,14 +221,18 @@ check_is_volta_gpu() {
         do_error_exit ""
     fi
 
-    check_is_volta $gpu_name
+    check_is_volta "$gpu_name"
     return $?
 }
 
 # Kills a process 
 # First argument is the name of the process
 kill_process() {
-    pid=`pgrep $1`
+
+    # Get the process name from the cmd
+    cmd="$1"
+    name=`echo "$cmd" | awk '{ print $1 }'`
+    pid=`pgrep $name`
     if [ ! -z "$pid" ]
     then
         sudo kill $pid &> /dev/null
@@ -237,6 +247,7 @@ deinit_fgpu() {
     sleep 2
 
     # Kill all possibly running benchmarks
+    sudo pkill -9 $SERVER
     sudo pkill -9 cudaSDK
     sudo pkill -9 rodinia
 

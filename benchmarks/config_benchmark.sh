@@ -27,7 +27,7 @@ BENCHMARK_PRIO=99                   # Real time priority of benchmark app
 NUM_COLORS=2		    	        # Number of interferenceing applications + 1
 
 # List of benchmarks to run
-benchmarks=(
+default_benchmarks=(
 "cudaSDK_mms"       # Matrix Multiplication
 "cudaSDK_sn"        # Sorting Networks
 "cudaSDK_va"        # Vector Addition
@@ -37,6 +37,9 @@ benchmarks=(
 #"rodinia_nn"        # Nearest neighbours
 #"rodinia_gaussian"  # Gaussian Elimination
 )
+
+# Current selected benchmarks is same as default benchmarks
+benchmarks=("${default_benchmarks[@]}")
 
 NO_INTERFERENCE_DUMMY_APP="__none__"
 
@@ -99,7 +102,7 @@ parse_args() {
 
     for i in "$@"
     do
-        case $i in
+        case "$i" in
         -h*|--help*)
             print_usage
             exit 1
@@ -201,10 +204,10 @@ parse_args() {
     NUM_ITERATION=$n
     ENABLE_VOLTA_MPS_PARTITION=$v
     
-    if [ ! -z $b ]; then
+    if [ ! -z "$b" ]; then
         benchmarks=("$b")
     fi
-    
+
     if [ ! -z $it ]; then
         interferences=($it)
     fi

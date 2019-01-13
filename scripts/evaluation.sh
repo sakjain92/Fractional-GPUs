@@ -161,7 +161,7 @@ run_benchmark() {
 
     # Print to stdout and store in variable
     echo ""
-    output=$($1 | tee /dev/tty)
+    output=$(eval $1 | tee /dev/tty)
     echo ""
 
     if [ $? -ne 0 ]; then
@@ -273,8 +273,15 @@ case $evaluation_mode_number in
         treadline_outfile+="_dram_bank_access_trendline.png"
         inteference_outfile+="_cache_and_dram_interference_experiments.png"
 
-        $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
-        if [ $? -ne 0 ]; then
+        # Volta GPU takes more samples to get meaningful plots as bigger memory size
+        # This is only for plotting. For reverse engineering these inputs are not needed
+        if [ "$IS_VOLTA" = "1" ]; then
+            $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 20000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
+        else
+            $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
+        fi
+
+	if [ $? -ne 0 ]; then
             do_error_exit "Reverse engineering code failed"
         fi
 
@@ -516,7 +523,7 @@ case $evaluation_mode_number in
 
         # Use a caffe example application that has been ported to use FGPU
         benchmark_name="Caffe_Image_Classification"
-        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATHexamples/images/cat.jpg"
+        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATH/examples/images/cat.jpg"
         b_alias="IC"
 
         cur_dir=`pwd`
