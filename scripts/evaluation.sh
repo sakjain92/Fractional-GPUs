@@ -480,7 +480,161 @@ case $evaluation_mode_number in
         ;;
     3)
         FGPU_MODE=$EVAL_CAFFE
-        echo "TODO: To be implemented in the script"
+
+        echo "INFO: Benchmarks can run in different modes. The runtimes of benchmarks are normalized wrt to FGPU disabled mode."
+        ask_and_configure_fgpu
+        chosen_fgpu_mode=$FGPU_MODE_NAME
+
+        compile_caffe
+
+        num_iterations=1000
+        echo "Enter the number of iterations of each benchmark. Average results are reported (Default $num_iterations):"
+        read num_iterations
+        echo ""
+
+        if [ -z $num_iterations ]; then
+            num_iterations=1000
+        else
+            check_arg_is_number $num_iterations
+        fi
+
+        num_colors=2
+
+        if [ $IS_VOLTA -ne 0 ]; then
+            echo "Enter the number of total partitions. Default is $num_colors (Valid options are 2,4,8):"
+            read num_colors
+            echo ""
+            check_arg_is_number $num_colors
+
+            if [ $num_colors -ne 2 ] && [ $num_colors -ne 4 ] && [ $num_colors -ne 8 ]; then
+                do_error_exit "Invalid argument"
+            fi
+
+        else
+            echo "GPU only supports 2 partitions. Using this value."
+        fi
+
+        # Use a caffe example application that has been ported to use FGPU
+        benchmark_name="Caffe_Image_Classification"
+        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATHexamples/images/cat.jpg"
+        b_alias="IC"
+
+        cur_dir=`pwd`
+        cd $BENCHMARK_PATH
+        # Get list of inteference applications
+        list_interference=`$BENCHMARK_PATH/$BENCHMARK_SCRIPT -I`
+        cd $cur_dir
+
+        # Print out
+        echo ""
+        echo "List of bencharks:"
+        echo "$benchmark_name"
+        echo ""
+        echo "$list_interference"
+        echo ""
+
+        declare -a inteferences
+
+        while read i; do
+            inteferences+=("$i")
+        done < <(echo "$list_interference" | tail -n +2)
+
+        print_fgpu_mode
+
+        declare -a runtimes
+        declare -a baseline
+        declare -a normalized
+
+        for i in "${inteferences[@]}"
+        do
+            i_alias=${benchmark_aliases[$i]}
+
+            echo "*************************************************************************************"
+            echo "Running Benchmark:$benchmark_name(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
+            echo "*************************************************************************************"
+
+            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -e=\"$benchmark_cmd\""
+            run_benchmark "$cmd"
+            runtimes+=($BENCHMARK_RUNTIME)
+        done
+
+        echo "INFO: Running with FGPU disabled (no partitioning) mode to gather baseline runtimes (to normalize)"
+        echo "INFO: For measuring baseline, we disable FGPU and for each benchmark, we run it alone without any interference"
+        configure_fgpu $FGPU_DISABLED
+        print_fgpu_mode
+        
+        compile_caffe
+
+        baseline_interference="__none__"
+        
+        # For normalization, base case is when FGPU is disabled,
+        # and benchmark application runs alone fully utilizing the whole
+        # GPU
+        i=$baseline_interference
+        i_alias=${benchmark_aliases[$i]}
+
+        echo "**************************************************************************************"
+        echo "Running Benchmark:$benchmark_name(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
+        echo "**************************************************************************************"
+
+        cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -e=\"$benchmark_cmd\""
+        run_benchmark "$cmd"
+        base=($BENCHMARK_RUNTIME)
+
+        for i in "${inteferences[@]}"
+        do
+            baseline+=($base)
+        done
+
+        for i in "${!runtimes[@]}"; 
+        do
+            run=${runtimes[i]}
+            base=${baseline[i]}
+            norm=`bc -l <<< $run/$base/$num_colors`
+            normalized+=("$norm")
+
+            # Trim
+            runtimes[i]=`printf "%.2f" $run`
+            baseline[i]=`printf "%.2f" $base`
+            normalized[i]=`printf "%.2f" $norm`
+        done
+
+        result_file=`mktemp`
+        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime(usec)\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime(usec)\tNormalizedRunTime\n" > $result_file
+
+        index=0
+        for i in "${inteferences[@]}"
+        do
+            run=${runtimes[index]}
+            norm=${normalized[index]}
+            base=${baseline[index]}
+            index=$((index+1))
+            i_alias=${benchmark_aliases[$i]}
+            bi_alias=${benchmark_aliases[$baseline_interference]}
+            printf "$index\t%-40s\t$num_iterations\t$num_colors\t%-10s\t%-40s\t%-10s\t$norm\n" "$benchmark_name($b_alias)-$i($i_alias)" "$run" "$benchmark_name($b_alias)-$baseline_interference($bi_alias)" "$base" >> $result_file
+        done
+
+        echo ""
+        echo "Printing Results for $chosen_fgpu_mode"
+
+        cat $result_file
+
+        echo ""
+        echo "****************************************************"
+        echo "Raw benchmark results saved in file $result_file"
+        echo "****************************************************"
+        
+        output_plot=`mktemp`
+        output_plot+="_caffe_benchmarks.png"
+        plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchmarks[*]}" "${#inteferences[*]}"
+
+        echo ""
+        echo "****************************************************"
+        echo "Benchmark results plot is saved in file $output_plot"
+        echo "****************************************************"
+        echo "Open the file to see the plot"
+        pause_for_user_input
+
         ;;
 esac
 

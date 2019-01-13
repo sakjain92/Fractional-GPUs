@@ -19,7 +19,7 @@ LOG_FILE=$PWD/log.txt               # File to log results
 ENABLE_VOLTA_MPS_PARTITION="0"      # If 1, then we use Volta MPS for QoS
 
 NUM_ITERATION=1000                  # Number of iterations of the benchmarks
-MEMORY=1000000000                   # Amount of memory for each benchmark (About 1GB)
+MEMORY=2000000000                   # Amount of memory for each benchmark (About 2GB)
 INTERFERENCE_COLOR=1                # Color on which to run interference app (starting color)
 BENCHMARK_COLOR=0                   # Color on which to run benchmarks
 INTERFERENCE_PRIO=1                 # Real time priority of interference app
@@ -60,11 +60,12 @@ print_usage() {
     echo "Usage:"
     echo "./run_benchmark.sh"
     echo "Optional Options:"
-    echo "-b, --benchmark Select one benchmark from all available benchmarks applications"
+    echo "-b=<name>, --benchmark=<name> Select one benchmark from all available benchmarks applications"
+    echo "-e=<command>, --external=<command> Supply a command to run as a benchmark"
     echo "-B, --benchmarks Prints default benchmark applications"
     echo "-c=<val>, --colors=<val> Sets the number of colors that hardware is configured for."
     echo "-h, --help Shows this usage."
-    echo "-i, --interference Select one interference from all available interfence applications"
+    echo "-i=<name>, --interference=<name> Select one interference from all available interfence applications"
     echo "-I, --interferences Prints default interfence applications"
     echo "-n=<val>, --numIterations=<val> Set the number of iterations. Time show in average of runtimes of all iterations."
     echo "-v, --voltaMPS Enables MPS compute partitioning on Volta GPU. FGPU compute/memory coloring should be disabled in this configuration."
@@ -136,7 +137,13 @@ parse_args() {
 
             shift # past argument=value
             ;;
-        
+
+        -e*|--external=*)
+            b="${i#*=}"
+            
+            shift # past argument=value
+            ;;
+ 
         -i*|--interference=*)
             it="${i#*=}"
             
@@ -195,7 +202,7 @@ parse_args() {
     ENABLE_VOLTA_MPS_PARTITION=$v
     
     if [ ! -z $b ]; then
-        benchmarks=($b)
+        benchmarks=("$b")
     fi
     
     if [ ! -z $it ]; then
