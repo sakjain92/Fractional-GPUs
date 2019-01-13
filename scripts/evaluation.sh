@@ -273,8 +273,15 @@ case $evaluation_mode_number in
         treadline_outfile+="_dram_bank_access_trendline.png"
         inteference_outfile+="_cache_and_dram_interference_experiments.png"
 
-        $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
-        if [ $? -ne 0 ]; then
+        # Volta GPU takes more samples to get meaningful plots as bigger memory size
+        # This is only for plotting. For reverse engineering these inputs are not needed
+        if [ "$IS_VOLTA" = "1" ]; then
+            $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 20000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
+        else
+            $BIN_PATH/$REVERSE_ENGINEERING_BINARY -n 10000 -s 5 -H $hist_file -T $treadline_file -I $inteference_file
+        fi
+
+	if [ $? -ne 0 ]; then
             do_error_exit "Reverse engineering code failed"
         fi
 

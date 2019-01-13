@@ -14,7 +14,7 @@ BENCHMARK_PATH="$PROJ_PATH/benchmarks"
 FGPU_LIBRARY="libfractional_gpu.so"
 CAFFE_PATH="$PROJ_PATH/framework/caffe/"
 
-SERVER=fgpu_server                  # Server name
+SERVER="fgpu_server"                # Server name
 REVERSE_ENGINEERING_BINARY="gpu_reverse_engineering"
 REVERSE_ENGINEERING_PLOT="plot_reverse_engineering.sh"
 BENCHMARK_SCRIPT="run_benchmark.sh"
@@ -221,7 +221,7 @@ check_is_volta_gpu() {
         do_error_exit ""
     fi
 
-    check_is_volta $gpu_name
+    check_is_volta "$gpu_name"
     return $?
 }
 
@@ -247,6 +247,7 @@ deinit_fgpu() {
     sleep 2
 
     # Kill all possibly running benchmarks
+    sudo pkill -9 $SERVER
     sudo pkill -9 cudaSDK
     sudo pkill -9 rodinia
 

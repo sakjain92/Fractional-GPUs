@@ -267,7 +267,7 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
     min = LONG_MAX;
     max = 0;
     sum = 0;
-    printf("Finding threshold\n");
+    printf("Finding threshold\n", count);
     for (int i = 0; i < count; i++) {
         a = (uintptr_t)virt_start;
         b = a + offset * i;
@@ -677,7 +677,7 @@ static int run_interference_exp(void *virt_start, void *phy_start,
     assert(g_interference_fp);
 
     print_highlighted("Outputting Interference experiment results' raw data to %s", g_interference_file);
-    fprintf(g_interference_fp, "NumThreads\t SameCachelineSame_DRAMBank(SCSB)\t " 
+    fprintf(g_interference_fp, "NumThreads\t SameCachelineSameDRAMBank(SCSB)\t " 
             "SameCachelineDifferentDRAMBank(CSDB)\t DifferentCachelineSameDRAMBank(DCSB)\t " 
             "DifferentCachelineDifferentBank(DCDB)\t DifferentModule(DM)\n");
     
