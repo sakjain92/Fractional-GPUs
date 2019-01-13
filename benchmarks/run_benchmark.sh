@@ -7,7 +7,7 @@ source ./config_benchmark.sh
 check_if_not_sudo
 
 # Parse command line arguments
-parse_args $@
+parse_args "$@"
 
 #Change pwd to Proj directory 
 cd $PROJ_PATH
@@ -45,8 +45,9 @@ AVG="0"
 
 # Kill all known processes that this script might have ran
 kill_all_processes () {
-    for bench in ${benchmarks[@]}; do
-        kill_process $bench
+    for ((i = 0; i < ${#benchmarks[@]}; i++))
+    do
+        kill_process "${benchmarks[$i]}"
     done
    
     for int in ${interferences[@]}; do
@@ -70,17 +71,17 @@ trap 'do_for_sigint' EXIT
 # For return value, it modifies AVG variable
 run_benchmark () { 
 
-    bench_app=$1
-    int_app=$2
+    bench_app="$1"
+    int_app="$2"
     is_external_bench="0"
 
     # Check if external benchmark
     unset found
-    for j in "${benchmarks[@]}"
+    for ((j = 0; j < ${#default_benchmarks[@]}; j++))
     do
-        if [ "$j" = "$bench_app" ] ; then
+        if [ "${default_benchmarks[$j]}" = "$bench_app" ]; then
             found=1
-        fi
+       fi
     done
 
     if [ -z "$found" ]; then
@@ -141,14 +142,14 @@ run_benchmark () {
     # Hence supply LD_PRELOAD and LD_LIBRARY_PATH
     echo "New Benchmark: [$bench_name, $int_app]" > $TEMP_LOG_FILE
     
-    if [ "$is_external_bench" = "1"]; then
+    if [ "$is_external_bench" = "1" ]; then
 
         if [ $ENABLE_VOLTA_MPS_PARTITION -ne "0" ];
         then
-            sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e su -c "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage FGPU_NUM_ITER_ENV=$NUM_INTERATION FGPU_COLOR_ENV=$BENCHMARK_COLOR FGPU_COLOR_MEM_SIZE_ENV=$MEMORY LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BIN_PATH LD_PRELOAD=$BIN_PATH/$FGPU_LIBRARY $bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
+            sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e su -c "CUDA_MPS_ACTIVE_THREAD_PERCENTAGE=$percentage FGPU_NUM_ITER_ENV=$NUM_ITERATION FGPU_COLOR_ENV=$BENCHMARK_COLOR FGPU_COLOR_MEM_SIZE_ENV=$MEMORY LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BIN_PATH LD_PRELOAD=$BIN_PATH/$FGPU_LIBRARY $bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
             echo "Benchmark: $bench_name, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range, MPS Percentage:$percentage"
         else
-            sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  su -c "FGPU_NUM_ITER_ENV=$NUM_INTERATION FGPU_COLOR_ENV=$BENCHMARK_COLOR FGPU_COLOR_MEM_SIZE_ENV=$MEMORY LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BIN_PATH LD_PRELOAD=$BIN_PATH/$FGPU_LIBRARY $bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
+            sudo taskset -c $bench_proc_range schedtool -R -p $BENCHMARK_PRIO -e  su -c "FGPU_NUM_ITER_ENV=$NUM_ITERATION FGPU_COLOR_ENV=$BENCHMARK_COLOR FGPU_COLOR_MEM_SIZE_ENV=$MEMORY LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BIN_PATH LD_PRELOAD=$BIN_PATH/$FGPU_LIBRARY $bench_app -c $BENCHMARK_COLOR -m $MEMORY -i $NUM_ITERATION >> $TEMP_LOG_FILE" $user
         	echo "Benchmark:$bench_name, Color:$BENCHMARK_COLOR, CPU Affinity:$bench_proc_range"
         fi
     else
@@ -165,6 +166,10 @@ run_benchmark () {
     ret_code=$?
 
     # Kill all processes
+    if ! [[ $int_app = $NO_INTERFERENCE_DUMMY_APP ]]; then
+        echo "NOTE: Terminating background interference applications that where running in forever loop"
+    fi
+
     kill_all_processes
     sleep 2
 
@@ -184,7 +189,11 @@ run_benchmark () {
     stats=`grep -A 1  "Kernel Stats" $TEMP_LOG_FILE`
     if [ -z "$stats" ]
     then
-        do_error_exit "Couldn't find kernel stats. See file $TEMP_LOG_FILE"
+        stats=`grep -A 1  "Overall Stats" $TEMP_LOG_FILE`
+        if [ -z "$stats" ]; then
+            do_error_exit "Couldn't find kernel/overall stats. See file $TEMP_LOG_FILE"
+        fi
+        echo "NOTE: Taking overall (GPU Kernel + CPU) time into consideration for benchmark"
     fi
 
     # Extract the averge runtime
@@ -209,7 +218,9 @@ done
 echo "" >> $TEMP_TIME_FILE
 
 # Get and print the averge runtime of benchmarks (w and w/o interference) 
-for b in ${benchmarks[@]}; do
+for ((i = 0; i < ${#benchmarks[@]}; i++))
+do
+    b="${benchmarks[$i]}"
     
     echo -n -e "$b\t" >> $TEMP_TIME_FILE
 

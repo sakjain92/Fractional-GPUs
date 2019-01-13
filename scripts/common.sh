@@ -150,8 +150,12 @@ compile_caffe() {
     cur_dir=$PWD
 
     cd $CAFFE_PATH
-    # Copy the config file
-    cp Makefile.config.example Makefile.config
+    # Copy the config file if it doesn't exist
+    if [ ! -f Makefile.config ]; then
+        cp Makefile.config.example Makefile.config
+        file="0"
+    fi
+
     numcores=`nproc`
     log=`mktemp`
     make -j$numcores &>> $log
@@ -160,9 +164,11 @@ compile_caffe() {
         do_error_exit "Couldn't compile Caffe. See log file $log"
     fi
 
-    rm Makefile.config
-    cur_dir=$PWD
+    if [ "$file" = "0" ]; then
+        rm Makefile.config
+    fi
 
+    cur_dir=$PWD
 }
 
 # Prints all supported GPUs
@@ -222,7 +228,11 @@ check_is_volta_gpu() {
 # Kills a process 
 # First argument is the name of the process
 kill_process() {
-    pid=`pgrep $1`
+
+    # Get the process name from the cmd
+    cmd="$1"
+    name=`echo "$cmd" | awk '{ print $1 }'`
+    pid=`pgrep $name`
     if [ ! -z "$pid" ]
     then
         sudo kill $pid &> /dev/null

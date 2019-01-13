@@ -161,7 +161,7 @@ run_benchmark() {
 
     # Print to stdout and store in variable
     echo ""
-    output=$($1 | tee /dev/tty)
+    output=$(eval $1 | tee /dev/tty)
     echo ""
 
     if [ $? -ne 0 ]; then
@@ -516,7 +516,7 @@ case $evaluation_mode_number in
 
         # Use a caffe example application that has been ported to use FGPU
         benchmark_name="Caffe_Image_Classification"
-        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATHexamples/images/cat.jpg"
+        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATH/examples/images/cat.jpg"
         b_alias="IC"
 
         cur_dir=`pwd`
