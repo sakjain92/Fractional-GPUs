@@ -318,6 +318,8 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
             dram_histogram[bin]++;
         }
 
+	fflush(g_dram_trendline_fp);
+
         if (g_dram_histogram_enabled) {
 
             print_highlighted("Outputting DRAM access time histogram's raw data to %s", g_dram_histogram_file);
@@ -330,6 +332,8 @@ static hash_context_t *run_dram_exp(void *virt_start, void *phy_start,
                         dram_histogram[i]);
             }
         }
+
+	fflush(g_dram_histogram_fp);
     } else {
         dprintf("Threshold is %f, Running threshold is: %f, (Max: %f, Min:%f)\n",
             threshold, running_threshold, max, min);
@@ -686,6 +690,8 @@ static int run_interference_exp(void *virt_start, void *phy_start,
         
         fprintf(g_interference_fp, "\n");
     }
+
+    fflush(g_interference_fp);
     return 0;
 }
 
