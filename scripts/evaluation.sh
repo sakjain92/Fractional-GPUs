@@ -468,6 +468,41 @@ case $evaluation_mode_number in
 
         cat $result_file
 
+        # Refer to academic paper for definition of variation
+        echo ""
+        echo "Printing Variation"
+        overall_max_variation=0
+        sum_variation=0
+        count_variation=0
+        for b in "${benchmarks[@]}"
+        do
+            max_run=0
+            index=0
+            divisor=0
+            for i in "${inteferences[@]}"
+            do
+                run=${runtimes[index]}
+                interference=${inteferences[index]}
+                if [ "$interference" = "$baseline_interference" ]; then
+                    divisor=$run
+                fi
+                if [ `echo $run'>'$max_run | bc -l` -eq 1 ]; then
+                    max_run=$run
+                fi
+                index=$((index+1))
+            done
+            max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
+            if [ `echo $max_variation'>'$overall_max_run | bc -l` -eq 1 ]; then
+                overall_max_variation=$max_variation
+            fi
+            sum_variation=`echo $sum_variation'+'$max_variation | bc -l`
+            count_variation=$((count_variation+1))
+        done
+
+        avg_variation=`echo $sum_variation'/'$count_variation | bc -l`
+        echo "*************************************************************************"
+        printf "Average Variation: %.2f%% Max variation: %.2f%%%" "$avg_variation" "$overall_max_variation"
+        echo "*************************************************************************"
         echo ""
         echo "****************************************************"
         echo "Raw benchmark results saved in file $result_file"
@@ -626,6 +661,28 @@ case $evaluation_mode_number in
 
         cat $result_file
 
+        # Refer to academic paper for definition of variation
+        echo ""
+        echo "Printing Variation"
+        max_run=0
+        index=0
+        divisor=0
+        for i in "${inteferences[@]}"
+        do
+            run=${runtimes[index]}
+            interference=${inteferences[index]}
+            if [ "$interference" = "$baseline_interference" ]; then
+                divisor=$run
+            fi
+            if [ `echo $run'>'$max_run | bc -l` -eq 1 ]; then
+                max_run=$run
+            fi
+            index=$((index+1))
+        done
+        max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
+        echo "**************************"
+        printf "Variation: %.2f%%%" "$max_variation"
+        echo "**************************"
         echo ""
         echo "****************************************************"
         echo "Raw benchmark results saved in file $result_file"
