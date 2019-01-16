@@ -54,7 +54,7 @@ print_fgpu_mode() {
 # First argument is the FGPU mode number
 configure_fgpu() {
     # If FGPU is already set to the desired mode, skip configuring
-    if [ "$FGPU_MODE" == "$1" ]; then
+    if [ "$FGPU_MODE" = "$1" ]; then
         return 0
     fi
 
@@ -149,7 +149,7 @@ trap 'do_for_sigint' EXIT
 # Arg 1 is the command to launch the benchmark
 # Sets the variable BENCHMARK_RUNTIME to the average runtime
 unset BENCHMARK_RUNTIME
-run_benchmark() {
+run_benchmark_cmd() {
 
     cmd=$1
     # Enable volta mps based compute partitioning
@@ -160,10 +160,12 @@ run_benchmark() {
     cur_dir=`pwd`
 
     cd $BENCHMARK_PATH
+    log=`mktemp`
 
     # Print to stdout and store in variable
     echo ""
-    output=$(eval $cmd | tee /dev/tty)
+
+    bash -c "$cmd | tee $log"
     echo ""
 
     if [ $? -ne 0 ]; then
@@ -171,13 +173,229 @@ run_benchmark() {
     fi
 
     # Get the runtime
-    BENCHMARK_RUNTIME=`echo $output | grep -oP '(?<=AVG_RUNTIME: )[0-9.]+'`
+    BENCHMARK_RUNTIME=`cat $log | grep -oP '(?<=AVG_RUNTIME: )[0-9.]+'`
     if [ $? -ne 0 ]; then
-        do_error_exit "Couldn't find the runtime of benchmark"
+        do_error_exit "Couldn't find the runtime of benchmark. See $log"
     fi
 
     cd $cur_dir
 }
+
+# Given a pair of benchmark and interference, run them
+# First argument is the benchmark command to run
+# Second argument is the interference command to run
+# Third argument is the benchmark name
+# Fourth argument is the intereference name
+# Fifth argument is the benchmark aliases
+# Sixth argument is the interference aliases
+# Seventh argument is the number of colors
+# Eigth argument is the number of iterations
+run_benchmark() {
+    bcmd="$1"
+    icmd="$2"
+    bname="$3"
+    iname="$4"
+    balias="$5"
+    ialias="$6"
+    num_colors=$7
+    num_iterations=$8
+
+    # Different commands based on whether an external command or one of the default benchmark/interference
+    if [[ -v "default_aliases[$bname]" ]]; then
+        if [[ -v "default_aliases[$iname]" ]]; then
+            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$icmd -b=$bcmd"
+            run_benchmark_cmd "$cmd"
+        else
+            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -E=\"$icmd\" -b=$bcmd"
+            run_benchmark_cmd "$cmd"
+        fi
+    else
+        if [[ -v "default_aliases[$iname]" ]]; then
+            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$icmd -e=\"$bcmd\""
+            run_benchmark_cmd "$cmd"
+        else
+            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -E=\"$icmd\" -e=\"$bcmd\""
+            run_benchmark_cmd "$cmd"
+        fi
+    fi
+}
+
+# Given a list of benchmarks and interferences, run them
+# FGPU must be properly configured before calling this
+# First argument is the array of benchmark command to run
+# Second argument is the array of interference command to run
+# Third argument is the array of benchmark name
+# Fourth argument is the array of intereference name
+# Fifth argument is the array of benchmark aliases
+# Sixth argument is the array of interference aliases
+# Seventh argument is the number of colors
+# Eigth argument is the number of iterations
+# Nineth argument is if caffe needs to be compiled
+run_all_benchmark() {
+
+    local -n benchcmds=$1
+    local -n intcmds=$2
+    local -n benchnames=$3
+    local -n intnames=$4
+    local -n benchaliases=$5
+    local -n intaliases=$6
+    num_colors=$7
+    num_iterations=$8
+    is_caffe=$9
+
+    declare -a runtimes
+    declare -a baseline
+    declare -a normalized
+
+    # Current FGPU mode
+    chosen_fgpu_mode="$FGPU_MODE_NAME"
+
+    for ((i = 0; i < "${#benchcmds[@]}"; i++))
+    do
+        for ((j = 0; j < "${#intcmds[@]}"; j++))
+        do
+            bcmd=${benchcmds[$i]}
+            icmd=${intcmds[$j]}
+            bname=${benchnames[$i]}
+            iname=${intnames[$j]}
+            balias=${benchaliases[$i]}
+            ialias=${intaliases[$j]}
+
+            echo "*************************************************************************************"
+            echo "Running Benchmark:$bname(Alias:$balias) with Interference:$iname(Alias:$ialias)"
+            echo "*************************************************************************************"
+            run_benchmark "$bcmd" "$icmd" "$bname" "$iname" "$balias" "$ialias" $num_colors $num_iterations
+            runtimes+=($BENCHMARK_RUNTIME)
+        done
+    done
+
+    echo "INFO: Running with FGPU disabled (no partitioning) mode to gather baseline runtimes (to normalize)"
+    echo "INFO: For measuring baseline, we disable FGPU and for each benchmark, we run it alone without any interference"
+    configure_fgpu $FGPU_DISABLED
+    print_fgpu_mode
+    
+    if [ "$is_caffe" = "1" ]; then
+        compile_caffe
+    fi
+
+    baseline_interference="__none__"
+   
+    for ((i = 0; i < "${#benchcmds[@]}"; i++))
+    do
+        # For normalization, base case is when FGPU is disabled,
+        # and benchmark application runs alone fully utilizing the whole
+        # GPU
+        bcmd=${benchcmds[$i]}
+        icmd=$baseline_interference
+        bname=${benchnames[$i]}
+        iname=$baseline_interference
+        balias=${benchaliases[$i]}
+        ialias=${default_aliases[$baseline_interference]}
+
+        echo "**************************************************************************************"
+        echo "Running Benchmark:$bname(Alias:$balias) with Interference:$iname(Alias:$ialias)"
+        echo "**************************************************************************************"
+
+        run_benchmark "$bcmd" "$icmd" "$bname" "$iname" "$balias" "$ialias" $num_colors $num_iterations
+        base=($BENCHMARK_RUNTIME)
+
+        for ((j = 0; j < "${#intcmds[@]}"; j++))
+        do
+            baseline+=($base)
+        done
+    done
+
+    for i in "${!runtimes[@]}"; 
+    do
+        run=${runtimes[$i]}
+        base=${baseline[$i]}
+        norm=`bc -l <<< $run/$base/$num_colors`
+        normalized+=("$norm")
+
+        # Trim
+        runtimes[i]=`printf "%.2f" $run`
+        baseline[i]=`printf "%.2f" $base`
+        normalized[i]=`printf "%.2f" $norm`
+    done
+
+    result_file=`mktemp`
+    printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime(usec)\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime(usec)\tNormalizedRunTime\n" > $result_file
+
+    index=0
+    for ((i = 0; i < "${#benchcmds[@]}"; i++))
+    do
+        for ((j = 0; j < "${#intcmds[@]}"; j++))
+        do
+            run=${runtimes[$index]}
+            norm=${normalized[$index]}
+            base=${baseline[$index]}
+            index=$((index+1))
+            bname=${benchnames[$i]}
+            iname=${intnames[$j]}
+            balias=${benchaliases[$i]}
+            ialias=${intaliases[$j]}
+            bialias=${default_aliases[$baseline_interference]}
+            printf "$index\t%-40s\t$num_iterations\t$num_colors\t%-10s\t%-40s\t%-10s\t$norm\n" "$bname($balias)-$iname($ialias)" "$run" "$bname($balias)-$baseline_interference($bialias)" "$base" >> $result_file
+        done
+    done
+
+    echo ""
+    echo "Printing Results for $chosen_fgpu_mode"
+
+    cat $result_file
+
+    # Refer to academic paper for definition of variation
+    echo ""
+    echo "Printing Variation"
+    overall_max_variation=0
+    sum_variation=0
+    count_variation=0
+    index=0
+    for ((i = 0; i < "${#benchcmds[@]}"; i++))
+    do
+        max_run=0
+        divisor=0
+        for ((j = 0; j < "${#intcmds[@]}"; j++))
+        do
+            run=${runtimes[$index]}
+            iname=${intnames[$j]}
+            if [ "$iname" = "$baseline_interference" ]; then
+                divisor=$run
+            fi
+            if [ `echo $run'>'$max_run | bc -l` -eq 1 ]; then
+                max_run=$run
+            fi
+            index=$((index+1))
+        done
+        max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
+        if [ `echo $max_variation'>'$overall_max_variation | bc -l` -eq 1 ]; then
+            overall_max_variation=$max_variation
+        fi
+        sum_variation=`echo $sum_variation'+'$max_variation | bc -l`
+        count_variation=$((count_variation+1))
+    done
+
+    avg_variation=`echo $sum_variation'/'$count_variation | bc -l`
+    echo "*************************************************************************"
+    printf "Average Variation: %.2f%% Max variation: %.2f%%\n" "$avg_variation" "$overall_max_variation"
+    echo "*************************************************************************"
+    echo ""
+    echo "****************************************************"
+    echo "Raw benchmark results saved in file $result_file"
+    echo "****************************************************"
+    
+    output_plot=`mktemp`
+    output_plot+="_benchmarks.png"
+    plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchcmds[*]}" "${#intcmds[*]}"
+
+    echo ""
+    echo "****************************************************"
+    echo "Benchmark results plot is saved in file $output_plot"
+    echo "****************************************************"
+    echo "Open the file to see the plot"
+    pause_for_user_input 
+}
+
 
 # Using GNU plot, plots and save benchmark results
 # First argument is the input data file
@@ -213,7 +431,7 @@ plot_benchmark() {
     done
 
     gnu_command="$gnu_command;
-        set term 'pngcairo' size 1280,960;
+        set term 'pngcairo' size 2560,1920;
         set output '$2';
         set title 'Normalized Average Runtime of Benchmarks ($3, Number of Colors:$4, Number of Iterations:$5)';
         set ylabel 'Normalized Runtime';
@@ -382,148 +600,26 @@ case $evaluation_mode_number in
 
         print_fgpu_mode
 
-        declare -a runtimes
-        declare -a baseline
-        declare -a normalized
+        declare -a baliases
+        declare -a ialiases
 
-        for b in "${benchmarks[@]}"
+        for ((i = 0; i < "${#benchmarks[@]}"; i++))
         do
-            for i in "${inteferences[@]}"
-            do
-                b_alias=${benchmark_aliases[$b]}
-                i_alias=${benchmark_aliases[$i]}
-
-                echo "*************************************************************************************"
-                echo "Running Benchmark:$b(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
-                echo "*************************************************************************************"
-
-                cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -b=$b"
-                run_benchmark "$cmd"
-                runtimes+=($BENCHMARK_RUNTIME)
-            done
+            bname=${benchmarks[$i]}
+            baliases+=("${default_aliases[$bname]}")
         done
 
-        echo "INFO: Running with FGPU disabled (no partitioning) mode to gather baseline runtimes (to normalize)"
-        echo "INFO: For measuring baseline, we disable FGPU and for each benchmark, we run it alone without any interference"
-        configure_fgpu $FGPU_DISABLED
-        print_fgpu_mode
-       
-        baseline_interference="__none__"
-        
-        for b in "${benchmarks[@]}"
+        for ((i = 0; i < "${#inteferences[@]}"; i++))
         do
-            # For normalization, base case is when FGPU is disabled,
-            # and benchmark application runs alone fully utilizing the whole
-            # GPU
-            i=$baseline_interference
-            b_alias=${benchmark_aliases[$b]}
-            i_alias=${benchmark_aliases[$i]}
-
-            echo "**************************************************************************************"
-            echo "Running Benchmark:$b(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
-            echo "**************************************************************************************"
-
-            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -b=$b"
-            run_benchmark "$cmd"
-            base=($BENCHMARK_RUNTIME)
-
-            for i in "${inteferences[@]}"
-            do
-                baseline+=($base)
-            done
+            iname=${inteferences[$i]}
+            ialiases+=("${default_aliases[$iname]}")
         done
 
-        for i in "${!runtimes[@]}"; 
-        do
-            run=${runtimes[i]}
-            base=${baseline[i]}
-            norm=`bc -l <<< $run/$base/$num_colors`
-            normalized+=("$norm")
-
-            # Trim
-            runtimes[i]=`printf "%.2f" $run`
-            baseline[i]=`printf "%.2f" $base`
-            normalized[i]=`printf "%.2f" $norm`
-        done
-
-        result_file=`mktemp`
-        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime(usec)\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime(usec)\tNormalizedRunTime\n" > $result_file
-
-        index=0
-        for b in "${benchmarks[@]}"
-        do
-            for i in "${inteferences[@]}"
-            do
-                run=${runtimes[index]}
-                norm=${normalized[index]}
-                base=${baseline[index]}
-                index=$((index+1))
-                b_alias=${benchmark_aliases[$b]}
-                i_alias=${benchmark_aliases[$i]}
-                bi_alias=${benchmark_aliases[$baseline_interference]}
-                printf "$index\t%-40s\t$num_iterations\t$num_colors\t%-10s\t%-40s\t%-10s\t$norm\n" "$b($b_alias)-$i($i_alias)" "$run" "$b($b_alias)-$baseline_interference($bi_alias)" "$base" >> $result_file
-            done
-        done
-
-        echo ""
-        echo "Printing Results for $chosen_fgpu_mode"
-
-        cat $result_file
-
-        # Refer to academic paper for definition of variation
-        echo ""
-        echo "Printing Variation"
-        overall_max_variation=0
-        sum_variation=0
-        count_variation=0
-        for b in "${benchmarks[@]}"
-        do
-            max_run=0
-            index=0
-            divisor=0
-            for i in "${inteferences[@]}"
-            do
-                run=${runtimes[index]}
-                interference=${inteferences[index]}
-                if [ "$interference" = "$baseline_interference" ]; then
-                    divisor=$run
-                fi
-                if [ `echo $run'>'$max_run | bc -l` -eq 1 ]; then
-                    max_run=$run
-                fi
-                index=$((index+1))
-            done
-            max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
-            if [ `echo $max_variation'>'$overall_max_variation | bc -l` -eq 1 ]; then
-                overall_max_variation=$max_variation
-            fi
-            sum_variation=`echo $sum_variation'+'$max_variation | bc -l`
-            count_variation=$((count_variation+1))
-        done
-
-        avg_variation=`echo $sum_variation'/'$count_variation | bc -l`
-        echo "*************************************************************************"
-        printf "Average Variation: %.2f%% Max variation: %.2f%%%" "$avg_variation" "$overall_max_variation"
-        echo "*************************************************************************"
-        echo ""
-        echo "****************************************************"
-        echo "Raw benchmark results saved in file $result_file"
-        echo "****************************************************"
-        
-        output_plot=`mktemp`
-        output_plot+="_benchmarks.png"
-        plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchmarks[*]}" "${#inteferences[*]}"
-
-        echo ""
-        echo "****************************************************"
-        echo "Benchmark results plot is saved in file $output_plot"
-        echo "****************************************************"
-        echo "Open the file to see the plot"
-        pause_for_user_input
+        run_all_benchmark benchmarks inteferences benchmarks inteferences baliases ialiases $num_colors $num_iterations "0"
 
         ;;
     3)
-        FGPU_MODE=$EVAL_CAFFE
+        EVAL_MODE=$EVAL_CAFFE
 
         echo "INFO: Benchmarks can run in different modes. The runtimes of benchmarks are normalized wrt to FGPU disabled mode."
         ask_and_configure_fgpu
@@ -559,147 +655,55 @@ case $evaluation_mode_number in
         fi
 
         # Use a caffe example application that has been ported to use FGPU
-        benchmark_name="Caffe_Image_Classification"
-        benchmark_cmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin   $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt   $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto   $CAFFE_PATH/data/ilsvrc12/synset_words.txt   $CAFFE_PATH/examples/images/cat.jpg"
-        b_alias="IC"
+        declare -a bcmds
+        declare -a icmds
+        declare -a bnames
+        declare -a inames
+        declare -a baliases
+        declare -a ialiases
+
+        bcmd="$CAFFE_PATH/build/examples/cpp_classification/classification.bin                  \
+                $CAFFE_PATH/models/bvlc_reference_caffenet/deploy.prototxt                      \
+                $CAFFE_PATH/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel   \
+                $CAFFE_PATH/data/ilsvrc12/imagenet_mean.binaryproto                             \
+                $CAFFE_PATH/data/ilsvrc12/synset_words.txt                                      \
+                $CAFFE_PATH/examples/images/cat.jpg"
+        bname="Caffe_Image_Classification"
+        balias="IC"
+
+        bcmds+=("$bcmd")
+        bnames+=("$bnames")
+        baliases+=("$balias")
+
+        # Add Caffe to list of intereference applications also
+        icmds+=("$bcmd")
+        inames+=("$bnames")
+        ialiases+=("$balias")
 
         cur_dir=`pwd`
         cd $BENCHMARK_PATH
-        # Get list of inteference applications
+        # Get list of default inteference applications
         list_interference=`$BENCHMARK_PATH/$BENCHMARK_SCRIPT -I`
         cd $cur_dir
 
         # Print out
         echo ""
         echo "List of bencharks:"
-        echo "$benchmark_name"
+        echo "$bname"
         echo ""
         echo "$list_interference"
+        echo "$bname"
         echo ""
 
-        declare -a inteferences
-
         while read i; do
-            inteferences+=("$i")
+            icmds+=($i)
+            inames+=("$i")
+            ialiases+=("${default_aliases[$i]}")
         done < <(echo "$list_interference" | tail -n +2)
 
         print_fgpu_mode
 
-        declare -a runtimes
-        declare -a baseline
-        declare -a normalized
-
-        for i in "${inteferences[@]}"
-        do
-            i_alias=${benchmark_aliases[$i]}
-
-            echo "*************************************************************************************"
-            echo "Running Benchmark:$benchmark_name(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
-            echo "*************************************************************************************"
-
-            cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -e=\"$benchmark_cmd\""
-            run_benchmark "$cmd"
-            runtimes+=($BENCHMARK_RUNTIME)
-        done
-
-        echo "INFO: Running with FGPU disabled (no partitioning) mode to gather baseline runtimes (to normalize)"
-        echo "INFO: For measuring baseline, we disable FGPU and for each benchmark, we run it alone without any interference"
-        configure_fgpu $FGPU_DISABLED
-        print_fgpu_mode
-        
-        compile_caffe
-
-        baseline_interference="__none__"
-        
-        # For normalization, base case is when FGPU is disabled,
-        # and benchmark application runs alone fully utilizing the whole
-        # GPU
-        i=$baseline_interference
-        i_alias=${benchmark_aliases[$i]}
-
-        echo "**************************************************************************************"
-        echo "Running Benchmark:$benchmark_name(Alias:$b_alias) with Interference:$i(Alias:$i_alias)"
-        echo "**************************************************************************************"
-
-        cmd="$BENCHMARK_PATH/$BENCHMARK_SCRIPT -c=$num_colors -n=$num_iterations -i=$i -e=\"$benchmark_cmd\""
-        run_benchmark "$cmd"
-        base=($BENCHMARK_RUNTIME)
-
-        for i in "${inteferences[@]}"
-        do
-            baseline+=($base)
-        done
-
-        for i in "${!runtimes[@]}"; 
-        do
-            run=${runtimes[i]}
-            base=${baseline[i]}
-            norm=`bc -l <<< $run/$base/$num_colors`
-            normalized+=("$norm")
-
-            # Trim
-            runtimes[i]=`printf "%.2f" $run`
-            baseline[i]=`printf "%.2f" $base`
-            normalized[i]=`printf "%.2f" $norm`
-        done
-
-        result_file=`mktemp`
-        printf "Index\tBenchmark(Alias)-Interference(Alias)\tNumIterations\tNumColors\tAvgRunTime(usec)\tBaselineBenchmark(Alias)-Inteference(Alias)\tBaselineAvgRunTime(usec)\tNormalizedRunTime\n" > $result_file
-
-        index=0
-        for i in "${inteferences[@]}"
-        do
-            run=${runtimes[index]}
-            norm=${normalized[index]}
-            base=${baseline[index]}
-            index=$((index+1))
-            i_alias=${benchmark_aliases[$i]}
-            bi_alias=${benchmark_aliases[$baseline_interference]}
-            printf "$index\t%-40s\t$num_iterations\t$num_colors\t%-10s\t%-40s\t%-10s\t$norm\n" "$benchmark_name($b_alias)-$i($i_alias)" "$run" "$benchmark_name($b_alias)-$baseline_interference($bi_alias)" "$base" >> $result_file
-        done
-
-        echo ""
-        echo "Printing Results for $chosen_fgpu_mode"
-
-        cat $result_file
-
-        # Refer to academic paper for definition of variation
-        echo ""
-        echo "Printing Variation"
-        max_run=0
-        index=0
-        divisor=0
-        for i in "${inteferences[@]}"
-        do
-            run=${runtimes[index]}
-            interference=${inteferences[index]}
-            if [ "$interference" = "$baseline_interference" ]; then
-                divisor=$run
-            fi
-            if [ `echo $run'>'$max_run | bc -l` -eq 1 ]; then
-                max_run=$run
-            fi
-            index=$((index+1))
-        done
-        max_variation=`echo $max_run'/'$divisor'*100 -100'  | bc -l`
-        echo "**************************"
-        printf "Variation: %.2f%%%" "$max_variation"
-        echo "**************************"
-        echo ""
-        echo "****************************************************"
-        echo "Raw benchmark results saved in file $result_file"
-        echo "****************************************************"
-        
-        output_plot=`mktemp`
-        output_plot+="_caffe_benchmarks.png"
-        plot_benchmark "$result_file" "$output_plot" "$chosen_fgpu_mode" $num_colors $num_iterations "${#benchmarks[*]}" "${#inteferences[*]}"
-
-        echo ""
-        echo "****************************************************"
-        echo "Benchmark results plot is saved in file $output_plot"
-        echo "****************************************************"
-        echo "Open the file to see the plot"
-        pause_for_user_input
+        run_all_benchmark bcmds icmds bnames inames baliases ialiases $num_colors $num_iterations "1"
 
         ;;
 esac

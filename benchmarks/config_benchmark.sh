@@ -46,12 +46,15 @@ NO_INTERFERENCE_DUMMY_APP="__none__"
 # List of interference applications that run in background
 # For now, they are subset of the list of benchmarks are these are the most
 # interesting intereference applications
-interferences=(
+default_interferences=(
 $NO_INTERFERENCE_DUMMY_APP
 "cudaSDK_mms"       # Computational Intensive
 "cudaSDK_fwt"       # Shared memory and memory intensive
 "cudaSDK_va"        # Memory Intensive
 )
+
+# Current selected interefence is same as default interefence
+interferences=("${default_interferences[@]}")
 
 
 # Prefix for statement that shows that average runtime
@@ -65,6 +68,7 @@ print_usage() {
     echo "Optional Options:"
     echo "-b=<name>, --benchmark=<name> Select one benchmark from all available benchmarks applications"
     echo "-e=<command>, --external=<command> Supply a command to run as a benchmark"
+    echo "-E=<command>, --External=<command> Supply a command to run as a interference"
     echo "-B, --benchmarks Prints default benchmark applications"
     echo "-c=<val>, --colors=<val> Sets the number of colors that hardware is configured for."
     echo "-h, --help Shows this usage."
@@ -143,10 +147,16 @@ parse_args() {
 
         -e*|--external=*)
             b="${i#*=}"
-            
+
             shift # past argument=value
             ;;
- 
+
+        -E*|--External=*)
+            it="${i#*=}"
+
+            shift # past argument=value
+            ;;
+
         -i*|--interference=*)
             it="${i#*=}"
             
@@ -208,8 +218,8 @@ parse_args() {
         benchmarks=("$b")
     fi
 
-    if [ ! -z $it ]; then
-        interferences=($it)
+    if [ ! -z "$it" ]; then
+        interferences=("$it")
     fi
 
     echo "Number of colors:$NUM_COLORS"

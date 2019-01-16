@@ -27,7 +27,7 @@ supported_gpus=(
 )
 
 # Aliases used in academic paper
-declare -A benchmark_aliases=(
+declare -A default_aliases=(
 ["cudaSDK_mms"]="MM" 
 ["cudaSDK_sn"]="SN"
 ["cudaSDK_va"]="VA"
