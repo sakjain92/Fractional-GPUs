@@ -228,6 +228,15 @@ CP and CMP)
 This option is similar as the above option. The only difference is that instead of using CUDA/Rodinia
 applications, we use a ML (image classification) application that uses FGPU ported Caffe.
 
+Some of the data file required by the [example](http://caffe.berkeleyvision.org/gathered/examples/cpp_classification.html)
+image classification application needs to be downloaded before running in this mode.
+
+```
+cd $PROJ_DIR/framework/caffe/
+./scripts/download_model_binary.py models/bvlc_reference_caffenet # Download the model
+./data/ilsvrc12/get_ilsvrc_aux.s # Download example data
+```
+
 ### Testing
 In this mode, the script uses selected CUDA benchmark applications
 ([benchmarks/cudaSDK](benchmarks/cudaSDK)) to test FGPU functionally.
