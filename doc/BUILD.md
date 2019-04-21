@@ -88,6 +88,12 @@ the following paramters might be of interest:
 
 ## Setup
 FGPU requires following setup prior to build/installation:
+* Download dependencies
+    ```
+    sudo apt-get install gcc make g++ linux-headers-$(uname -r) linux-source
+    ```
+    * Download cmake (version >= 3.8) (For instructions see https://askubuntu.com/a/865294)
+
 * CUDA SDK 9.1 is required (We currently only support specifically CUDA SDK 9.1).
     * CUDA SDK version can be probed
         ```
@@ -99,22 +105,51 @@ FGPU requires following setup prior to build/installation:
             ```
             sudo apt-get --purge remove 'cuda*'
             ```
-        * To install CUDA SDK 9.1, download it from https://developer.nvidia.com/cuda-downloads
-        * CUDA SDK and FGPU depends on following packages:
-            * gcc
-            * make
-            * cmake (version 3.8 or greater)
-            * g++
+        * To install CUDA SDK 9.1, download it from [Nvidia CUDA SDK Downloads](https://developer.nvidia.com/cuda-downloads) (See *Legacy Releases*)
+            * Use all default options except do not install Nvidia Kernel Driver
         * After installing add the following to ~/.bashrc file
             ```
             export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
             export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
             ```
-* Nvidia driver needs to be uninstalled (You need to do this even if you newly install CUDA 9.1)
+* Nvidia driver needs to be uninstalled
     * To remove old Nvidia drivers
         ```
         sudo apt-get purge nvidia*
         ```
+* Install Nvidia driver
+    ```
+    cd $PROJ_DIR/driver
+    sudo ./NVIDIA-Linux-x86_64-390.48.run # Use all default options
+    nvidia-smi # Test driver works. This command should list all connected GPUs
+    ```
+* Install Caffe dependencies
+    ```
+    sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler libgoogle-glog-dev libgflags-dev liblmdb-dev
+    sudo apt-get install --no-install-recommends libboost-all-dev
+    sudo apt-get install libopenblas-dev
+    sudo apt-get install libatlas-base-dev
+    sudo apt-get install python-pip
+    pip install protobuf
+    pip install pyyaml
+    ```
+* Correct the hdf5 libraries
+    ```
+    cd /usr/lib/x86_64-linux-gnu/
+    sudo ln -s libhdf5_serial.so.10.1.0 libhdf5.so
+    sudo ln -s libhdf5_serial_hl.so.10.0.2 libhdf5_hl.so
+    sudo ldconfig
+    ```
+* Install model/data for caffe example (For documentation, see [Caffe CPP Classification Example](http://caffe.berkeleyvision.org/gathered/examples/cpp_classification.html))
+    ```
+    cd $PROJ_DIR/frameworks/caffe
+    ./scripts/download_model_binary.py models/bvlc_reference_caffenet
+    ./data/ilsvrc12/get_ilsvrc_aux.sh
+    ```
+* Install miscellaneous dependencies tools
+    ```
+    sudo apt-get install schedtool bc
+    ```
 
 ## Build
 
